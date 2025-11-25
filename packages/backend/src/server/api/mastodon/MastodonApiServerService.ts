@@ -181,7 +181,7 @@ export class MastodonApiServerService {
 			const { client, me } = await this.clientService.getAuthClient(_request);
 
 			const data = await client.getBookmarks(parseTimelineArgs(_request.query));
-			const response = await promiseMap(data.data, async (status) => await this.mastoConverters.convertStatus(status, me), { limit: 4 });
+			const response = await promiseMap(data.data, async (status) => await this.mastoConverters.convertStatus(status, me), { limiter: 4 });
 
 			return reply.send(response);
 		});
@@ -203,7 +203,7 @@ export class MastodonApiServerService {
 				userId: me.id,
 			};
 			const data = await client.getFavourites(args);
-			const response = await promiseMap(data.data, async (status) => await this.mastoConverters.convertStatus(status, me), { limit: 4 });
+			const response = await promiseMap(data.data, async (status) => await this.mastoConverters.convertStatus(status, me), { limiter: 4 });
 
 			return reply.send(response);
 		});
@@ -212,7 +212,7 @@ export class MastodonApiServerService {
 			const client = this.clientService.getClient(_request);
 
 			const data = await client.getMutes(parseTimelineArgs(_request.query));
-			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limit: 4 });
+			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limiter: 4 });
 
 			return reply.send(response);
 		});
@@ -221,7 +221,7 @@ export class MastodonApiServerService {
 			const client = this.clientService.getClient(_request);
 
 			const data = await client.getBlocks(parseTimelineArgs(_request.query));
-			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limit: 4 });
+			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limiter: 4 });
 
 			return reply.send(response);
 		});
@@ -231,7 +231,7 @@ export class MastodonApiServerService {
 
 			const limit = _request.query.limit ? parseInt(_request.query.limit) : 20;
 			const data = await client.getFollowRequests(limit);
-			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limit: 4 });
+			const response = await promiseMap(data.data, async (account) => await this.mastoConverters.convertAccount(account), { limiter: 4 });
 
 			return reply.send(response);
 		});
