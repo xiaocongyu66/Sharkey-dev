@@ -36496,6 +36496,7 @@ export interface operations {
             content: {
                 'application/json': {
                     password: string;
+                    token?: string | null;
                 };
             };
         };
@@ -42545,8 +42546,6 @@ export interface operations {
                 'application/json': {
                     /** Format: misskey:id */
                     noteId: string;
-                    /** @default false */
-                    quote?: boolean;
                 };
             };
         };
