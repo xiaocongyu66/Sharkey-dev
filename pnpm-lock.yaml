@@ -1456,6 +1456,9 @@ importers:
 
   packages/sw:
     dependencies:
+      frontend-shared:
+        specifier: workspace:*
+        version: link:../frontend-shared
       idb-keyval:
         specifier: 6.2.2
         version: 6.2.2

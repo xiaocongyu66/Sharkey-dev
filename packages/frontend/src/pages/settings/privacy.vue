@@ -249,7 +249,7 @@ import { instance } from '@/instance.js';
 import { ensureSignin } from '@/i.js';
 import { definePage } from '@/page.js';
 import FormSlot from '@/components/form/slot.vue';
-import { formatDateTimeString } from '@/utility/format-time-string.js';
+import { formatDateTimeString } from '@@/js/format-time-string.js';
 import MkInput from '@/components/MkInput.vue';
 import * as os from '@/os.js';
 import MkDisableSection from '@/components/MkDisableSection.vue';

@@ -14,7 +14,8 @@
 	},
 	"dependencies": {
 		"idb-keyval": "6.2.2",
-		"misskey-js": "workspace:*"
+		"misskey-js": "workspace:*",
+		"frontend-shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/node": "22.18.1",
