@@ -36,6 +36,7 @@ class HybridTimelineChannel extends NoteChannel {
 
 	@bindThis
 	public async init(params: JsonObject): Promise<void> {
+		if (!this.user) return;
 		if (!this.subscriber) throw new IdentifiableError(errorCodes.websocketError, `Cannot init ${this.chName} channel: socket is not connected`);
 		const policies = await this.roleService.getUserPolicies(this.user);
 		if (!policies.ltlAvailable) return;
@@ -50,7 +51,9 @@ class HybridTimelineChannel extends NoteChannel {
 
 	@bindThis
 	private async onNote(note: Packed<'Note'>) {
-		const isMe = this.user?.id === note.userId;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const userId = this.user!.id;
+		const isMe = userId === note.userId;
 
 		if (this.withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
 		if (!this.withBots && note.user.isBot) return;
@@ -63,7 +66,7 @@ class HybridTimelineChannel extends NoteChannel {
 		// フォローしているチャンネルの投稿 の場合だけ
 		if (!(
 			(note.channelId == null && isMe) ||
-			(note.channelId == null && this.following.has(note.userId)) ||
+			(note.channelId == null && (await this.cacheService.getUserRelation(userId, note.userId)).isFollowing) ||
 			(note.channelId == null && (note.user.host == null && note.visibility === 'public')) ||
 			(note.channelId != null && this.followingChannels.has(note.channelId))
 		)) return;

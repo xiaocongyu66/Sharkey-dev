@@ -32,25 +32,6 @@ export abstract class Channel {
 		return this.connection.cacheService;
 	}
 
-	protected get following() {
-		return this.connection.following;
-	}
-
-	protected get userIdsWhoMeMuting() {
-		return this.connection.userIdsWhoMeMuting;
-	}
-
-	protected get userIdsWhoMeMutingRenotes() {
-		return this.connection.userIdsWhoMeMutingRenotes;
-	}
-
-	protected get userIdsWhoBlockingMe() {
-		return this.connection.userIdsWhoBlockingMe;
-	}
-
-	/**
-	 * @deprecated use cacheService.threadMutingsCache to avoid stale data
-	 */
 	protected get userMutedInstances() {
 		return this.connection.userMutedInstances;
 	}
@@ -63,9 +44,6 @@ export abstract class Channel {
 		return this.connection.userMutedNotes;
 	}
 
-	/**
-	 * @deprecated use cacheService.threadMutingsCache to avoid stale data
-	 */
 	protected get followingChannels() {
 		return this.connection.followingChannels;
 	}
@@ -152,17 +130,12 @@ export abstract class NoteChannel extends Channel {
 		// TODO should probably pass list context here
 		// Otherwise, re-pack the anonymous note for the actual target user.
 		return await this.noteEntityService.rePack(note, this.user, {
-			// TODO verify these
-			userFollowings: this.following,
-			userBlockers: this.userIdsWhoBlockingMe,
-			userMutedUsers: this.userIdsWhoMeMuting,
-			userMutedUserRenotes: this.userIdsWhoMeMutingRenotes,
-			userMutedInstances: this.userMutedInstances,
-			userMutedNotes: this.userMutedNotes,
-			userMutedThreads: this.userMutedThreads,
-			myReactions: this.myRecentReactions,
-			myRenotes: this.myRecentRenotes,
-			myFavorites: this.myRecentFavorites,
+			myRecentReactions: this.myRecentReactions,
+			myRecentRenotes: this.myRecentRenotes,
+			myRecentFavorites: this.myRecentFavorites,
+			myInstanceMutings: this.userMutedInstances,
+			myNoteMutings: this.userMutedNotes,
+			myThreadMutings: this.userMutedThreads,
 		});
 	}
 }

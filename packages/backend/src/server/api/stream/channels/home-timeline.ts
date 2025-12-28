@@ -30,6 +30,7 @@ class HomeTimelineChannel extends NoteChannel {
 
 	@bindThis
 	public async init(params: JsonObject) {
+		if (!this.user) return;
 		if (!this.subscriber) throw new IdentifiableError(errorCodes.websocketError, `Cannot init ${this.chName} channel: socket is not connected`);
 		this.withRenotes = !!(params.withRenotes ?? true);
 		this.withFiles = !!(params.withFiles ?? false);
@@ -39,14 +40,16 @@ class HomeTimelineChannel extends NoteChannel {
 
 	@bindThis
 	private async onNote(note: Packed<'Note'>) {
-		const isMe = this.user?.id === note.userId;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+		const userId = this.user!.id;
+		const isMe = userId === note.userId;
 		if (this.withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
 		if (!this.withRenotes && isPackedPureRenote(note)) return;
 		if (note.channelId) {
 			if (!this.followingChannels.has(note.channelId)) return;
 		} else {
 			// その投稿のユーザーをフォローしていなかったら弾く
-			if (!isMe && !this.following.has(note.userId)) return;
+			if (!isMe && !(await this.cacheService.getUserRelation(userId, note.userId)).isFollowing) return;
 		}
 
 		const preparedNote = await this.prepareNote(note);

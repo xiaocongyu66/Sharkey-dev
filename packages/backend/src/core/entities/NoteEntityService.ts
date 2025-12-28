@@ -11,7 +11,7 @@ import type { Packed } from '@/misc/json-schema.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
-import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, PollVotesRepository, NoteReactionsRepository, ChannelsRepository, MiMeta, MiPollVote, MiPoll, MiChannel, MiFollowing, NoteFavoritesRepository } from '@/models/_.js';
+import type { UsersRepository, NotesRepository, FollowingsRepository, PollsRepository, PollVotesRepository, NoteReactionsRepository, ChannelsRepository, MiMeta, MiPollVote, MiPoll, MiChannel, NoteFavoritesRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import { deepClone } from '@/misc/clone.js';
 import { crawlNote } from '@/misc/crawl-note.js';
@@ -22,9 +22,9 @@ import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import type { IdService } from '@/core/IdService.js';
 import type { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import type { Config } from '@/config.js';
-import type { NoteVisibilityData } from '@/core/NoteVisibilityService.js';
+import type { NoteVisibilityData, PopulatedMe, PopulatedNote, NoteVisibilityHint } from '@/core/NoteVisibilityService.js';
 import type { OnModuleInit } from '@nestjs/common';
-import type { CacheService } from '../CacheService.js';
+import type { CacheService, UserRelation } from '../CacheService.js';
 import type { CustomEmojiService } from '../CustomEmojiService.js';
 import type { ReactionService } from '../ReactionService.js';
 import type { UserEntityService } from './UserEntityService.js';
@@ -154,7 +154,7 @@ export class NoteEntityService implements OnModuleInit {
 		const me = typeof(meOrMeId) === 'string'
 			? await this.cacheService.findUserById(meOrMeId)
 			: meOrMeId;
-		const data = await this.noteVisibilityService.populateData(me, hint);
+		const data = await this.noteVisibilityService.populateData(me, notes, hint);
 
 		for (const note of notes) {
 			await this.hideNoteAsync(note, me, data);
@@ -253,61 +253,61 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private async populateMyRenotes(notes: Packed<'Note'>[], meId: string, hint?: {
-		myRenotes?: Set<string>;
+		myRecentRenotes?: Set<string>;
 	}): Promise<Set<string>> {
-		const fetchedRenotes = new Set<string>();
-		const toFetch = new Set<string>();
+		const renotes = new Set<string>();
+		const renotesToFetch = new Set<string>(notes.map(n => n.id));
 
-		if (hint?.myRenotes) {
-			for (const note of notes) {
-				if (hint.myRenotes.has(note.id)) {
-					fetchedRenotes.add(note.id);
-				} else {
-					toFetch.add(note.id);
+		// Fetch renotes from hint
+		if (hint?.myRecentRenotes) {
+			for (const noteId of hint.myRecentRenotes) {
+				if (renotesToFetch.delete(noteId)) {
+					renotes.add(noteId);
 				}
 			}
 		}
 
-		if (toFetch.size > 0) {
+		// Fetch renotes from DB
+		if (renotesToFetch.size > 0) {
 			const fetched = await this.queryService
 				.andIsRenote(this.notesRepository.createQueryBuilder('note'), 'note')
 				.andWhere({
 					userId: meId,
-					renoteId: In(Array.from(toFetch)),
+					renoteId: IsOne(Array.from(renotesToFetch)),
 				})
 				.select('note.renoteId', 'renoteId')
 				.getRawMany<{ renoteId: string }>();
 
 			for (const { renoteId } of fetched) {
-				fetchedRenotes.add(renoteId);
+				renotes.add(renoteId);
 			}
 		}
 
-		return fetchedRenotes;
+		return renotes;
 	}
 
 	@bindThis
 	private async populateMyFavorites(notes: Packed<'Note'>[], meId: string, hint?: {
-		myFavorites?: Set<string>;
+		myRecentFavorites?: Set<string>;
 	}): Promise<Set<string>> {
-		const fetchedFavorites = new Set<string>();
-		const toFetch = new Set<string>();
+		const favorites = new Set<string>();
+		const favoritesToFetch = new Set<string>(notes.map(n => n.id));
 
-		if (hint?.myFavorites) {
-			for (const note of notes) {
-				if (hint.myFavorites.has(note.id)) {
-					fetchedFavorites.add(note.id);
-				} else {
-					toFetch.add(note.id);
+		// Fetch favorites from hint
+		if (hint?.myRecentFavorites) {
+			for (const noteId of hint.myRecentFavorites) {
+				if (favoritesToFetch.delete(noteId)) {
+					favorites.add(noteId);
 				}
 			}
 		}
 
-		if (toFetch.size > 0) {
+		// Fetch favorites from DB
+		if (favoritesToFetch.size > 0) {
 			const fetched = await this.noteFavoritesRepository.find({
 				where: {
 					userId: meId,
-					noteId: In(Array.from(toFetch)),
+					noteId: IsOne(Array.from(favoritesToFetch)),
 				},
 				select: {
 					noteId: true,
@@ -315,42 +315,36 @@ export class NoteEntityService implements OnModuleInit {
 			}) as { noteId: string }[];
 
 			for (const { noteId } of fetched) {
-				fetchedFavorites.add(noteId);
+				favorites.add(noteId);
 			}
 		}
 
-		return fetchedFavorites;
+		return favorites;
 	}
 
 	@bindThis
 	private async populateMyReactions(notes: Packed<'Note'>[], meId: string, hint?: {
-		myReactions?: Map<MiNote['id'], string | null>;
+		myRecentReactions?: Map<MiNote['id'], string>;
 	}): Promise<Map<string, string>> {
-		const fetchedReactions = new Map<string, string>();
-		const toFetch = new Set<string>();
+		const reactions = new Map<string, string>();
+		const reactionsToFetch = new Set<string>(notes.map(n => n.id));
 
-		if (hint?.myReactions) {
-			for (const note of notes) {
-				const fromHint = hint.myReactions.get(note.id);
-
-				// null means we know there's no reaction, so just skip it.
-				if (fromHint === null) continue;
-
-				if (fromHint) {
-					const converted = this.reactionService.convertLegacyReaction(fromHint);
-					fetchedReactions.set(note.id, converted);
-				} else if (Object.values(note.reactions).some(count => count > 0)) {
-					// Note has at least one reaction, so we need to fetch
-					toFetch.add(note.id);
+		// Fetch reactions from hint
+		if (hint?.myRecentReactions) {
+			for (const [noteId, rawReaction] of hint.myRecentReactions) {
+				if (reactionsToFetch.delete(noteId)) {
+					const convertedReaction = this.reactionService.convertLegacyReaction(rawReaction);
+					reactions.set(noteId, convertedReaction);
 				}
 			}
 		}
 
-		if (toFetch.size > 0) {
+		// Fetch reactions from DB
+		if (reactionsToFetch.size > 0) {
 			const fetched = await this.noteReactionsRepository.find({
 				where: {
 					userId: meId,
-					noteId: In(Array.from(toFetch)),
+					noteId: IsOne(Array.from(reactionsToFetch)),
 				},
 				select: {
 					noteId: true,
@@ -359,12 +353,12 @@ export class NoteEntityService implements OnModuleInit {
 			});
 
 			for (const { noteId, reaction } of fetched) {
-				const converted = this.reactionService.convertLegacyReaction(reaction);
-				fetchedReactions.set(noteId, converted);
+				const convertedReaction = this.reactionService.convertLegacyReaction(reaction);
+				reactions.set(noteId, convertedReaction);
 			}
 		}
 
-		return fetchedReactions;
+		return reactions;
 	}
 
 	@bindThis
@@ -516,23 +510,29 @@ export class NoteEntityService implements OnModuleInit {
 	 */
 	@bindThis
 	public async rePack(note: Packed<'Note'>, me: MiUser | MiUser['id'], hint?: {
-		myReactions?: Map<MiNote['id'], string | null>;
-		myRenotes?: Set<string>;
-		myFavorites?: Set<string>;
+		myRecentReactions?: Map<MiNote['id'], string>;
+		myRecentRenotes?: Set<string>;
+		myRecentFavorites?: Set<string>;
+		myInstanceMutings?: Set<string>;
+		myNoteMutings?: Set<string>;
+		myThreadMutings?: Set<string>;
 	}): Promise<Packed<'Note'>> {
 		const meId = typeof(me) === 'object' ? me.id : me;
 
 		// Important: copy the note, since anonymous packed notes are often shared between multiple users!
 		const clonedNote = deepClone(note);
 		const allNotes = crawlNote(clonedNote);
+		const allUsers = new Set(allNotes.map(note => note.userId)).values().toArray();
 
-		const [myReactions, myRenotes, myFavorites, myThreadMutings, myNoteMutings, myFollowings] = await Promise.all([
+		const [myReactions, myRenotes, myFavorites, myInstanceMutings, myThreadMutings, myNoteMutings, myRelations] = await Promise.all([
 			this.populateMyReactions(allNotes, meId, hint),
 			this.populateMyRenotes(allNotes, meId, hint),
 			this.populateMyFavorites(allNotes, meId, hint),
-			this.populateMyTheadMutings(allNotes, meId),
-			this.populateMyNoteMutings(allNotes, meId),
-			this.cacheService.userFollowingsCache.fetch(meId),
+			hint?.myInstanceMutings ?? this.cacheService.userProfileCache.fetch(meId)
+				.then(profile => new Set(profile.mutedInstances)),
+			hint?.myThreadMutings ?? this.cacheService.threadMutingsCache.fetch(meId),
+			hint?.myNoteMutings ?? this.cacheService.noteMutingsCache.fetch(meId),
+			this.cacheService.getUserRelations(meId, allUsers),
 		]);
 
 		for (const n of allNotes) {
@@ -544,14 +544,15 @@ export class NoteEntityService implements OnModuleInit {
 			n.isFavorited = myFavorites.has(n.id);
 			n.isMutingThread = myThreadMutings.has(n.id);
 			n.isMutingNote = myNoteMutings.has(n.id);
-			n.user.bypassSilence = n.userId === meId || myFollowings.has(n.userId);
+			n.user.bypassSilence = n.userId === meId || !!myRelations.get(n.userId)?.isFollowing;
 		}
 
 		// Hide notes *after* we sync visibility
-		await this.hideNotes(allNotes, meId, {
+		await this.hideNotesAsync(allNotes, me, {
+			userRelations: myRelations,
+			userMutedInstances: myInstanceMutings,
 			userMutedNotes: myNoteMutings,
 			userMutedThreads: myThreadMutings,
-			userFollowings: myFollowings,
 		});
 
 		return clonedNote;
@@ -573,14 +574,14 @@ export class NoteEntityService implements OnModuleInit {
 				myReactions: Map<MiNote['id'], string | null>;
 				packedFiles: Map<MiNote['fileIds'][number], Packed<'DriveFile'> | null>;
 				packedUsers: Map<MiUser['id'], Packed<'UserLite'>>;
-				userFollowings: Map<string, Omit<MiFollowing, 'isFollowerHibernated'>>;
-				userBlockers: Set<string>;
+				mentionHandles: Map<string, string>;
 				polls: Map<string, MiPoll>;
 				pollVotes: Map<string, Map<string, MiPollVote[]>>;
 				channels: Map<string, MiChannel>;
 				notes: Map<string, MiNote>;
 				mutedThreads: Set<string>;
 				mutedNotes: Set<string>;
+				userRelations: Map<string, UserRelation>;
 				favoriteNotes: Set<string>;
 				renotedNotes: Set<string>;
 			};
@@ -740,10 +741,9 @@ export class NoteEntityService implements OnModuleInit {
 
 		if (!opts.skipHide) {
 			await this.hideNoteAsync(packed, meId, {
-				userFollowings: opts._hint_?.userFollowings,
-				userBlockers: opts._hint_?.userBlockers,
 				userMutedNotes: opts._hint_?.mutedNotes,
 				userMutedThreads: opts._hint_?.mutedThreads,
+				userRelations: opts._hint_?.userRelations,
 			});
 		}
 
@@ -790,7 +790,7 @@ export class NoteEntityService implements OnModuleInit {
 		const fileIds = new Set(targetNotes.flatMap(n => n.fileIds));
 		const mentionedUsers = new Set(targetNotes.flatMap(note => note.mentions));
 
-		const [{ bufferedReactions, myReactionsMap }, packedFiles, packedUsers, mentionHandles, userFollowings, userBlockers, polls, pollVotes, channels, mutedThreads, mutedNotes, favoriteNotes, renotedNotes] = await Promise.all([
+		const [{ bufferedReactions, myReactionsMap }, packedFiles, packedUsers, mentionHandles, polls, pollVotes, channels, mutedThreads, mutedNotes, favoriteNotes, renotedNotes, userRelations] = await Promise.all([
 			// bufferedReactions & myReactionsMap
 			this.getReactions(targetNotes, me),
 			// packedFiles
@@ -800,10 +800,6 @@ export class NoteEntityService implements OnModuleInit {
 				.then(users => new Map(users.map(u => [u.id, u]))),
 			// mentionHandles
 			this.getUserHandles(Array.from(mentionedUsers)),
-			// userFollowings
-			me ? this.cacheService.userFollowingsCache.fetch(me.id) : new Map<string, Omit<MiFollowing, 'isFollowerHibernated'>>(),
-			// userBlockers
-			me ? this.cacheService.userBlockedCache.fetch(me.id) : new Set<string>,
 			// polls
 			this.pollsRepository.findBy({ noteId: In(noteIds) })
 				.then(polls => new Map(polls.map(p => [p.noteId, p]))),
@@ -843,6 +839,12 @@ export class NoteEntityService implements OnModuleInit {
 				.select('note.renoteId', 'renoteId')
 				.getRawMany<{ renoteId: string }>()
 				.then(ns => new Set(ns.map(n => n.renoteId))) : new Set<string>(),
+			// userRelations
+			me
+				? this.cacheService.userRelationsCache
+					.fetchMany(userIds.map(u => `${me.id}:${u}`))
+					.then(rs => new Map(rs))
+				: new Map<string, UserRelation>(),
 			// (not returned)
 			this.customEmojiService.prefetchEmojis(this.aggregateNoteEmojis(notes)),
 		]);
@@ -855,8 +857,6 @@ export class NoteEntityService implements OnModuleInit {
 				packedFiles,
 				packedUsers,
 				mentionHandles,
-				userFollowings,
-				userBlockers,
 				polls,
 				pollVotes,
 				channels,
@@ -865,6 +865,7 @@ export class NoteEntityService implements OnModuleInit {
 				mutedNotes,
 				favoriteNotes,
 				renotedNotes,
+				userRelations,
 			},
 		})));
 	}

@@ -43,7 +43,10 @@ class MainChannel extends NoteChannel {
 			case 'notification': {
 				// Ignore notifications from instances the user has muted
 				if (isUserFromMutedInstance(data.body, this.userMutedInstances)) return;
-				if (data.body.userId && this.userIdsWhoMeMuting.has(data.body.userId)) return;
+				if (data.body.userId) {
+					const relation = await this.cacheService.getUserRelation(this.user!.id, data.body.userId);
+					if (relation.isMuting) return;
+				}
 
 				if (data.body.note) {
 					const preparedNote = await this.prepareNote(data.body.note);
