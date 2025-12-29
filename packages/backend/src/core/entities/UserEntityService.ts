@@ -312,10 +312,7 @@ export class UserEntityService implements OnModuleInit {
 			includeSecrets: false,
 		}, options);
 
-		const user = typeof src === 'object' ? src : await this.usersRepository.findOneOrFail({
-			where: { id: src },
-			relations: { userProfile: true },
-		});
+		const user = typeof src === 'object' ? src : await this.cacheService.findUserById(src);
 
 		// migration
 		if (user.avatarId != null && user.avatarUrl === null) {
@@ -351,7 +348,7 @@ export class UserEntityService implements OnModuleInit {
 		const iAmRoot = iAmAdmin && me && this.meta.rootUserId === me.id;
 
 		const profile = isDetailed
-			? (opts.userProfile ?? user.userProfile ?? await this.userProfilesRepository.findOneByOrFail({ userId: user.id }))
+			? (opts.userProfile ?? user.userProfile ?? await this.cacheService.userProfileCache.fetch(user.id))
 			: null;
 
 		const relation = opts.userRelations?.get(user.id) ?? (meId ? await this.cacheService.getUserRelation(meId, user) : undefined);
@@ -379,7 +376,7 @@ export class UserEntityService implements OnModuleInit {
 			}
 		}
 
-		const mastoapi = !isDetailed ? opts.userProfile ?? user.userProfile ?? await this.userProfilesRepository.findOneByOrFail({ userId: user.id }) : null;
+		const mastoapi = !isDetailed ? (opts.userProfile ?? user.userProfile ?? await this.cacheService.userProfileCache.fetch(user.id)) : null;
 
 		const followingCount = profile == null ? null :
 			(profile.followingVisibility === 'public') || isMe || iAmModerator ? user.followingCount :
@@ -715,13 +712,10 @@ export class UserEntityService implements OnModuleInit {
 					return map;
 				}) : new Map(),
 
-			// userIdsByUrl
+			// userIdsByUri
 			isDetailed
-				? this.usersRepository.find({
-					where: { uri: IsOne(Array.from(userUris)) },
-					select: { id: true, uri: true },
-				})
-					.then(users => new Map(users.map(u => [u.uri as string, u.id])))
+				? this.cacheService.uriPersonCache.fetchMany(userUris)
+					.then(users => new Map(users))
 				: new Map(),
 
 			// instances
