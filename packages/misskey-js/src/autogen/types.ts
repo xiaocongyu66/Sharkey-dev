@@ -40784,7 +40784,8 @@ export interface operations {
                     sinceId?: string;
                     /** Format: misskey:id */
                     untilId?: string;
-                    visibility?: string;
+                    /** @enum {string} */
+                    visibility?: 'public' | 'home' | 'followers' | 'specified';
                 };
             };
         };
