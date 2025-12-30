@@ -779,7 +779,7 @@ export class NoteEntityService implements OnModuleInit {
 		const noteIds = Array.from(new Set(targetNotes.keys()));
 
 		const usersMap = new Map<string, MiUser | string>();
-		const allUsers = notes.flatMap(note => [
+		const allUsers = targetNotes.values().flatMap(note => [
 			note.user ?? note.userId,
 			note.reply?.user ?? note.replyUserId,
 			note.renote?.user ?? note.renoteUserId,
