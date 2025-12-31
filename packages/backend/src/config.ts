@@ -7,7 +7,7 @@ import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import * as yaml from 'js-yaml';
-import { globSync } from 'glob';
+import fastGlob from 'fast-glob';
 import ipaddr from 'ipaddr.js';
 import Logger from './logger.js';
 import type * as Sentry from '@sentry/node';
@@ -387,7 +387,7 @@ export function loadConfig(loggerService: LoggerService): Config {
 		JSON.parse(fs.readFileSync(`${_dirname}/../../../built/_frontend_embed_vite_/manifest.json`, 'utf-8'))
 		: { 'src/boot.ts': { file: 'src/boot.ts' } };
 
-	const configFiles = globSync(path).sort();
+	const configFiles = fastGlob.globSync(path).sort();
 
 	if (configFiles.length === 0
 			&& !process.env['MK_WARNED_ABOUT_CONFIG']) {

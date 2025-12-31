@@ -24,7 +24,7 @@ import type { IdentifiableError } from '@/misc/identifiable-error.js';
 import { SkRateLimiterService } from '@/server/SkRateLimiterService.js';
 import { sendRateLimitHeaders } from '@/misc/rate-limit-utils.js';
 import { SigninService } from './SigninService.js';
-import type { AuthenticationResponseJSON } from '@simplewebauthn/types';
+import type { AuthenticationResponseJSON } from '@simplewebauthn/server';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
 @Injectable()

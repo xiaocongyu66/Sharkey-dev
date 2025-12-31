@@ -39,8 +39,8 @@ const fs = require('fs');
 	fs.rmSync(__dirname + '/../built', { recursive: true, force: true });
 	fs.rmSync(__dirname + '/../node_modules', { recursive: true, force: true });
 
-	execSync('pnpm store prune', {
-		cwd: __dirname + '/../',
-		stdio: 'inherit',
-	});
+	// execSync('pnpm store prune', {
+	// 	cwd: __dirname + '/../',
+	// 	stdio: 'inherit',
+	// });
 })();
