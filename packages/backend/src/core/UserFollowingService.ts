@@ -385,12 +385,11 @@ export class UserFollowingService implements OnModuleInit {
 	}
 
 	@bindThis
-	private async decrementFollowing(
+	private decrementFollowing(
 		follower: MiUser,
 		followee: MiUser,
-	): Promise<void> {
-		// Neither followee nor follower has moved.
-		if (!follower.movedToUri && !followee.movedToUri) {
+	): void {
+		{
 			//#region Decrement following / followers counts
 			this.collapsedQueueService.updateUserQueue.enqueue(follower.id, { followingCountDelta: -1 });
 			this.collapsedQueueService.updateUserQueue.enqueue(followee.id, { followersCountDelta: -1 });
@@ -417,40 +416,6 @@ export class UserFollowingService implements OnModuleInit {
 			//#endregion
 
 			this.perUserFollowingChart.update(follower, followee, false);
-		} else {
-			// Adjust following/followers counts
-			for (const user of [follower, followee]) {
-				if (user.movedToUri) continue; // No need to update if the user has already moved.
-
-				const nonMovedFollowees = await this.followingsRepository.count({
-					relations: {
-						followee: true,
-					},
-					where: {
-						followerId: user.id,
-						followee: {
-							movedToUri: IsNull(),
-						},
-					},
-				});
-				const nonMovedFollowers = await this.followingsRepository.count({
-					relations: {
-						follower: true,
-					},
-					where: {
-						followeeId: user.id,
-						follower: {
-							movedToUri: IsNull(),
-						},
-					},
-				});
-				await this.usersRepository.update(
-					{ id: user.id },
-					{ followingCount: nonMovedFollowees, followersCount: nonMovedFollowers },
-				);
-			}
-
-			// TODO: adjust charts
 		}
 	}
 
