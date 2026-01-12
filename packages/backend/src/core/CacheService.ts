@@ -236,7 +236,7 @@ export class CacheService implements OnApplicationShutdown {
 		this.userByAcctCache = this.cacheManagementService.createQuantumKVCache('userByAcct', {
 			lifetime: 1000 * 60 * 30, // 30m
 			fetcher: async (acct) => {
-				const parsed = Acct.parse(acct);
+				const parsed = this.utilityService.parseAcct(acct);
 				const { id } = await this.usersRepository
 					.createQueryBuilder('user')
 					.select('user.id')
@@ -248,7 +248,7 @@ export class CacheService implements OnApplicationShutdown {
 				return id;
 			},
 			optionalFetcher: async (acct) => {
-				const parsed = Acct.parse(acct);
+				const parsed = this.utilityService.parseAcct(acct);
 				const res = await this.usersRepository
 					.createQueryBuilder('user')
 					.select('user.id')
