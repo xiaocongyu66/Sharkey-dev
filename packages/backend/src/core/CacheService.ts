@@ -751,6 +751,24 @@ export class CacheService implements OnApplicationShutdown {
 	}
 
 	@bindThis
+	public async findUsersByAcct(accounts: (string | Acct.Acct)[]): Promise<Map<string, MiUser>> {
+		const keys = accounts.map(a => typeof(a) === 'string' ? a.toLowerCase() : Acct.toString(a));
+
+		const ids = await this.userByAcctCache.fetchMany(keys);
+		return await this.findUsersById(ids.values);
+	}
+
+	@bindThis
+	public async findLocalUserByUsername(username: string): Promise<MiLocalUser> {
+		return await this.findUserByAcct({ username: username.toLowerCase(), host: null }) as MiLocalUser;
+	}
+
+	@bindThis
+	public async findOptionalLocalUserByUsername(username: string): Promise<MiLocalUser | undefined> {
+		return await this.findOptionalUserByAcct({ username: username.toLowerCase(), host: null }) as MiLocalUser | undefined;
+	}
+
+	@bindThis
 	public async findLocalUserById(userId: MiUser['id']): Promise<MiLocalUser> {
 		const user = await this.findUserById(userId);
 

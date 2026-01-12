@@ -8,6 +8,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import RE2 from 're2';
 import psl from 'psl';
 import semver from 'semver';
+import * as Acct from '@/misc/acct.js';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { bindThis } from '@/decorators.js';
@@ -398,5 +399,21 @@ export class UtilityService {
 			id,
 			rest: rest.length === 0 ? undefined : rest.join(separator),
 		};
+	}
+
+	@bindThis
+	public parseAcct(input: string | Acct.Acct): Acct.Acct {
+		const acct = typeof(input) === 'string' ? Acct.parse(input) : input;
+
+		const dbHost = this.toPunyNullable(acct.host);
+		const host = dbHost === this.config.host ? null : dbHost;
+
+		return { username: acct.username, host };
+	}
+
+	@bindThis
+	public stringifyAcct(input: string | Acct.Acct): string {
+		const acct = this.parseAcct(input);
+		return Acct.toString(acct);
 	}
 }
