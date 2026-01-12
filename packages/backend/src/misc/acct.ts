@@ -10,6 +10,9 @@ export type Acct = {
 	host: string | null;
 };
 
+/**
+ * @deprecated Use UtilityService.parseAcct for a more robust implementation.
+ */
 export function parse(acct: string, lower = true): Acct {
 	if (acct.startsWith('@')) acct = acct.substring(1);
 	if (lower) {
@@ -20,6 +23,9 @@ export function parse(acct: string, lower = true): Acct {
 	return { username: split[0], host: split[1] ?? null };
 }
 
+/**
+ * @deprecated Use UtilityService.stringifyAcct for a more robust implementation.
+ */
 export function toString(acct: Acct, lower = true): string {
 	const username = lower
 		? acct.username.toLowerCase()
