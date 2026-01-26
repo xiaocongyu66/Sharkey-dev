@@ -80,6 +80,7 @@ export class RelationshipProcessorService {
 		return 'ok';
 	}
 
+	@bindThis
 	public async processMove(job: Bull.Job<RelationshipJobData>): Promise<string> {
 		this.logger.info(`${job.data.from.id} is trying to migrate to ${job.data.to.id}`);
 		const [src, dst] = await Promise.all([
