@@ -92,7 +92,7 @@ export class UserBlockingService implements OnModuleInit {
 
 		if (this.userEntityService.isLocalUser(blocker) && this.userEntityService.isRemoteUser(blockee)) {
 			const content = this.apRendererService.addContext(this.apRendererService.renderBlock(blocking));
-			this.queueService.deliver(blocker, content, blockee.inbox, false);
+			await this.queueService.deliver(blocker, content, blockee.inbox, false);
 		}
 	}
 
