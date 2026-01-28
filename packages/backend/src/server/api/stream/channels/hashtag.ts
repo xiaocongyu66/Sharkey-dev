@@ -30,7 +30,11 @@ class HashtagChannel extends Channel {
 	@bindThis
 	public async init(params: JsonObject) {
 		if (!Array.isArray(params.q)) return;
-		if (!params.q.every(x => Array.isArray(x) && x.every(y => typeof y === 'string'))) return;
+		if (!params.q.every((x): x is string[] => (
+			Array.isArray(x) &&
+			x.length >= 1 &&
+			x.every(y => typeof y === 'string')
+		))) return;
 		this.q = params.q;
 
 		// Subscribe stream
@@ -43,7 +47,7 @@ class HashtagChannel extends Channel {
 		const matched = this.q.some(tags => tags.every(tag => noteTags.includes(normalizeForSearch(tag))));
 		if (!matched) return;
 
-		if (this.isNoteVisibleForMe(note)) return;
+		if (!this.isNoteVisibleForMe(note)) return;
 
 		const clonedNote = await this.assignMyReaction(note);
 		await this.hideNote(clonedNote);
