@@ -93,9 +93,38 @@ export default abstract class Channel {
 			}
 		}
 
-		if (this.connection.userIdsWhoBlockingMe.has(note.userId)) return false;
-
 		return true;
+	}
+
+	/*
+	 * ミュートとブロックされてるを処理する
+	 */
+	protected isNoteMutedOrBlocked(note: Packed<'Note'>): boolean {
+		// Ignore notes that require sign-in
+		if (note.user.requireSigninToViewContents && !this.user) return true;
+
+		// 流れてきたNoteがインスタンスミュートしたインスタンスが関わる
+		if (isInstanceMuted(note, this.userMutedInstances) && !this.following.has(note.userId)) return true;
+
+		// 流れてきたNoteがミュートしているユーザーが関わる
+		if (isUserRelated(note, this.userIdsWhoMeMuting)) return true;
+		// 流れてきたNoteがブロックされているユーザーが関わる
+		if (isUserRelated(note, this.userIdsWhoBlockingMe)) return true;
+
+		// 流れてきたNoteがリノートをミュートしてるユーザが行ったもの
+		if (isRenotePacked(note) && !isQuotePacked(note) && this.userIdsWhoMeMutingRenotes.has(note.user.id)) return true;
+
+		// If it's a boost (pure renote) then we need to check the target as well
+		if (isPackedPureRenote(note) && note.renote && this.isNoteMutedOrBlocked(note.renote)) return true;
+
+		// Hide silenced notes
+		if (note.user.isSilenced || note.user.instance?.isSilenced) {
+			if (this.user == null) return true;
+			if (this.user.id === note.userId) return false;
+			if (!this.following.has(note.userId)) return true;
+		}
+
+		return false;
 	}
 
 	/**

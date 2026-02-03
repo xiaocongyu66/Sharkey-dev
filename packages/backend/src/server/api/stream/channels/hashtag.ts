@@ -48,6 +48,7 @@ class HashtagChannel extends Channel {
 		if (!matched) return;
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		const clonedNote = await this.assignMyReaction(note);
 		await this.hideNote(clonedNote);

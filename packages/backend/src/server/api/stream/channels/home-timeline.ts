@@ -51,6 +51,7 @@ class HomeTimelineChannel extends Channel {
 		}
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		if (note.reply) {
 			const reply = note.reply;

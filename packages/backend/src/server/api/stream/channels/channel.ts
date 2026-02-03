@@ -48,6 +48,7 @@ class ChannelChannel extends Channel {
 		if (note.renote && note.text == null && (note.fileIds == null || note.fileIds.length === 0) && !this.withRenotes) return;
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		const clonedNote = await this.assignMyReaction(note);
 		await this.hideNote(clonedNote);

@@ -60,6 +60,7 @@ class LocalTimelineChannel extends Channel {
 		if (note.channelId != null) return;
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		// 関係ない返信は除外
 		if (note.reply) {

@@ -94,6 +94,7 @@ class UserListChannel extends Channel {
 		if (!Object.hasOwn(this.membershipsMap, note.userId)) return;
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		if (note.reply) {
 			const reply = note.reply;

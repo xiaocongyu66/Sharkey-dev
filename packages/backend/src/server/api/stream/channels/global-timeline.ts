@@ -57,6 +57,7 @@ class GlobalTimelineChannel extends Channel {
 		if (note.channelId != null) return;
 
 		if (!this.isNoteVisibleForMe(note)) return;
+		if (this.isNoteMutedOrBlocked(note)) return;
 
 		if (note.reply) {
 			const reply = note.reply;
