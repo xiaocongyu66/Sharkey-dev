@@ -189,6 +189,7 @@ export class AccountMoveService {
 		const followJobs = followings.map(following => ({
 			from: { id: following.followerId },
 			to: { id: dst.id },
+			withReplies: following.withReplies,
 		})) as RelationshipJobData[];
 
 		// Decrease following count instead of unfollowing.
