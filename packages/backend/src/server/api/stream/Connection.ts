@@ -448,7 +448,7 @@ export default class Connection {
 		const ch: Channel = channelService.create(id, this);
 		this.channels.set(ch.id, ch);
 		const valid = await ch.init(params ?? {});
-		if (typeof valid === 'boolean' && !valid) {
+		if (valid === false) {
 			this.disconnectChannel(id);
 			return;
 		}
