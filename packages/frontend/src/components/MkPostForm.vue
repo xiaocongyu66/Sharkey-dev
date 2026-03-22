@@ -309,11 +309,11 @@ watch(visibleUsers, () => {
 });
 
 if (props.mention) {
-	text.value += `@${Misskey.acct.toString(props.mention)} `;
+	pushMention(props.mention, 'end');
 }
 
 if (props.reply && props.reply.user.id !== $i.id) {
-	text.value += `@${Misskey.acct.toString(props.reply.user)} `;
+	pushMention(props.reply.user, 'end');
 }
 
 if (props.reply && props.reply.text != null) {
@@ -321,14 +321,7 @@ if (props.reply && props.reply.text != null) {
 	const otherHost = props.reply.user.host;
 
 	for (const x of extractMentions(ast, otherHost)) {
-		// 自分は除外
-		if ($i.username.toLowerCase() === x.username.toLowerCase() && x.host == null) continue;
-
-		// 重複は除外
-		const mention = `@${x.acct} `;
-		if (!text.value.toLowerCase().includes(mention.toLowerCase())) {
-			text.value += mention;
-		}
+		pushMention(x);
 	}
 }
 
@@ -664,16 +657,11 @@ function pushVisibleUser(user: Misskey.entities.UserDetailed) {
 function addVisibleUser() {
 	os.selectUser().then(user => {
 		pushVisibleUser(user);
-
-		const acct = Misskey.acct.toString(user);
-		const mention = `@${acct} `;
-		if (!text.value.toLowerCase().includes(mention.toLowerCase())) {
-			text.value = `${mention}${text.value}`;
-		}
+		pushMention(user);
 	});
 }
 
-  function removeVisibleUser(user: Misskey.entities.UserDetailed) {
+function removeVisibleUser(user: Misskey.entities.UserDetailed) {
 	visibleUsers.value = erase(user, visibleUsers.value);
 }
 
@@ -1069,9 +1057,45 @@ function cancel() {
 }
 
 function insertMention() {
-	os.selectUser({ localOnly: localOnly.value, includeSelf: true }).then(user => {
-		insertTextAtCursor(textareaEl.value, '@' + Misskey.acct.toString(user) + ' ');
+	os.selectUser({ localOnly: localOnly.value }).then(user => {
+		pushMention(user, 'cursor');
 	});
+}
+
+/**
+ * Adds a mention to the post.
+ * @param user User or Acct, should already be host-normalized.
+ * @param at Where to add the mention.
+ */
+function pushMention(user: { id?: string; username: string; host: string | null }, at: 'start' | 'end' | 'cursor' = 'start') {
+	// Don't mention ourself
+	if (user.id === $i.id) {
+		return;
+	}
+	if (user.host === null && user.username.toLowerCase() === $i.username.toLowerCase()) {
+		return;
+	}
+
+	const acct = Misskey.acct.toString(user, false);
+	const mention = `@${acct}`;
+
+	// Cursor mode is easy - skip checks and inject with spacer.
+	if (at === 'cursor' && textareaEl.value) {
+		insertTextAtCursor(textareaEl.value, mention + ' ');
+		text.value = textareaEl.value.value;
+		return;
+	}
+
+	// Other modes require more involved checks
+	const mentionLower = mention.toLowerCase();
+	const textLower = text.value.toLowerCase();
+	if (!textLower.includes(mentionLower + ' ') && !textLower.endsWith(mentionLower)) {
+		if (at === 'start') {
+			text.value = `${mention} ${text.value}`;
+		} else {
+			text.value = `${text.value} ${mention}`;
+		}
+	}
 }
 
 async function insertEmoji(ev: MouseEvent) {

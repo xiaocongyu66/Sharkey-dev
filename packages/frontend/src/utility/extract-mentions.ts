@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+// TODO move to mfm-js and use in backend
 // test is located in test/extract-mentions
 
 import { acct } from 'misskey-js';
