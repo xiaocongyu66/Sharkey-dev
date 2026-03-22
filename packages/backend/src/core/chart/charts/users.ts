@@ -10,6 +10,7 @@ import { isLocalUser } from '@/models/User.js';
 import { AppLockService } from '@/core/AppLockService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { DI } from '@/di-symbols.js';
+import { SystemAccountService } from '@/core/SystemAccountService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import type { UsersRepository } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
@@ -34,6 +35,7 @@ export default class UsersChart extends Chart<typeof schema> { // eslint-disable
 		private userEntityService: UserEntityService,
 		private chartLoggerService: ChartLoggerService,
 		private readonly timeService: TimeService,
+		private readonly systemAccountService: SystemAccountService,
 	) {
 		super(db, (k) => appLockService.getChartInsertLock(k), chartLoggerService.logger, name, schema);
 	}
@@ -43,16 +45,14 @@ export default class UsersChart extends Chart<typeof schema> { // eslint-disable
 	}
 
 	protected async tickMajor(): Promise<Partial<KVs<typeof schema>>> {
-		const [localCount, remoteCount] = await Promise.all([
-			// that Not(Like()) is ugly, but it matches the logic in
-			// packages/backend/src/models/User.ts to not count "system"
-			// accounts
-			this.usersRepository.countBy({ host: IsNull(), username: Not(Like('%.%')) }),
+		const [localCount, remoteCount, systemAccounts] = await Promise.all([
+			this.usersRepository.countBy({ host: IsNull() }),
 			this.usersRepository.countBy({ host: Not(IsNull()) }),
+			this.systemAccountService.list(),
 		]);
 
 		return {
-			'local.total': localCount,
+			'local.total': localCount - systemAccounts.length,
 			'remote.total': remoteCount,
 		};
 	}
