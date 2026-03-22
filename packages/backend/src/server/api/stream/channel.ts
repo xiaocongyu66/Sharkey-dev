@@ -114,7 +114,13 @@ export abstract class NoteChannel extends Channel {
 	 */
 	@bindThis
 	protected async prepareNote(note: Packed<'Note'>): Promise<Packed<'Note'> | null> {
-		const { accessible, silence } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, this.user);
+		const { accessible, silence } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, this.user, {
+			hint: {
+				userMutedInstances: this.userMutedInstances,
+				userMutedThreads: this.userMutedThreads,
+				userMutedNotes: this.userMutedNotes,
+			},
+		});
 
 		// Skip notes that the user can't or shouldn't access
 		if (!accessible || silence) {
