@@ -193,12 +193,12 @@ export class EmailService {
 			};
 		}
 
-		const exist = await this.userProfilesRepository.countBy({
+		const exist = await this.userProfilesRepository.existsBy({
 			emailVerified: true,
 			email: emailAddress,
 		});
 
-		if (exist !== 0) {
+		if (exist) {
 			return {
 				available: false,
 				reason: 'used',
