@@ -6,17 +6,18 @@
 import { EntityNotFoundError } from 'typeorm';
 import promiseLimit from 'promise-limit';
 import { bindThis } from '@/decorators.js';
-import type { InternalEventService, InternalEventTypes } from '@/global/InternalEventService.js';
-import { MemoryKVCache, type MemoryCacheServices } from '@/misc/cache.js';
 import { makeKVPArray, type KVPArray } from '@/misc/kvp-array.js';
 import { renderInlineError } from '@/misc/render-inline-error.js';
+import { withCleanup, withSignal } from '@/misc/promiseUtils.js';
+import { promiseTry } from '@/misc/promise-try.js';
 import { FetchFailedError } from '@/misc/errors/FetchFailedError.js';
 import { KeyNotFoundError } from '@/misc/errors/KeyNotFoundError.js';
 import { QuantumCacheError } from '@/misc/errors/QuantumCacheError.js';
+import { MemoryKVCache, type MemoryCacheServices } from '@/misc/cache.js';
 import { DisposedError, DisposingError } from '@/misc/errors/DisposeError.js';
-import { withCleanup, withSignal } from '@/misc/promiseUtils.js';
-import { promiseTry } from '@/misc/promise-try.js';
 import { SkEventSource, type EventListener, type ListenerProps, type SkEventEmitter } from '@/misc/SkEventEmitter.js';
+import type { InternalEventService, InternalEventTypes } from '@/global/InternalEventService.js';
+import type { Limiter } from '@/misc/promise-map.js';
 
 export interface QuantumKVOpts<TIn, T extends Value<TIn> = Value<TIn>> {
 	/**
@@ -150,7 +151,6 @@ type ActiveBulkFetcher<T> = Promise<KeyValue<T>[]>;
 // https://stackoverflow.com/a/63045455
 type Value<T> = NonNullable<T>;
 type KeyValue<T> = [key: string, value: T];
-type Limiter = <T>(callback: () => Promise<T>) => Promise<T>;
 type MaybePromise<T> = T | Promise<T>;
 type AtLeastOne<T> = [T, ...T[]];
 
@@ -613,20 +613,41 @@ export class QuantumKVCache<TIn, T extends Value<TIn> = Value<TIn>> implements I
 	}
 
 	/**
-	 * Registers a listener for a cache event.
+	 * Registers a listener callback for a given event.
+	 * Duplicate calls (same event+listener values) will be ignored.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using a method, then make sure it has @bindThis!
+	 * @param props Optional properties to configure the binding.
 	 */
 	@bindThis
-	public on<K extends keyof QuantumKVCacheEvents<T>>(type: K, listener: EventListener<QuantumKVCacheEvents<T>, K>, props?: Partial<ListenerProps> | undefined): void {
+	public on<K extends keyof QuantumKVCacheEvents<T>>(type: K, listener: EventListener<QuantumKVCacheEvents<T>, K>, props?: ListenerProps): void {
 		this.eventSource.on(type, listener, props);
 	}
 
 	/**
-	 * Removes an already-registered event listener.
-	 * No-op if the listener is not already registered.
+	 * Deregisters (removes) a listener callback for a given event.
+	 * Duplicate calls (same event+listener values, or given listener has not been registered) will be ignored.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using an arrow function, then make sure it points to the same exact instance as before!
 	 */
 	@bindThis
 	public off<K extends keyof QuantumKVCacheEvents<T>>(type: K, listener: EventListener<QuantumKVCacheEvents<T>, K>): void {
 		this.eventSource.off(type, listener);
+	}
+
+	/**
+	 * Shortcut to register a one-off listener for a given event.
+	 * See the "on" method for more details.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using a method, then make sure it has @bindThis!
+	 * @param props Optional properties to configure the binding, excluding "oneShot".
+	 */
+	@bindThis
+	public once<K extends keyof QuantumKVCacheEvents<T>>(type: K, listener: EventListener<QuantumKVCacheEvents<T>, K>, props?: ListenerProps & { oneShot: true | undefined | never }): void {
+		this.eventSource.once(type, listener, props);
 	}
 
 	/**

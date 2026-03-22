@@ -6,17 +6,50 @@
 import { bindThis } from '@/decorators.js';
 import { callAllAsync } from '@/misc/call-all.js';
 
-export interface SkEventEmitter<TEvents extends AnyEvents, TProps extends ListenerProps = ListenerProps> {
-	on<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: Partial<TProps>): void;
+export interface SkEventEmitter<
+	TEvents extends AnyEvents,
+	TProps extends ListenerProps = ListenerProps,
+> {
+	/**
+	 * Registers a listener callback for a given event.
+	 * Duplicate calls (same event+listener values) will be ignored.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using a method, then make sure it has @bindThis!
+	 * @param props Optional properties to configure the binding.
+	 */
+	on<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: TProps): void;
+
+	/**
+	 * Deregisters (removes) a listener callback for a given event.
+	 * Duplicate calls (same event+listener values, or given listener has not been registered) will be ignored.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using an arrow function, then make sure it points to the same exact instance as before!
+	 */
 	off<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>): void;
+
+	/**
+	 * Shortcut to register a one-off listener for a given event.
+	 * See the "on" method for more details.
+	 *
+	 * @param type Event type string.
+	 * @param listener Listener callback. If using a method, then make sure it has @bindThis!
+	 * @param props Optional properties to configure the binding, excluding "oneShot".
+	 */
+	once<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: TProps & { oneShot: true | undefined | never }): void;
 }
 
-export class SkEventSource<TEvents extends AnyEvents, TProps extends ListenerProps = ListenerProps, TContext extends object = Record<string, never>> implements SkEventEmitter<TEvents, TProps> {
+export class SkEventSource<
+	TEvents extends AnyEvents,
+	TProps extends ListenerProps = ListenerProps,
+	TContext extends object = Record<string, never>,
+> implements SkEventEmitter<TEvents, TProps> {
 	// Event -> (Listener -> Props)
 	private readonly listeners = new Map<keyof TEvents, Map<AnyListener, Partial<TProps>>>();
 
 	@bindThis
-	public on<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: Partial<TProps>): void {
+	public on<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: TProps): void {
 		let set = this.listeners.get(type);
 		if (!set) {
 			set = new Map();
@@ -30,6 +63,17 @@ export class SkEventSource<TEvents extends AnyEvents, TProps extends ListenerPro
 	@bindThis
 	public off<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>): void {
 		this.listeners.get(type)?.delete(listener as AnyListener);
+	}
+
+	@bindThis
+	once<K extends keyof TEvents>(type: K, listener: EventListener<TEvents, K>, props?: TProps & { oneShot: true | undefined | never }): void {
+		// Type assertion is necessary to make TS happy.
+		const adaptedProps = {
+			...(props ?? {}),
+			oneShot: true,
+		} as TProps;
+
+		this.on(type, listener, adaptedProps);
 	}
 
 	@bindThis
@@ -54,6 +98,24 @@ export class SkEventSource<TEvents extends AnyEvents, TProps extends ListenerPro
 
 		// Execute listeners only *after* everything is up to date
 		await this.emitInternal(type, value, listeners as [EventListener<TEvents, K>, Partial<TProps>][]);
+	}
+
+	/**
+	 * Removes all listeners attached to this emitter.
+	 */
+	public removeAllListeners(): void;
+	/**
+	 * Removes all listeners of a given type.
+	 * @param type Type of listener to remove.
+	 */
+	public removeAllListeners<K extends keyof TEvents>(type: K): void;
+	@bindThis
+	public removeAllListeners<K extends keyof TEvents = keyof TEvents>(type?: K) {
+		if (type != null) {
+			this.listeners.delete(type);
+		} else {
+			this.listeners.clear();
+		}
 	}
 
 	/**
