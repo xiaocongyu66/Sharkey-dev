@@ -598,3 +598,30 @@ export type FastifyHttpHeader = keyof OmitIndexSignature<OutgoingHttpHeaders> | 
 type OmitIndexSignature<T> = {
 	[K in keyof T as string extends K ? never : number extends K ? never : K]: T[K];
 };
+
+/**
+ * General-purpose Option type with support for strongly-typed errors.
+ * Useful when code needs to abort with an error, but exceptions (Error) would be inappropriate.
+ */
+export type Result<TResult, TError = unknown> = SuccessResult<TResult> | ErrorResult<TError>;
+
+type SuccessResult<TResult> = { result: TResult, error?: undefined };
+type ErrorResult<TError> = { result?: undefined, error: TError };
+
+/**
+ * Converts a union type (A | B | C) into an intersection type (A & B & C);
+ * Adapted from the wizardry at https://stackoverflow.com/a/50375286
+ */
+export type UnionToIntersection<T> = (T extends unknown ? (x: T) => void : never) extends ((x: infer I) => void) ? I : never;
+
+/**
+ * Converts a union type (A | B | C) into an interface type (Partial<{ ...a, ...b, ...c }>)>
+ */
+export type UnionToInterface<T> = {
+	[K in keyof UnionToIntersection<T>]: UnionToIntersection<T>[K];
+};
+
+/**
+ * Represents the empty object - {}
+ */
+export type EmptyObject = Record<string, never>;

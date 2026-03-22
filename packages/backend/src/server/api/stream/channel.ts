@@ -7,14 +7,12 @@ import { bindThis } from '@/decorators.js';
 import type { Packed } from '@/misc/json-schema.js';
 import type { JsonObject, JsonValue } from '@/misc/json-value.js';
 import type { NoteEntityService } from '@/core/entities/NoteEntityService.js';
-import type Connection from '@/server/api/stream/Connection.js';
+import type { Connection } from '@/server/api/stream/Connection.js';
 
 /**
  * Stream channel
  */
 export abstract class Channel {
-	protected connection: Connection;
-	public id: string;
 	public abstract readonly chName: string;
 	public static readonly shouldShare: boolean;
 	public static readonly requireCredential: boolean;
@@ -24,12 +22,12 @@ export abstract class Channel {
 		return this.connection.user;
 	}
 
-	protected get userProfile() {
-		return this.connection.userProfile;
+	protected get wsUser() {
+		return this.connection.wsUser;
 	}
 
-	protected get cacheService() {
-		return this.connection.cacheService;
+	protected get userProfile() {
+		return this.connection.userProfile;
 	}
 
 	protected get userMutedInstances() {
@@ -64,19 +62,19 @@ export abstract class Channel {
 		return this.connection.myRecentFavorites;
 	}
 
-	constructor(id: string, connection: Connection) {
-		this.id = id;
-		this.connection = connection;
-	}
+	constructor(
+		public readonly id: string,
+		public readonly connection: Connection,
+	) {}
 
-	public send(payload: { type: string, body: JsonValue }): void;
-	public send(type: string, payload: JsonValue): void;
+	public async send(payload: { type: string, body: JsonValue }): Promise<void>;
+	public async send(type: string, payload: JsonValue): Promise<void>;
 	@bindThis
-	public send(typeOrPayload: { type: string, body: JsonValue } | string, payload?: JsonValue) {
+	public async send(typeOrPayload: { type: string, body: JsonValue } | string, payload?: JsonValue): Promise<void> {
 		const type = payload === undefined ? (typeOrPayload as { type: string, body: JsonValue }).type : (typeOrPayload as string);
 		const body = payload === undefined ? (typeOrPayload as { type: string, body: JsonValue }).body : payload;
 
-		this.connection.sendMessageToWs('channel', {
+		await this.connection.sendMessageToWs('channel', {
 			id: this.id,
 			type: type,
 			body: body,

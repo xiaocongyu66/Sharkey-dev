@@ -6,10 +6,10 @@
 import { Injectable } from '@nestjs/common';
 import { isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
+import { CacheService } from '@/core/CacheService.js';
 import { bindThis } from '@/decorators.js';
-import { errorCodes, IdentifiableError } from '@/misc/identifiable-error.js';
 import type { JsonObject } from '@/misc/json-value.js';
-import type { GlobalEvents } from '@/core/GlobalEventService.js';
+import type { MainEventPayload } from '@/core/GlobalEventService.js';
 import { type Channel, NoteChannel, type MiChannelService } from '../channel.js';
 
 // TODO does not need to be NoteChannel?
@@ -23,6 +23,7 @@ class MainChannel extends NoteChannel {
 		id: string,
 		connection: Channel['connection'],
 		noteEntityService: NoteEntityService,
+		private readonly cacheService: CacheService,
 	) {
 		super(id, connection, noteEntityService);
 	}
@@ -30,7 +31,6 @@ class MainChannel extends NoteChannel {
 	@bindThis
 	public async init(): Promise<boolean> {
 		if (!this.user) return false;
-		if (!this.subscriber) throw new IdentifiableError(errorCodes.websocketError, `Cannot init ${this.chName} channel: socket is not connected`);
 
 		this.subscriber.on(`mainStream:${this.user.id}`, this.onEvent);
 
@@ -38,7 +38,7 @@ class MainChannel extends NoteChannel {
 	}
 
 	@bindThis
-	private async onEvent(data: GlobalEvents['main']['payload']): Promise<void> {
+	private async onEvent(data: MainEventPayload): Promise<void> {
 		switch (data.type) {
 			case 'notification': {
 				// Ignore notifications from instances the user has muted
@@ -70,7 +70,7 @@ class MainChannel extends NoteChannel {
 
 	@bindThis
 	public dispose() {
-		this.subscriber?.off(`mainStream:${this.user?.id}`, this.onEvent);
+		this.subscriber.off(`mainStream:${this.user?.id}`, this.onEvent);
 	}
 }
 
@@ -82,6 +82,7 @@ export class MainChannelService implements MiChannelService<true> {
 
 	constructor(
 		private noteEntityService: NoteEntityService,
+		private readonly cacheService: CacheService,
 	) {
 	}
 
@@ -91,6 +92,7 @@ export class MainChannelService implements MiChannelService<true> {
 			id,
 			connection,
 			this.noteEntityService,
+			this.cacheService,
 		);
 	}
 }

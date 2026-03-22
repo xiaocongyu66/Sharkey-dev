@@ -253,18 +253,23 @@ export class ReactionService implements OnModuleInit {
 		// カスタム絵文字リアクションだったら絵文字情報も送る
 		const decodedReaction = this.decodeReaction(reaction);
 
+		// TODO this shouldn't be necessary - we can just reuse the same values as above
 		const customEmojiKey = decodedReaction.name == null ? null : encodeEmojiKey({ name: decodedReaction.name, host: decodedReaction.host ?? null });
 		const customEmoji = customEmojiKey == null ? null :
 			await this.customEmojiService.emojisByKeyCache.fetchMaybe(customEmojiKey);
 
 		this.globalEventService.publishNoteStream(note.id, 'reacted', {
-			reaction: decodedReaction.reaction,
-			emoji: customEmoji != null ? {
-				name: customEmoji.host ? `${customEmoji.name}@${customEmoji.host}` : `${customEmoji.name}@.`,
-				// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
-				url: customEmoji.publicUrl || customEmoji.originalUrl,
-			} : null,
-			userId: user.id,
+			id: note.id,
+			userId: note.userId,
+			body: {
+				reaction: decodedReaction.reaction,
+				emoji: customEmoji != null ? {
+					name: customEmoji.host ? `${customEmoji.name}@${customEmoji.host}` : `${customEmoji.name}@.`,
+					// || emoji.originalUrl してるのは後方互換性のため（publicUrlはstringなので??はだめ）
+					url: customEmoji.publicUrl || customEmoji.originalUrl,
+				} : null,
+				userId: user.id,
+			},
 		});
 
 		// リアクションされたユーザーがローカルユーザーなら通知を作成
@@ -341,8 +346,12 @@ export class ReactionService implements OnModuleInit {
 		this.collapsedQueueService.updateUserQueue.enqueue(user.id, { updatedAt: this.timeService.date });
 
 		this.globalEventService.publishNoteStream(note.id, 'unreacted', {
-			reaction: this.decodeReaction(exist.reaction).reaction,
-			userId: user.id,
+			id: note.id,
+			userId: note.userId,
+			body: {
+				reaction: this.decodeReaction(exist.reaction).reaction,
+				userId: user.id,
+			},
 		});
 
 		//#region 配信

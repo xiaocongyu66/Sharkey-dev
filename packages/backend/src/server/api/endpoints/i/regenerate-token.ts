@@ -82,7 +82,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// Publish event
 			await this.internalEventService.emit('userTokenRegenerated', { id: me.id, oldToken, newToken });
-			await this.globalEventService.publishMainStream(me.id, 'myTokenRegenerated');
+			await this.globalEventService.publishMainStream(me.id, 'myTokenRegenerated', {});
 		});
 	}
 }

@@ -85,8 +85,12 @@ export class PollService {
 		await this.pollsRepository.query(`UPDATE poll SET votes[${index}] = votes[${index}] + 1 WHERE "noteId" = '${poll.noteId}'`);
 
 		this.globalEventService.publishNoteStream(note.id, 'pollVoted', {
-			choice: choice,
-			userId: user.id,
+			id: note.id,
+			userId: note.userId,
+			body: {
+				choice: choice,
+				userId: user.id,
+			},
 		});
 	}
 

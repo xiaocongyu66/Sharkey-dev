@@ -246,7 +246,7 @@ export class AnnouncementService {
 		}
 
 		if ((await this.getUnreadAnnouncements(user)).length === 0) {
-			this.globalEventService.publishMainStream(user.id, 'readAllAnnouncements');
+			await this.globalEventService.publishMainStream(user.id, 'readAllAnnouncements', {});
 		}
 	}
 

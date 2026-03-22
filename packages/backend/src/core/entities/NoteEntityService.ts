@@ -249,28 +249,8 @@ export class NoteEntityService implements OnModuleInit {
 	}
 
 	@bindThis
-	private async populateMyNoteMutings(notes: Packed<'Note'>[], meId: string): Promise<Set<string>> {
-		const mutedNotes = await this.cacheService.noteMutingsCache.fetch(meId);
-
-		const mutedIds = notes
-			.filter(note => mutedNotes.has(note.id))
-			.map(note => note.id);
-		return new Set(mutedIds);
-	}
-
-	@bindThis
-	private async populateMyTheadMutings(notes: Packed<'Note'>[], meId: string): Promise<Set<string>> {
-		const mutedThreads = await this.cacheService.threadMutingsCache.fetch(meId);
-
-		const mutedIds = notes
-			.filter(note => mutedThreads.has(note.threadId))
-			.map(note => note.id);
-		return new Set(mutedIds);
-	}
-
-	@bindThis
 	private async populateMyRenotes(notes: Packed<'Note'>[], meId: string, hint?: {
-		myRecentRenotes?: Set<string>;
+		myRecentRenotes?: ReadonlySet<string>;
 	}): Promise<Set<string>> {
 		const renotes = new Set<string>();
 		const renotesToFetch = new Set<string>(notes.map(n => n.id));
@@ -305,7 +285,7 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private async populateMyFavorites(notes: Packed<'Note'>[], meId: string, hint?: {
-		myRecentFavorites?: Set<string>;
+		myRecentFavorites?: ReadonlySet<string>;
 	}): Promise<Set<string>> {
 		const favorites = new Set<string>();
 		const favoritesToFetch = new Set<string>(notes.map(n => n.id));
@@ -341,7 +321,7 @@ export class NoteEntityService implements OnModuleInit {
 
 	@bindThis
 	private async populateMyReactions(notes: Packed<'Note'>[], meId: string, hint?: {
-		myRecentReactions?: Map<MiNote['id'], string>;
+		myRecentReactions?: ReadonlyMap<MiNote['id'], string>;
 	}): Promise<Map<string, string>> {
 		const reactions = new Map<string, string>();
 		const reactionsToFetch = new Set<string>(notes.map(n => n.id));
@@ -527,12 +507,12 @@ export class NoteEntityService implements OnModuleInit {
 	 */
 	@bindThis
 	public async rePack(note: Packed<'Note'>, me: MiUser | MiUser['id'], hint?: {
-		myRecentReactions?: Map<MiNote['id'], string>;
-		myRecentRenotes?: Set<string>;
-		myRecentFavorites?: Set<string>;
-		myInstanceMutings?: Set<string>;
-		myNoteMutings?: Set<string>;
-		myThreadMutings?: Set<string>;
+		myRecentReactions?: ReadonlyMap<MiNote['id'], string>;
+		myRecentRenotes?: ReadonlySet<string>;
+		myRecentFavorites?: ReadonlySet<string>;
+		myInstanceMutings?: ReadonlySet<string>;
+		myNoteMutings?: ReadonlySet<string>;
+		myThreadMutings?: ReadonlySet<string>;
 	}): Promise<Packed<'Note'>> {
 		const meId = typeof(me) === 'object' ? me.id : me;
 

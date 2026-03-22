@@ -167,8 +167,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			await this.pollsRepository.query(`UPDATE poll SET votes[${index}] = votes[${index}] + 1 WHERE "noteId" = '${poll.noteId}'`);
 
 			this.globalEventService.publishNoteStream(note.id, 'pollVoted', {
-				choice: ps.choice,
-				userId: me.id,
+				id: note.id,
+				userId: note.userId,
+				body: {
+					choice: ps.choice,
+					userId: me.id,
+				},
 			});
 
 			// リモート投票の場合リプライ送信

@@ -105,7 +105,11 @@ export class NoteDeleteService {
 			// Publish websocket deleted events
 			for (const note of allNotes) {
 				promises.push(this.globalEventService.publishNoteStream(note.id, 'deleted', {
-					deletedAt: deletedAt,
+					id: note.id,
+					userId: note.userId,
+					body: {
+						deletedAt: deletedAt,
+					},
 				}));
 			}
 

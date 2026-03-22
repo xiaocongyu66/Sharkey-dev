@@ -76,6 +76,7 @@ export class NoteVisibilityService {
 		private readonly roleService: RoleService,
 	) {}
 
+	// TODO redis cache for this?
 	@bindThis
 	public async checkNoteVisibilityAsync(note: MiNote | Packed<'Note'>, user: string | PopulatedMe, opts?: { filters?: NoteVisibilityFilters, hint?: NoteVisibilityHint }): Promise<NoteVisibilityResult> {
 		if (typeof(user) === 'string') {
@@ -526,10 +527,10 @@ export interface PopulationData {
 }
 
 export interface NoteVisibilityData {
-	userMutedThreads: Set<string>;
-	userMutedNotes: Set<string>;
-	userMutedInstances: Set<string>;
-	userRelations: Map<string, UserRelation>;
+	userMutedThreads: ReadonlySet<string>;
+	userMutedNotes: ReadonlySet<string>;
+	userMutedInstances: ReadonlySet<string>;
+	userRelations: ReadonlyMap<string, UserRelation>;
 
 	// userId => membership (already scoped to listContext)
 	userListMemberships: Map<string, MiUserListMembership>;

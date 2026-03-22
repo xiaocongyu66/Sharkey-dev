@@ -6,9 +6,9 @@
 import { Injectable } from '@nestjs/common';
 import type { Packed } from '@/misc/json-schema.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
+import { CacheService } from '@/core/CacheService.js';
 import { bindThis } from '@/decorators.js';
 import { isPackedPureRenote } from '@/misc/is-renote.js';
-import { errorCodes, IdentifiableError } from '@/misc/identifiable-error.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import { Channel, NoteChannel, type MiChannelService } from '../channel.js';
 
@@ -24,6 +24,7 @@ class HomeTimelineChannel extends NoteChannel {
 		id: string,
 		connection: Channel['connection'],
 		noteEntityService: NoteEntityService,
+		private readonly cacheService: CacheService,
 	) {
 		super(id, connection, noteEntityService);
 	}
@@ -31,7 +32,6 @@ class HomeTimelineChannel extends NoteChannel {
 	@bindThis
 	public async init(params: JsonObject) {
 		if (!this.user) return;
-		if (!this.subscriber) throw new IdentifiableError(errorCodes.websocketError, `Cannot init ${this.chName} channel: socket is not connected`);
 		this.withRenotes = !!(params.withRenotes ?? true);
 		this.withFiles = !!(params.withFiles ?? false);
 
@@ -46,7 +46,7 @@ class HomeTimelineChannel extends NoteChannel {
 		if (this.withFiles && (note.fileIds == null || note.fileIds.length === 0)) return;
 		if (!this.withRenotes && isPackedPureRenote(note)) return;
 		if (note.channelId) {
-			if (!this.followingChannels.has(note.channelId)) return;
+			if (!this.followingChannels?.has(note.channelId)) return;
 		} else {
 			// その投稿のユーザーをフォローしていなかったら弾く
 			if (!isMe && !(await this.cacheService.getUserRelation(userId, note.userId)).isFollowing) return;
@@ -61,7 +61,7 @@ class HomeTimelineChannel extends NoteChannel {
 	@bindThis
 	public dispose() {
 		// Unsubscribe events
-		this.subscriber?.off('notesStream', this.onNote);
+		this.subscriber.off('notesStream', this.onNote);
 	}
 }
 
@@ -73,6 +73,7 @@ export class HomeTimelineChannelService implements MiChannelService<true> {
 
 	constructor(
 		private noteEntityService: NoteEntityService,
+		private readonly cacheService: CacheService,
 	) {
 	}
 
@@ -82,6 +83,7 @@ export class HomeTimelineChannelService implements MiChannelService<true> {
 			id,
 			connection,
 			this.noteEntityService,
+			this.cacheService,
 		);
 	}
 }
