@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import { In, IsNull } from 'typeorm';
+import { In, IsNull, Not } from 'typeorm';
 import type {
 	BlockingsRepository,
 	FollowingsRepository,
@@ -1206,46 +1206,21 @@ export class CacheService implements OnApplicationShutdown {
 	@bindThis
 	public async getFollowStats(userId: MiUser['id']): Promise<FollowStats> {
 		return await this.userFollowStatsCache.fetch(userId, async () => {
-			const stats = {
-				localFollowing: 0,
-				localFollowers: 0,
-				remoteFollowing: 0,
-				remoteFollowers: 0,
-			};
-
-			const followings = await this.followingsRepository.findBy([
-				{ followerId: userId },
-				{ followeeId: userId },
+			const [localFollowing, remoteFollowing, localFollowers, remoteFollowers, user] = await Promise.all([
+				this.followingsRepository.countBy({ followerId: userId, followeeHost: IsNull() }),
+				this.followingsRepository.countBy({ followerId: userId, followeeHost: Not(IsNull()) }),
+				this.followingsRepository.countBy({ followeeId: userId, followerHost: IsNull() }),
+				this.followingsRepository.countBy({ followeeId: userId, followerHost: Not(IsNull()) }),
+				this.findUserById(userId),
 			]);
 
-			for (const following of followings) {
-				if (following.followerId === userId) {
-					// increment following; user is a follower of someone else
-					if (following.followeeHost == null) {
-						stats.localFollowing++;
-					} else {
-						stats.remoteFollowing++;
-					}
-				} else if (following.followeeId === userId) {
-					// increment followers; user is followed by someone else
-					if (following.followerHost == null) {
-						stats.localFollowers++;
-					} else {
-						stats.remoteFollowers++;
-					}
-				} else {
-					// Should never happen
-				}
-			}
-
-			// Infer remote-remote followers heuristically, since we don't track that info directly.
-			const user = await this.findUserById(userId);
-			if (user.host !== null) {
-				stats.remoteFollowing = Math.max(0, user.followingCount - stats.localFollowing);
-				stats.remoteFollowers = Math.max(0, user.followersCount - stats.localFollowers);
-			}
-
-			return stats;
+			return {
+				localFollowing,
+				localFollowers,
+				// Infer remote-remote followers heuristically, since we don't track that info directly.
+				remoteFollowing: Math.max(0, remoteFollowing, user.followingCount - localFollowing),
+				remoteFollowers: Math.max(0, remoteFollowers, user.followersCount - localFollowers),
+			};
 		});
 	}
 
