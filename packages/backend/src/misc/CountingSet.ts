@@ -5,6 +5,10 @@
 
 import { bindThis } from '@/decorators.js';
 
+interface Opts {
+	allowDebt?: boolean;
+}
+
 /**
  * Special set-like class that counts add() and delete() calls instead of ignoring duplicates.
  *
@@ -21,8 +25,20 @@ export class CountingSet<T> implements Iterable<T> {
 
 	private readonly allowDebt: boolean;
 
-	constructor(opts?: { allowDebt?: boolean }) {
+	constructor(opts?: Opts);
+	constructor(input: Iterable<T>, opts?: Opts)
+	constructor(inputOrOpts?: Iterable<T> | Opts, optsOrUndefined?: Opts) {
+		// Decode opts
+		const opts = inputOrOpts && !(Symbol.iterator in inputOrOpts) ? inputOrOpts : optsOrUndefined;
 		this.allowDebt = opts?.allowDebt ?? false;
+
+		// Load input
+		const input = inputOrOpts && Symbol.iterator in inputOrOpts ? inputOrOpts : undefined;
+		if (input) {
+			for (const item of input) {
+				this.add(item);
+			}
+		}
 	}
 
 	/**
@@ -37,7 +53,12 @@ export class CountingSet<T> implements Iterable<T> {
 	 * Adds an item to the set and returns the new count.
 	 */
 	@bindThis
-	public add(item: T): number {
+	public add(item: T, stacks = 1): number {
+		// Adding a negative amount is equal to removing the absolute value.
+		if (stacks < 0) {
+			return this.remove(item, 0 - stacks);
+		}
+
 		const newCount = this.count(item) + 1;
 
 		// Remove and re-insert to fix ordering
@@ -54,16 +75,30 @@ export class CountingSet<T> implements Iterable<T> {
 	 * If debt is enabled, then it will be negative if the same item has been removed more than it's been added.
 	 */
 	@bindThis
-	public remove(item: T): number {
-		const newCount = this.count(item) - 1;
+	public remove(item: T, stacks = 1): number {
+		// Removing a negative amount is equal to adding the absolute value.
+		if (stacks < 0) {
+			return this.add(item, 0 - stacks);
+		}
 
-		if (newCount === 0) {
-			// Remove items when reaching count=0
-			this.map.delete(item);
+		// Removing zero is equal to doing nothing.
+		const currentCount = this.count(item);
+		if (stacks === 0) {
+			return currentCount;
+		}
+
+		const newCount = currentCount - stacks;
+
+		// Update active item set
+		if (newCount < 1) {
 			this.set.delete(item);
-		} else if (newCount > 0 || this.allowDebt) {
-			// Update items when count>0, or count<0 and debt is allowed.
+		}
+
+		// Update real count map
+		if (newCount > 0 || (newCount < 0 && this.allowDebt)) {
 			this.map.set(item, newCount);
+		} else {
+			this.map.delete(item);
 		}
 
 		return newCount;
@@ -88,13 +123,24 @@ export class CountingSet<T> implements Iterable<T> {
 	}
 
 	/**
+	 * Returns the total count of all items in the set
+	 * By default, this number will never be less than zero.
+	 * If debt is enabled, then it will be negative if total debt is greater than total value.
+	 */
+	public count(): number;
+	/**
 	 * Returns the current count of an item.
 	 * By default, this number will never be less than zero.
 	 * If debt is enabled, then it will be negative if the same item has been removed more than it's been added.
 	 */
+	public count(item: T): number;
 	@bindThis
-	public count(item: T): number {
-		return this.map.get(item) ?? 0;
+	public count(item?: T): number {
+		if (item) {
+			return this.map.get(item) ?? 0;
+		} else {
+			return this.map.values().reduce((sum, next) => sum + next, 0);
+		}
 	}
 
 	/**
@@ -119,14 +165,14 @@ export class CountingSet<T> implements Iterable<T> {
 	 * Only positive counts are included; items with a zero or negative count are excluded.
 	 */
 	@bindThis
-	public items(): IterableIterator<T> {
+	public items(): SetIterator<T> {
 		return this.set.values();
 	}
 
 	/**
 	 * Alias to items().
 	 */
-	public [Symbol.iterator](): IterableIterator<T> {
+	public [Symbol.iterator](): SetIterator<T> {
 		return this.set.values();
 	}
 
@@ -134,7 +180,7 @@ export class CountingSet<T> implements Iterable<T> {
 	 * Returns all items tracked in the set, whether present (having a positive count) or not.
 	 */
 	@bindThis
-	public entries(): IterableIterator<[ item: T, count: number ]> {
+	public entries(): MapIterator<[ item: T, count: number ]> {
 		return this.map.entries();
 	}
 

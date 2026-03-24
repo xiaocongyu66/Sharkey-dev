@@ -92,7 +92,6 @@ export class NoteVisibilityService {
 	@bindThis
 	public async populate(noteOrNotes: MiNote | Packed<'Note'> | (MiNote | Packed<'Note'>)[], accessingUser: PopulatedMe, hint?: NoteVisibilityHint): Promise<PopulationData> {
 		// Fetch all notes up-front
-		// TODO search in noteOrNotes in case the whole tree is included, but *not* passed in hint
 		const noteInput = toArray(noteOrNotes).flatMap(note => [
 			note,
 			note.replyId ? (note.reply ?? hint?.notes?.get(note.replyId) ?? note.replyId) : undefined,

@@ -12,7 +12,6 @@ import type { JsonObject } from '@/misc/json-value.js';
 import type { MainEventPayload } from '@/core/GlobalEventService.js';
 import { type Channel, NoteChannel, type MiChannelService } from '../channel.js';
 
-// TODO does not need to be NoteChannel?
 class MainChannel extends NoteChannel {
 	public readonly chName = 'main';
 	public static shouldShare = true;

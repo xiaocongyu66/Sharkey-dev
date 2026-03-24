@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Brackets, In, IsNull, Not } from 'typeorm';
 import { Injectable, Inject } from '@nestjs/common';
 import type { MiUser, MiLocalUser, MiRemoteUser } from '@/models/User.js';
 import type { MiNote } from '@/models/Note.js';
@@ -27,6 +26,7 @@ import { ApDeliverManagerService } from '@/core/activitypub/ApDeliverManagerServ
 import { isPureRenote } from '@/misc/is-renote.js';
 import { isRemoteUser } from '@/models/User.js';
 import { bindThis } from '@/decorators.js';
+import { IsOne } from '@/misc/is-one.js';
 import { SearchService } from '@/core/SearchService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { LatestNoteService } from '@/core/LatestNoteService.js';
@@ -34,6 +34,7 @@ import { ApLogService } from '@/core/ApLogService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { CollapsedQueueService } from '@/core/CollapsedQueueService.js';
 import { Deduplicator } from '@/misc/deduplicator.js';
+import { CountingSet } from '@/misc/CountingSet.js';
 import { CacheService } from '@/core/CacheService.js';
 
 @Injectable()
@@ -166,39 +167,7 @@ export class NoteDeleteService {
 		}
 
 		// Increment updateChannelQueue
-		const userChannelNotes = new Map<string, Map<string, number>>();
-		for (const note of allNotes) {
-			if (note.channelId != null) {
-				// Get or fetch number of notes by this user in the given channel.
-				let channelNotes = userChannelNotes.get(note.userId);
-				if (channelNotes == null) {
-					channelNotes = new Map<string, number>();
-					userChannelNotes.set(note.userId, channelNotes);
-				}
-				let notes = channelNotes.get(note.channelId);
-				if (notes == null) {
-					// TODO find a way to get rid of this await
-					notes = await this.notesRepository.countBy({
-						userId: user.id,
-						channelId: note.channelId,
-					});
-					channelNotes.set(note.userId, notes);
-				}
-
-				this.collapsedQueueService.updateChannelQueue.enqueue(note.channelId, {
-					notesCountDelta: -1,
-
-					// If we're about the delete the user's only note in the channel, then drop them from the count.
-					usersCountDelta: notes === 1 ? -1 : undefined,
-				});
-
-				// Decrement the note we're going to delete
-				if (notes > 0) {
-					notes--;
-					channelNotes.set(note.userId, notes);
-				}
-			}
-		}
+		promises.push(this.updateChannelCounts(allNotes));
 
 		// Remove from search index
 		for (const note of allNotes) {
@@ -265,8 +234,8 @@ export class NoteDeleteService {
 		const cascade = async (layer: string[]): Promise<void> => {
 			const refs = await this.notesRepository.find({
 				where: [
-					{ replyId: In(layer) },
-					{ renoteId: In(layer) },
+					{ replyId: IsOne(layer) },
+					{ renoteId: IsOne(layer) },
 				],
 			});
 
@@ -305,5 +274,73 @@ export class NoteDeleteService {
 		await this.apDeliverManagerService.deliverToFollowers(user, content);
 		await this.apDeliverManagerService.deliverToUsers(user, content, await this.getMentionedRemoteUsers(note));
 		await this.relayService.deliverToRelays(user, content);
+	}
+
+	@bindThis
+	private async updateChannelCounts(allNotes: MiNote[]): Promise<void> {
+		const channelNotesInBatch = allNotes.filter(n => n.channelId != null) as (MiNote & { channelId: string })[];
+		if (channelNotesInBatch.length < 1) return;
+
+		// Group batch by channelId => userId => noteCount
+		const channelsInBatch = new Set(channelNotesInBatch.map(n => n.channelId));
+		const usersInBatch = new Set(channelNotesInBatch.map(n => n.userId));
+		const channelUserNoteCountsBatch = new Map<string, CountingSet<string>>();
+		for (const note of channelNotesInBatch) {
+			let userNoteCounts = channelUserNoteCountsBatch.get(note.channelId);
+			if (!userNoteCounts) {
+				userNoteCounts = new CountingSet();
+				channelUserNoteCountsBatch.set(note.channelId, userNoteCounts);
+			}
+			userNoteCounts.add(note.userId);
+		}
+
+		const dbCounts = await this.notesRepository
+			.createQueryBuilder('note')
+			.select('note.channelId', 'channelId')
+			.addSelect('note.userId', 'userId')
+			.addSelect('count(note.id)', 'noteCount')
+			.where({
+				userId: IsOne(usersInBatch),
+				channelId: IsOne(channelsInBatch),
+			})
+			.groupBy('note.channelId')
+			.addGroupBy('note.userId')
+			.getRawMany<{ channelId: string, userId: string, noteCount: number }>();
+
+		// Organize bulk-data from DB
+		const channelUserNoteCountsDb = new Map<string, CountingSet<string>>();
+		for (const dbCount of dbCounts) {
+			let userNoteCounts = channelUserNoteCountsDb.get(dbCount.channelId);
+			if (!userNoteCounts) {
+				userNoteCounts = new CountingSet();
+				channelUserNoteCountsDb.set(dbCount.channelId, userNoteCounts);
+			}
+			userNoteCounts.add(dbCount.userId, dbCount.noteCount);
+		}
+
+		// Loop and update each channel
+		for (const channel of channelsInBatch) {
+			const noteUserCountsFromBatch = channelUserNoteCountsBatch.get(channel);
+			const noteUserCountsFromDb = channelUserNoteCountsDb.get(channel);
+
+			// Safety check; should never happen
+			if (!noteUserCountsFromBatch || !noteUserCountsFromDb) continue;
+
+			// Find number of notes being removed from this channel.
+			const notesRemovingFromChannel = noteUserCountsFromBatch.count();
+			const notesCountDelta = notesRemovingFromChannel > 0
+				? (0 - notesRemovingFromChannel)
+				: undefined;
+
+			// Find number of users being removed from this channel.
+			// (users are removed when all of their notes are removed)
+			const usersRemovingFromChannel = noteUserCountsFromBatch.entries().filter(entry => entry[1] >= noteUserCountsFromDb.count(entry[0])).map(entry => entry[0]).toArray().length;
+			const usersCountDelta = usersRemovingFromChannel > 0
+				? (0 - usersRemovingFromChannel)
+				: undefined;
+
+			// Queue it for bulk-update later
+			this.collapsedQueueService.updateChannelQueue.enqueue(channel, { notesCountDelta, usersCountDelta });
+		}
 	}
 }
