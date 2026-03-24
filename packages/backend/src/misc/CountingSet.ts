@@ -18,15 +18,23 @@ interface Opts {
  * By default, the CountingSet will not count negative.
  * That is to say - calling delete() repeatedly for an item that has already been removed will have no effect.
  * If this is not desired, then the set can be configured to allow debt (negative counts) with a constructor parameter.
+ *
+ * TODO unit tests!
  */
 export class CountingSet<T> implements Iterable<T> {
+	/** Stores the value for all non-zero items. */
 	private readonly map = new Map<T, number>();
-	private readonly set = new Set<T>();
+
+	/** Stores all positive-count items. */
+	private readonly value = new Set<T>();
+
+	/** Stores all negative-count items. */
+	private readonly debt = new Set<T>();
 
 	private readonly allowDebt: boolean;
 
 	constructor(opts?: Opts);
-	constructor(input: Iterable<T>, opts?: Opts)
+	constructor(input: Iterable<T>, opts?: Opts);
 	constructor(inputOrOpts?: Iterable<T> | Opts, optsOrUndefined?: Opts) {
 		// Decode opts
 		const opts = inputOrOpts && !(Symbol.iterator in inputOrOpts) ? inputOrOpts : optsOrUndefined;
@@ -46,27 +54,17 @@ export class CountingSet<T> implements Iterable<T> {
 	 * Only positive counts are included; items with a zero or negative count are excluded.
 	 */
 	public get size(): number {
-		return this.set.size;
+		return this.value.size;
 	}
 
 	/**
 	 * Adds an item to the set and returns the new count.
+	 * By default, this number will never be less than zero.
+	 * If debt is enabled, then it will be negative if the same item has been removed more than it's been added.
 	 */
 	@bindThis
 	public add(item: T, stacks = 1): number {
-		// Adding a negative amount is equal to removing the absolute value.
-		if (stacks < 0) {
-			return this.remove(item, 0 - stacks);
-		}
-
-		const newCount = this.count(item) + 1;
-
-		// Remove and re-insert to fix ordering
-		this.set.delete(item);
-		this.set.add(item);
-
-		this.map.set(item, newCount);
-		return newCount;
+		return this.incrementCount(item, stacks);
 	}
 
 	/**
@@ -76,29 +74,37 @@ export class CountingSet<T> implements Iterable<T> {
 	 */
 	@bindThis
 	public remove(item: T, stacks = 1): number {
-		// Removing a negative amount is equal to adding the absolute value.
-		if (stacks < 0) {
-			return this.add(item, 0 - stacks);
-		}
+		return this.incrementCount(item, 0 - stacks);
+	}
 
-		// Removing zero is equal to doing nothing.
-		const currentCount = this.count(item);
-		if (stacks === 0) {
-			return currentCount;
-		}
+	@bindThis
+	private incrementCount(item: T, delta: number): number {
+		const oldCount = this.count(item);
+		const newCount = this.allowDebt
+			? oldCount + delta
+			: Math.max(0, oldCount + delta);
 
-		const newCount = currentCount - stacks;
+		if (oldCount !== newCount) {
+			// 1. Remove from existing list so we can re-insert (fixes ordering).
+			if (oldCount < 0) {
+				this.debt.delete(item);
+			} else if (oldCount > 0) {
+				this.value.delete(item);
+			}
 
-		// Update active item set
-		if (newCount < 1) {
-			this.set.delete(item);
-		}
+			// 2. Re-insert into the correct list.
+			if (newCount < 0) {
+				this.debt.add(item);
+			} else if (newCount > 0) {
+				this.value.add(item);
+			}
 
-		// Update real count map
-		if (newCount > 0 || (newCount < 0 && this.allowDebt)) {
-			this.map.set(item, newCount);
-		} else {
-			this.map.delete(item);
+			// 3. Update or remove from map
+			if (newCount === 0) {
+				this.map.delete(item);
+			} else {
+				this.map.set(item, newCount);
+			}
 		}
 
 		return newCount;
@@ -119,7 +125,8 @@ export class CountingSet<T> implements Iterable<T> {
 	@bindThis
 	public zero(item: T): boolean {
 		this.map.delete(item);
-		return this.set.delete(item);
+		this.debt.delete(item);
+		return this.value.delete(item);
 	}
 
 	/**
@@ -148,7 +155,7 @@ export class CountingSet<T> implements Iterable<T> {
 	 */
 	@bindThis
 	public has(item: T): boolean {
-		return this.set.has(item);
+		return this.value.has(item);
 	}
 
 	/**
@@ -156,24 +163,38 @@ export class CountingSet<T> implements Iterable<T> {
 	 */
 	@bindThis
 	public clear(): void {
+		this.debt.clear();
+		this.value.clear();
 		this.map.clear();
-		this.set.clear();
 	}
 
 	/**
-	 * Returns all items present in the set.
+	 * Alias to values().
+	 */
+	public [Symbol.iterator](): CountingSetIterator<T> {
+		return this.values();
+	}
+
+	/**
+	 * Returns all items with a positive value.
 	 * Only positive counts are included; items with a zero or negative count are excluded.
 	 */
 	@bindThis
-	public items(): SetIterator<T> {
-		return this.set.values();
+	public values(): CountingSetIterator<T> {
+		const iter = this.value.values() as CountingSetIterator<T>;
+		iter.size = this.value.size;
+		return iter;
 	}
 
 	/**
-	 * Alias to items().
+	 * Returns all items with a negative value.
+	 * Only negative counts (debt) are included; items with a zero or positive count are excluded.
 	 */
-	public [Symbol.iterator](): SetIterator<T> {
-		return this.set.values();
+	@bindThis
+	public debts(): CountingSetIterator<T> {
+		const iter = this.debt.values() as CountingSetIterator<T>;
+		iter.size = this.debt.size;
+		return iter;
 	}
 
 	/**
@@ -190,6 +211,19 @@ export class CountingSet<T> implements Iterable<T> {
 	 */
 	@bindThis
 	public oldest(): T | undefined {
-		return this.set.values().next().value;
+		return this.value.values().next().value;
 	}
+}
+
+export interface CountingSetIterator<T> extends SetIterator<T> {
+	size: number;
+}
+
+/**
+ * Type Guard for CountingSet.
+ */
+export function isCountingSet(value: unknown): value is CountingSet<unknown> {
+	if (value == null) return false;
+	if (typeof(value) !== 'object') return false;
+	return value instanceof CountingSet;
 }
