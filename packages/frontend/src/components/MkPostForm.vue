@@ -309,11 +309,11 @@ watch(visibleUsers, () => {
 });
 
 if (props.mention) {
-	pushMention(props.mention, 'end');
+	pushMention(props.mention);
 }
 
 if (props.reply && props.reply.user.id !== $i.id) {
-	pushMention(props.reply.user, 'end');
+	pushMention(props.reply.user);
 }
 
 if (props.reply && props.reply.text != null) {
@@ -657,7 +657,7 @@ function pushVisibleUser(user: Misskey.entities.UserDetailed) {
 function addVisibleUser() {
 	os.selectUser().then(user => {
 		pushVisibleUser(user);
-		pushMention(user);
+		pushMention(user, 'start');
 	});
 }
 
@@ -1067,7 +1067,7 @@ function insertMention() {
  * @param user User or Acct, should already be host-normalized.
  * @param at Where to add the mention.
  */
-function pushMention(user: { id?: string; username: string; host: string | null }, at: 'start' | 'end' | 'cursor' = 'start') {
+function pushMention(user: { id?: string; username: string; host: string | null }, at: 'start' | 'end' | 'cursor' = 'end') {
 	// Don't mention ourself
 	if (user.id === $i.id) {
 		return;
@@ -1091,9 +1091,13 @@ function pushMention(user: { id?: string; username: string; host: string | null 
 	const textLower = text.value.toLowerCase();
 	if (!textLower.includes(mentionLower + ' ') && !textLower.endsWith(mentionLower)) {
 		if (at === 'start') {
-			text.value = `${mention} ${text.value}`;
+			text.value = text.value.match(/^\s/)
+				? `${mention}${text.value}`
+				: `${mention} ${text.value}`;
 		} else {
-			text.value = `${text.value} ${mention}`;
+			text.value = text.value.match(/\s$/)
+				? `${text.value}${mention}`
+				: `${text.value} ${mention}`;
 		}
 	}
 }
