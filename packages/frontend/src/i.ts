@@ -14,7 +14,7 @@ type AccountWithToken = Misskey.entities.MeDetailed & { token: string };
 const accountData = miLocalStorage.getItem('account');
 
 // TODO: 外部からはreadonlyに
-export const $i = accountData ? reactive(JSON.parse(accountData) as AccountWithToken) : null;
+export const $i: AccountWithToken | null = accountData ? reactive(JSON.parse(accountData)) : null;
 
 export const iAmModerator = $i != null && ($i.isAdmin === true || $i.isModerator === true);
 export const iAmAdmin = $i != null && $i.isAdmin;
