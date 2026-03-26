@@ -95,9 +95,6 @@ async function createInstance(): Promise<Misskey.entities.MetaDetailed> {
 
 const initialMeta = await createInstance();
 export const instance: Readonly<Misskey.entities.MetaDetailed> = reactive(initialMeta);
-
-export const isEnabledUrlPreview = computed(() => instance.enableUrlPreview ?? true);
-
 export const policies = computed<Readonly<Misskey.entities.RolePolicies>>(() => $i?.policies ?? instance.policies);
 
 export async function fetchInstance(force = false): Promise<Misskey.entities.MetaDetailed> {
