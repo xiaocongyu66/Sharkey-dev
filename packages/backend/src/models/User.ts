@@ -276,6 +276,12 @@ export class MiUser {
 	})
 	public isDeleted: boolean;
 
+	@Column('timestamp with time zone', {
+		nullable: true,
+		comment: 'When the account was deleted.',
+	})
+	public deletedAt: Date | null;
+
 	@Column('varchar', {
 		length: 128, array: true, default: '{}',
 	})
