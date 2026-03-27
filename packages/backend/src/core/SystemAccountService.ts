@@ -20,7 +20,7 @@ import { IdService } from '@/core/IdService.js';
 import { genRsaKeyPair } from '@/misc/gen-key-pair.js';
 import { CacheManagementService, type ManagedMemoryKVCache } from '@/global/CacheManagementService.js';
 import { CacheService } from '@/core/CacheService.js';
-import { InternalEventService } from '@/global/InternalEventService.js';
+import { InternalEventService, InternalEventTypes } from '@/global/InternalEventService.js';
 import { TimeService } from '@/global/TimeService.js';
 
 export const SYSTEM_ACCOUNT_TYPES = ['actor', 'relay', 'proxy'] as const;
@@ -56,29 +56,16 @@ export class SystemAccountService implements OnApplicationShutdown {
 		cacheManagementService: CacheManagementService,
 	) {
 		this.cache = cacheManagementService.createMemoryKVCache<string>('systemAccount', 1000 * 60 * 10); // 10m
-
-		this.redisForSub.on('message', this.onMessage);
+		this.internalEventService.on('metaUpdated', this.onMetaUpdated);
 	}
 
 	@bindThis
-	private async onMessage(_: string, data: string): Promise<void> {
-		const obj = JSON.parse(data);
-
-		if (obj.channel === 'internal') {
-			const { type, body } = obj.message as GlobalEvents['internal']['payload'];
-			switch (type) {
-				case 'metaUpdated': {
-					if (body.before != null && body.before.name !== body.after.name) {
-						for (const account of SYSTEM_ACCOUNT_TYPES) {
-							await this.updateCorrespondingUserProfile(account, {
-								name: body.after.name,
-							});
-						}
-					}
-					break;
-				}
-				default:
-					break;
+	private async onMetaUpdated(body: InternalEventTypes['metaUpdated']): Promise<void> {
+		if (body.before.name !== body.after.name) {
+			for (const account of SYSTEM_ACCOUNT_TYPES) {
+				await this.updateCorrespondingUserProfile(account, {
+					name: body.after.name,
+				});
 			}
 		}
 	}
@@ -233,7 +220,7 @@ export class SystemAccountService implements OnApplicationShutdown {
 
 	@bindThis
 	public dispose(): void {
-		this.redisForSub.off('message', this.onMessage);
+		this.internalEventService.off('metaUpdated', this.onMetaUpdated);
 	}
 
 	@bindThis
