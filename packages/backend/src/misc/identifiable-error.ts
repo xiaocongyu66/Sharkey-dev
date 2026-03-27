@@ -47,6 +47,9 @@ export const errorCodes = {
 	/** User is suspended (directly or by instance) */
 	userSuspended: '1e56d624-737f-48e4-beb6-0bdddb9fa809',
 
+	/** User is protected (root, system, etc) */
+	userProtected: 'b5983a6a-9930-4c06-966b-d1cac0054544',
+
 	/** User is blocked by the target user(s) */
 	userBlocked: '3338392a-f764-498d-8855-db939dcf8c48',
 
