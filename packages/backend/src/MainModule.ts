@@ -5,12 +5,10 @@
 
 import { Module } from '@nestjs/common';
 import { ServerModule } from '@/server/ServerModule.js';
-import { DaemonModule } from '@/daemons/DaemonModule.js';
 
 @Module({
 	imports: [
 		ServerModule,
-		DaemonModule,
 	],
 })
 export class MainModule {}

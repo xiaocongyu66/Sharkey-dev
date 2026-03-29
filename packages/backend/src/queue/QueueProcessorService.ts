@@ -11,6 +11,8 @@ import { DI } from '@/di-symbols.js';
 import type Logger from '@/logger.js';
 import { bindThis } from '@/decorators.js';
 import { CheckModeratorsActivityProcessorService } from '@/queue/processors/CheckModeratorsActivityProcessorService.js';
+import { QueueStatsService } from '@/core/QueueStatsService.js';
+import { ServerStatsService } from '@/core/ServerStatsService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { renderFullError } from '@/misc/render-full-error.js';
 import { renderInlineError } from '@/misc/render-inline-error.js';
@@ -153,6 +155,8 @@ export class QueueProcessorService implements OnApplicationShutdown {
 		private readonly cleanupApLogsProcessorService: CleanupApLogsProcessorService,
 		private readonly hibernateUsersProcessorService: HibernateUsersProcessorService,
 		private readonly backgroundTaskProcessorService: BackgroundTaskProcessorService,
+		private readonly queueStatsService: QueueStatsService,
+		private readonly serverStatsService: ServerStatsService,
 	) {
 		this.logger = this.queueLoggerService.logger;
 
@@ -175,6 +179,14 @@ export class QueueProcessorService implements OnApplicationShutdown {
 					case 'clean': return await this.cleanProcessorService.process();
 					case 'cleanupApLogs': return await this.cleanupApLogsProcessorService.process();
 					case 'hibernateUsers': return await this.hibernateUsersProcessorService.process();
+					case 'tickServerStats': {
+						await this.serverStatsService.tick();
+						return 'ok';
+					}
+					case 'tickQueueCounts': {
+						await this.queueStatsService.tick();
+						return 'ok';
+					}
 					default: throw new Error(`unrecognized job type ${job.name} for system`);
 				}
 			};

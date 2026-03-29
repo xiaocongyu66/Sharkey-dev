@@ -9,18 +9,16 @@
 
 import cluster from 'node:cluster';
 import chalk from 'chalk';
-import Xev from 'xev';
 import { coreLogger, coreEnvService, coreLoggerService } from '@/boot/coreLogger.js';
 import { prepEnv } from '@/boot/prepEnv.js';
 import { masterMain } from './master.js';
 import { workerMain } from './worker.js';
 import { readyRef } from './ready.js';
 
+// TODO make this customizable
 process.title = `Misskey (${cluster.isPrimary ? 'master' : 'worker'})`;
 
 prepEnv();
-
-const ev = new Xev();
 
 // We wrap this in a main function, that gets called,
 // because not all platforms support top level await :/
@@ -65,7 +63,6 @@ async function main() {
 		if (cluster.isPrimary) {
 			logger.info(`Start main process... pid: ${process.pid}`);
 			await masterMain(coreLoggerService, coreEnvService);
-			ev.mount();
 		} else if (cluster.isWorker) {
 			logger.info(`Start worker process... pid: ${process.pid}`);
 			await workerMain(coreLoggerService, coreEnvService);
@@ -76,7 +73,6 @@ async function main() {
 		// 非clusterの場合はMasterのみが起動するため、Workerの処理は行わない(cluster.isWorker === trueの状態でこのブロックに来ることはない)
 		logger.info(`Start main process... pid: ${process.pid}`);
 		await masterMain(coreLoggerService, coreEnvService);
-		ev.mount();
 	}
 
 	readyRef.value = true;

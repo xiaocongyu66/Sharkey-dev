@@ -4,8 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import * as Redis from 'ioredis';
-import * as Reversi from 'misskey-reversi';
 import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -27,6 +25,9 @@ import type { Config } from '@/config.js';
 import type { EmptyObject, Serialized } from '@/types.js';
 import { bindThis } from '@/decorators.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
+import type * as Redis from 'ioredis';
+import type * as Reversi from 'misskey-reversi';
+import type * as Misskey from 'misskey-js';
 
 //#region Stream type-body definitions
 export interface BroadcastEventTypes {
@@ -291,6 +292,17 @@ export interface InternalEventTypes {
 	userListMemberBulkRemoved: { userListIds: MiUserList['id'][]; memberId: MiUser['id']; };
 	quantumCacheUpdated: { name: string, keys: string[] };
 	quantumCacheReset: { name: string };
+	/**
+	 * Emitted by the ServerStatsService when a new stats snapshot is available.
+	 * Migrated from xev.
+	 */
+	pushServerStats: Misskey.entities.ServerStats;
+
+	/**
+	 * Emitted by the QueueStatsService when a new stats snapshot is available.
+	 * Migrated from xev.
+	 */
+	pushQueueCounts: Packed<'QueueLogs'>;
 }
 
 type EventTypesToEventPayload<T extends object> = EventUnionFromDictionary<UndefinedAsNullAll<SerializedAll<T>> | T>;

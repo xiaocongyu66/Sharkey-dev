@@ -7,19 +7,19 @@ import * as fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import * as os from 'node:os';
-import cluster from 'node:cluster';
 import * as net from 'node:net';
+import cluster from 'node:cluster';
 import chalk from 'chalk';
+import si from 'systeminformation';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
-import type Logger from '@/logger.js';
 import { loadConfig } from '@/config.js';
+import { renderInlineError } from '@/misc/render-inline-error.js';
+import type { Logger } from '@/logger.js';
 import type { Config } from '@/config.js';
 import type { LoggerService } from '@/core/LoggerService.js';
 import type { EnvService } from '@/global/EnvService.js';
 import type { EnvOption } from '@/env.js';
-import { renderInlineError } from '@/misc/render-inline-error.js';
-import { showMachineInfo } from '@/misc/show-machine-info.js';
 import { coreLogger } from '@/boot/coreLogger.js';
 import { jobQueue, server } from './common.js';
 
@@ -159,6 +159,17 @@ function showEnvironment(bootLogger: Logger, envService: EnvService): void {
 		logger.warn('The environment is not in production mode.');
 		logger.warn('DO NOT USE FOR PRODUCTION PURPOSE!', null, true);
 	}
+}
+
+// moved from show-machine-info.ts
+async function showMachineInfo(parentLogger: Logger) {
+	const logger = parentLogger.createSubLogger('machine');
+	logger.debug(`Hostname: ${os.hostname()}`);
+	logger.debug(`Platform: ${process.platform} Arch: ${process.arch}`);
+	const mem = await si.mem();
+	const totalmem = (mem.total / 1024 / 1024 / 1024).toFixed(1);
+	const availmem = (mem.available / 1024 / 1024 / 1024).toFixed(1);
+	logger.debug(`CPU: ${os.cpus().length} core MEM: ${totalmem}GB (available: ${availmem}GB)`);
 }
 
 function showNodejsVersion(bootLogger: Logger): void {

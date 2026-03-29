@@ -99,4 +99,29 @@ export const DI = {
 	reversiGamesRepository: Symbol('reversiGamesRepository'),
 	noteScheduleRepository: Symbol('noteScheduleRepository'),
 	//#endregion
+
+	//#region Queues
+	systemQueue: Symbol('queue:system'),
+	systemQueueEvents: Symbol('queue:system:events'),
+	endedPollNotificationQueue: Symbol('queue:endedPollNotification'),
+	endedPollNotificationQueueEvents: Symbol('queue:endedPollNotification:events'),
+	deliverQueue: Symbol('queue:deliver'),
+	deliverQueueEvents: Symbol('queue:deliver:events'),
+	inboxQueue: Symbol('queue:inbox'),
+	inboxQueueEvents: Symbol('queue:inbox:events'),
+	dbQueue: Symbol('queue:db'),
+	dbQueueEvents: Symbol('queue:db:events'),
+	relationshipQueue: Symbol('queue:relationship'),
+	relationshipQueueEvents: Symbol('queue:relationship:events'),
+	objectStorageQueue: Symbol('queue:objectStorage'),
+	objectStorageQueueEvents: Symbol('queue:objectStorage:events'),
+	userWebhookDeliverQueue: Symbol('queue:userWebhookDeliver'),
+	userWebhookDeliverQueueEvents: Symbol('queue:userWebhookDeliver:events'),
+	systemWebhookDeliverQueue: Symbol('queue:systemWebhookDeliver'),
+	systemWebhookDeliverQueueEvents: Symbol('queue:systemWebhookDeliver:events'),
+	scheduleNotePostQueue: Symbol('queue:scheduleNotePost'),
+	scheduleNotePostQueueEvents: Symbol('queue:scheduleNotePost:events'),
+	backgroundTaskQueue: Symbol('queue:backgroundTask'),
+	backgroundTaskQueueEvents: Symbol('queue:backgroundTask:events'),
+	//#endregion
 };

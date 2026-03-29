@@ -40,6 +40,7 @@ export class AchievementService {
 
 		if (profile.achievements.some(a => a.name === type)) return;
 
+		// TODO this should be a separate table
 		await this.userProfilesRepository.update(userId, {
 			achievements: [...profile.achievements, {
 				name: type,

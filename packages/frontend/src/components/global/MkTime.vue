@@ -168,8 +168,6 @@ const tickInterval = computed<number>(() => {
 });
 
 function onTick() {
-	if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) onTick()`);
-
 	// Update time value
 	realNow.value = new Date();
 }
@@ -177,7 +175,6 @@ function onTick() {
 watch(tickInterval, (interval) => {
 	// stop interval
 	if (interval < 1) {
-		if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) stopping interval`);
 		window.clearInterval(intervalId.value);
 		intervalId.value = undefined;
 		intervalValue.value = undefined;
@@ -186,7 +183,6 @@ watch(tickInterval, (interval) => {
 
 	// start interval
 	if (!intervalId.value) {
-		if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) starting interval ${tickInterval.value}ms`);
 		intervalId.value = window.setInterval(onTick, tickInterval.value);
 		intervalValue.value = tickInterval.value;
 		return;
@@ -194,7 +190,6 @@ watch(tickInterval, (interval) => {
 
 	// change interval
 	if (interval !== intervalValue.value) {
-		if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) changing interval to ${tickInterval.value}ms (from ${intervalValue.value}ms)`);
 		window.clearInterval(intervalId.value);
 		intervalId.value = window.setInterval(onTick, tickInterval.value);
 		intervalValue.value = tickInterval.value;
@@ -206,12 +201,10 @@ watch(tickInterval, (interval) => {
 
 onMounted(() => {
 	mounted.value = true;
-	if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) onMounted()`);
 });
 
 onUnmounted(() => {
 	mounted.value = false;
-	if (_DEV_) console.debug(`MkTime#${componentId}(${date.value?.toISOString() ?? 'null'}) onUnmounted()`);
 });
 </script>
 

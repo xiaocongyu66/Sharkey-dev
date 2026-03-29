@@ -8,8 +8,6 @@ import { ChartManagementService } from '@/core/chart/ChartManagementService.js';
 import { QueueProcessorService } from '@/queue/QueueProcessorService.js';
 import { NestLogger } from '@/NestLogger.js';
 import { QueueProcessorModule } from '@/queue/QueueProcessorModule.js';
-import { QueueStatsService } from '@/daemons/QueueStatsService.js';
-import { ServerStatsService } from '@/daemons/ServerStatsService.js';
 import { ServerService } from '@/server/ServerService.js';
 import { MainModule } from '@/MainModule.js';
 import { EnvService } from '@/global/EnvService.js';
@@ -26,11 +24,6 @@ export async function server() {
 
 	if (envService.env.NODE_ENV !== 'test') {
 		app.get(ChartManagementService).start();
-	}
-
-	if (!envService.options.noDaemons) {
-		app.get(QueueStatsService).start();
-		app.get(ServerStatsService).start();
 	}
 
 	return app;

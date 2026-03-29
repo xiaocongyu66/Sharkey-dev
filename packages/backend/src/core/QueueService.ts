@@ -4,6 +4,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import * as Misskey from 'misskey-js';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { MetricsTime, type JobType } from 'bullmq';
 import { parse as parseRedisInfo } from 'redis-info';
@@ -12,8 +13,10 @@ import type { MiDriveFile } from '@/models/DriveFile.js';
 import type { MiWebhook, WebhookEventTypes } from '@/models/Webhook.js';
 import type { MiSystemWebhook, SystemWebhookEventType } from '@/models/SystemWebhook.js';
 import type { Config } from '@/config.js';
+import type { Packed } from '@/misc/json-schema.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
+import { awaitAll } from '@/misc/prelude/await-all.js';
 import type { Antenna } from '@/server/api/endpoints/i/import-antennas.js';
 import { ApRequestCreator } from '@/core/activitypub/ApRequestService.js';
 import { TimeService } from '@/global/TimeService.js';
@@ -48,19 +51,8 @@ import type {
 import type httpSignature from '@peertube/http-signature';
 import type * as Bull from 'bullmq';
 
-export const QUEUE_TYPES = [
-	'system',
-	'endedPollNotification',
-	'deliver',
-	'inbox',
-	'db',
-	'relationship',
-	'objectStorage',
-	'userWebhookDeliver',
-	'systemWebhookDeliver',
-	'scheduleNotePost',
-	'backgroundTask',
-] as const;
+export const QUEUE_TYPES = Misskey.entities.QUEUE_TYPES;
+export type QueueType = Misskey.entities.QueueType;
 
 @Injectable()
 export class QueueService implements OnModuleInit {
@@ -71,16 +63,27 @@ export class QueueService implements OnModuleInit {
 		private config: Config,
 
 		@Inject('queue:system') public systemQueue: SystemQueue,
+		@Inject('queue:system:events') public systemQueueEvents: Bull.QueueEvents,
 		@Inject('queue:endedPollNotification') public endedPollNotificationQueue: EndedPollNotificationQueue,
+		@Inject('queue:endedPollNotification:events') public endedPollNotificationQueueEvents: Bull.QueueEvents,
 		@Inject('queue:deliver') public deliverQueue: DeliverQueue,
+		@Inject('queue:deliver:events') public deliverQueueEvents: Bull.QueueEvents,
 		@Inject('queue:inbox') public inboxQueue: InboxQueue,
+		@Inject('queue:inbox:events') public inboxQueueEvents: Bull.QueueEvents,
 		@Inject('queue:db') public dbQueue: DbQueue,
+		@Inject('queue:db:events') public dbQueueEvents: Bull.QueueEvents,
 		@Inject('queue:relationship') public relationshipQueue: RelationshipQueue,
+		@Inject('queue:relationship:events') public relationshipQueueEvents: Bull.QueueEvents,
 		@Inject('queue:objectStorage') public objectStorageQueue: ObjectStorageQueue,
+		@Inject('queue:objectStorage:events') public objectStorageQueueEvents: Bull.QueueEvents,
 		@Inject('queue:userWebhookDeliver') public userWebhookDeliverQueue: UserWebhookDeliverQueue,
+		@Inject('queue:userWebhookDeliver:events') public userWebhookDeliverQueueEvents: Bull.QueueEvents,
 		@Inject('queue:systemWebhookDeliver') public systemWebhookDeliverQueue: SystemWebhookDeliverQueue,
-		@Inject('queue:scheduleNotePost') public ScheduleNotePostQueue: ScheduleNotePostQueue,
+		@Inject('queue:systemWebhookDeliver:events') public systemWebhookDeliverQueueEvents: Bull.QueueEvents,
+		@Inject('queue:scheduleNotePost') public scheduleNotePostQueue: ScheduleNotePostQueue,
+		@Inject('queue:scheduleNotePost:events') public scheduleNotePostQueueEvents: Bull.QueueEvents,
 		@Inject('queue:backgroundTask') public readonly backgroundTaskQueue: BackgroundTaskQueue,
+		@Inject('queue:backgroundTask:events') public readonly backgroundTaskQueueEvents: Bull.QueueEvents,
 
 		private readonly timeService: TimeService,
 
@@ -105,6 +108,8 @@ export class QueueService implements OnModuleInit {
 				if (job.id === 'checkModeratorsActivity-scheduler' || job.key === 'checkModeratorsActivity-scheduler') continue;
 				if (job.id === 'cleanupApLogs-scheduler' || job.key === 'cleanupApLogs-scheduler') continue;
 				if (job.id === 'hibernateUsers-scheduler' || job.key === 'hibernateUsers-scheduler') continue;
+				if (job.id === 'tickQueueCounts-scheduler' || job.key === 'tickQueueCounts-scheduler') continue;
+				if (job.id === 'tickServerStats-scheduler' || job.key === 'tickServerStats-scheduler') continue;
 
 				if (job.id) {
 					this.logger.info(`Removing obsolete job scheduler key=${job.key} id=${job.id} name=${job.name}`);
@@ -230,6 +235,30 @@ export class QueueService implements OnModuleInit {
 					removeOnFail: 30,
 				},
 			});
+
+		await this.systemQueue.upsertJobScheduler(
+			'tickQueueCounts-scheduler',
+			{ every: 2 * 1000 }, // every 2 seconds - https://docs.bullmq.io/guide/job-schedulers/repeat-strategies#every-strategy
+			{
+				name: 'tickQueueCounts',
+				opts: {
+					removeOnComplete: true,
+					removeOnFail: 10,
+				},
+			},
+		);
+
+		await this.systemQueue.upsertJobScheduler(
+			'tickServerStats-scheduler',
+			{ every: 2 * 1000 }, // every 2 seconds - https://docs.bullmq.io/guide/job-schedulers/repeat-strategies#every-strategy
+			{
+				name: 'tickServerStats',
+				opts: {
+					removeOnComplete: true,
+					removeOnFail: 10,
+				},
+			},
+		);
 
 		// Slot '40 1 * * *' is available for future work
 		// Slot '50 1 * * *' is available for future work
@@ -1060,7 +1089,7 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	private getQueue(type: typeof QUEUE_TYPES[number]): Bull.Queue {
+	public getQueue(type: QueueType): Bull.Queue {
 		switch (type) {
 			case 'system': return this.systemQueue;
 			case 'endedPollNotification': return this.endedPollNotificationQueue;
@@ -1071,14 +1100,32 @@ export class QueueService implements OnModuleInit {
 			case 'objectStorage': return this.objectStorageQueue;
 			case 'userWebhookDeliver': return this.userWebhookDeliverQueue;
 			case 'systemWebhookDeliver': return this.systemWebhookDeliverQueue;
-			case 'scheduleNotePost': return this.ScheduleNotePostQueue;
+			case 'scheduleNotePost': return this.scheduleNotePostQueue;
 			case 'backgroundTask': return this.backgroundTaskQueue;
 			default: throw new Error(`Unrecognized queue type: ${type}`);
 		}
 	}
 
 	@bindThis
-	public async queueClear(queueType: typeof QUEUE_TYPES[number], state: '*' | 'completed' | 'wait' | 'active' | 'paused' | 'prioritized' | 'delayed' | 'failed') {
+	public getQueueEvents(type: QueueType): Bull.QueueEvents {
+		switch (type) {
+			case 'system': return this.systemQueueEvents;
+			case 'endedPollNotification': return this.endedPollNotificationQueueEvents;
+			case 'deliver': return this.deliverQueueEvents;
+			case 'inbox': return this.inboxQueueEvents;
+			case 'db': return this.dbQueueEvents;
+			case 'relationship': return this.relationshipQueueEvents;
+			case 'objectStorage': return this.objectStorageQueueEvents;
+			case 'userWebhookDeliver': return this.userWebhookDeliverQueueEvents;
+			case 'systemWebhookDeliver': return this.systemWebhookDeliverQueueEvents;
+			case 'scheduleNotePost': return this.scheduleNotePostQueueEvents;
+			case 'backgroundTask': return this.backgroundTaskQueueEvents;
+			default: throw new Error(`Unrecognized queue type: ${type}`);
+		}
+	}
+
+	@bindThis
+	public async queueClear(queueType: QueueType, state: '*' | 'completed' | 'wait' | 'active' | 'paused' | 'prioritized' | 'delayed' | 'failed') {
 		const queue = this.getQueue(queueType);
 
 		if (state === '*') {
@@ -1097,13 +1144,13 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	public async queuePromoteJobs(queueType: typeof QUEUE_TYPES[number]) {
+	public async queuePromoteJobs(queueType: QueueType) {
 		const queue = this.getQueue(queueType);
 		await queue.promoteJobs();
 	}
 
 	@bindThis
-	public async queueRetryJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
+	public async queueRetryJob(queueType: QueueType, jobId: string) {
 		const queue = this.getQueue(queueType);
 		const job: Bull.Job | undefined = await queue.getJob(jobId);
 		if (job) {
@@ -1116,7 +1163,7 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	public async queueRemoveJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
+	public async queueRemoveJob(queueType: QueueType, jobId: string) {
 		const queue = this.getQueue(queueType);
 		const job: Bull.Job | undefined = await queue.getJob(jobId);
 		if (job) {
@@ -1150,7 +1197,7 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	public async queueGetJob(queueType: typeof QUEUE_TYPES[number], jobId: string) {
+	public async queueGetJob(queueType: QueueType, jobId: string) {
 		const queue = this.getQueue(queueType);
 		const job: Bull.Job | undefined = await queue.getJob(jobId);
 		if (job) {
@@ -1161,7 +1208,7 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	public async queueGetJobs(queueType: typeof QUEUE_TYPES[number], jobTypes: JobType[], search?: string) {
+	public async queueGetJobs(queueType: QueueType, jobTypes: JobType[], search?: string) {
 		const RETURN_LIMIT = 100;
 		const queue = this.getQueue(queueType);
 		let jobs: (Bull.Job | null)[];
@@ -1187,31 +1234,16 @@ export class QueueService implements OnModuleInit {
 	}
 
 	@bindThis
-	public async queueGetQueues() {
-		const fetchings = QUEUE_TYPES.map(async type => {
-			const queue = this.getQueue(type);
-
-			const counts = await queue.getJobCounts();
-			const isPaused = await queue.isPaused();
-			const metrics_completed = await queue.getMetrics('completed', 0, MetricsTime.ONE_WEEK);
-			const metrics_failed = await queue.getMetrics('failed', 0, MetricsTime.ONE_WEEK);
-
-			return {
-				name: type,
-				counts: counts,
-				isPaused,
-				metrics: {
-					completed: metrics_completed,
-					failed: metrics_failed,
-				},
-			};
-		});
-
-		return await Promise.all(fetchings);
+	public async queueGetQueues(): Promise<Packed<'QueueStats'>> {
+		const queues = QUEUE_TYPES.reduce((qs, qt) => {
+			qs[qt] = this.queueGetQueue(qt);
+			return qs;
+		}, {} as Record<QueueType, Promise<Packed<'QueueStat'>>>);
+		return awaitAll(queues);
 	}
 
 	@bindThis
-	public async queueGetQueue(queueType: typeof QUEUE_TYPES[number]) {
+	public async queueGetQueue(queueType: QueueType): Promise<Packed<'QueueStat'>> {
 		const queue = this.getQueue(queueType);
 		const counts = await queue.getJobCounts();
 		const isPaused = await queue.isPaused();
@@ -1247,6 +1279,28 @@ export class QueueService implements OnModuleInit {
 					blocked: parseInt(db.blocked_clients),
 				},
 			},
+		};
+	}
+
+	@bindThis
+	public async queueGetCounts(): Promise<Packed<'QueueCounts'>> {
+		const queues = QUEUE_TYPES.reduce((qs, qt) => {
+			qs[qt] = this.queueGetCount(qt);
+			return qs;
+		}, {} as Record<QueueType, Promise<Packed<'QueueCount'>>>);
+		return awaitAll(queues);
+	}
+
+	@bindThis
+	public async queueGetCount(queueType: QueueType): Promise<Packed<'QueueCount'>> {
+		const queue = this.getQueue(queueType);
+		const counts = await queue.getJobCounts() as Partial<Record<string, number>>;
+		return {
+			waiting: counts.waiting ?? 0,
+			active: counts.active ?? 0,
+			completed: counts.completed ?? 0,
+			failed: counts.failed ?? 0,
+			delayed: counts.delayed ?? 0,
 		};
 	}
 }

@@ -353,7 +353,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				});
 
 				const delay = new Date(schedNoteLocalTime).getTime() - this.timeService.now;
-				await this.queueService.ScheduleNotePostQueue.add(String(delay), {
+				await this.queueService.scheduleNotePostQueue.add(String(delay), {
 					scheduleNoteId: noteId,
 				}, {
 					delay,

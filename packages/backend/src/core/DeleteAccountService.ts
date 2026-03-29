@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import type { MiMeta, MiUser, UsersRepository } from '@/models/_.js';
-import type { Job } from 'bullmq';
 import { QueueService } from '@/core/QueueService.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
@@ -15,6 +14,7 @@ import { IdentifiableError, errorCodes } from '@/misc/identifiable-error.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
 import { TimeService } from '@/global/TimeService.js';
+import type { Job } from 'bullmq';
 
 @Injectable()
 export class DeleteAccountService {

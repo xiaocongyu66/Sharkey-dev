@@ -5,8 +5,9 @@
 
 import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { ModerationLogService } from '@/core/ModerationLogService.js';
-import { QUEUE_TYPES, QueueService } from '@/core/QueueService.js';
+import { QueueService } from '@/core/QueueService.js';
+import type { IEndpointMeta } from '@/server/api/endpoints.js';
+import type { Schema } from '@/misc/json-schema.js';
 
 export const meta = {
 	tags: ['admin'],
@@ -21,120 +22,25 @@ export const meta = {
 		items: {
 			type: 'object',
 			optional: false, nullable: false,
-			properties: {
-				name: {
-					type: 'string',
-					optional: false, nullable: false,
-				},
-				counts: {
-					type: 'object',
-					optional: false, nullable: false,
-					additionalProperties: {
-						optional: false, nullable: false,
-						type: 'number',
-					},
-				},
-				isPaused: {
-					type: 'boolean',
-					optional: false, nullable: false,
-				},
-				metrics: {
-					type: 'object',
-					optional: false, nullable: false,
-					properties: {
-						completed: {
-							type: 'object',
-							optional: false, nullable: false,
-							properties: {
-								meta: {
-									type: 'object',
-									optional: false, nullable: false,
-									properties: {
-										count: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-										prevTS: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-										prevCount: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-									},
-								},
-								data: {
-									type: 'array',
-									optional: false, nullable: false,
-									items: {
-										type: 'number',
-										optional: false, nullable: false,
-									},
-								},
-								count: {
-									type: 'number',
-									optional: false, nullable: false,
-								},
-							},
-						},
-						failed: {
-							type: 'object',
-							optional: false, nullable: false,
-							properties: {
-								meta: {
-									type: 'object',
-									optional: false, nullable: false,
-									properties: {
-										count: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-										prevTS: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-										prevCount: {
-											type: 'number',
-											optional: false, nullable: false,
-										},
-									},
-								},
-								data: {
-									type: 'array',
-									optional: false, nullable: false,
-									items: {
-										type: 'number',
-										optional: false, nullable: false,
-									},
-								},
-								count: {
-									type: 'number',
-									optional: false, nullable: false,
-								},
-							},
-						},
-					},
-				},
-			},
+			ref: 'QueueStat',
 		},
 	},
-} as const;
+} as const satisfies IEndpointMeta;
 
 export const paramDef = {
 	type: 'object',
-	properties: {
-	},
+	properties: {},
 	required: [],
-} as const;
+} as const satisfies Schema;
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
-		private queueService: QueueService,
+		private readonly queueService: QueueService,
 	) {
-		super(meta, paramDef, async (ps, me) => {
-			return await this.queueService.queueGetQueues();
+		super(meta, paramDef, async () => {
+			const queues = await this.queueService.queueGetQueues();
+			return Object.values(queues);
 		});
 	}
 }

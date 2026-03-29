@@ -17,8 +17,7 @@ import type {
 	EmojiAdded, EmojiDeleted,
 	EmojiUpdated,
 	PageEvent,
-	QueueStats,
-	QueueStatsLog,
+	QueueLogs,
 	ServerStats,
 	ServerStatsLog,
 	ReversiGameDetailed,
@@ -192,21 +191,19 @@ export type Channels = {
 		};
 		receives: {
 			requestLog: {
-				id: string | number;
-				length: number;
+				length?: number;
 			};
 		};
 	};
 	queueStats: {
 		params: null;
 		events: {
-			stats: (payload: QueueStats) => void;
-			statsLog: (payload: QueueStatsLog) => void;
+			stats: (payload: QueueLogs) => void;
+			statsLog: (payload: QueueLogs[]) => void;
 		};
 		receives: {
 			requestLog: {
-				id: string | number;
-				length: number;
+				length?: number;
 			};
 		};
 	};

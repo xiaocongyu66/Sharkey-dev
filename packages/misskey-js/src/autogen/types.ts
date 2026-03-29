@@ -11141,12 +11141,104 @@ export type components = {
             hasUnreadNote?: boolean;
             pinnedNotes?: components['schemas']['Note'][];
         };
+        QueueStat: {
+            /** @enum {string} */
+            name: 'system' | 'endedPollNotification' | 'deliver' | 'inbox' | 'db' | 'relationship' | 'objectStorage' | 'userWebhookDeliver' | 'systemWebhookDeliver' | 'scheduleNotePost' | 'backgroundTask';
+            qualifiedName: string;
+            counts: {
+                [key: string]: number;
+            };
+            isPaused: boolean;
+            metrics: {
+                completed: {
+                    meta: {
+                        count: number;
+                        prevTS: number;
+                        prevCount: number;
+                    };
+                    data: number[];
+                    count: number;
+                };
+                failed: {
+                    meta: {
+                        count: number;
+                        prevTS: number;
+                        prevCount: number;
+                    };
+                    data: number[];
+                    count: number;
+                };
+            };
+            db: {
+                version: string;
+                /** @enum {string} */
+                mode: 'standalone' | 'sentinel' | 'cluster';
+                runId: string;
+                processId: string;
+                port: number;
+                os: string;
+                uptime: number;
+                memory: {
+                    total: number;
+                    used: number;
+                    fragmentationRatio: number;
+                    peak: number;
+                };
+                clients: {
+                    connected: number;
+                    blocked: number;
+                };
+            };
+        };
+        QueueStats: {
+            system: components['schemas']['QueueStat'];
+            endedPollNotification: components['schemas']['QueueStat'];
+            deliver: components['schemas']['QueueStat'];
+            inbox: components['schemas']['QueueStat'];
+            db: components['schemas']['QueueStat'];
+            relationship: components['schemas']['QueueStat'];
+            objectStorage: components['schemas']['QueueStat'];
+            userWebhookDeliver: components['schemas']['QueueStat'];
+            systemWebhookDeliver: components['schemas']['QueueStat'];
+            scheduleNotePost: components['schemas']['QueueStat'];
+            backgroundTask: components['schemas']['QueueStat'];
+        };
+        QueueLog: components['schemas']['QueueCount'] & {
+            activeSincePrevTick: number;
+        };
+        QueueLogs: {
+            system: components['schemas']['QueueLog'];
+            endedPollNotification: components['schemas']['QueueLog'];
+            deliver: components['schemas']['QueueLog'];
+            inbox: components['schemas']['QueueLog'];
+            db: components['schemas']['QueueLog'];
+            relationship: components['schemas']['QueueLog'];
+            objectStorage: components['schemas']['QueueLog'];
+            userWebhookDeliver: components['schemas']['QueueLog'];
+            systemWebhookDeliver: components['schemas']['QueueLog'];
+            scheduleNotePost: components['schemas']['QueueLog'];
+            backgroundTask: components['schemas']['QueueLog'];
+        };
         QueueCount: {
             waiting: number;
             active: number;
             completed: number;
             failed: number;
             delayed: number;
+            activeSincePrevTick?: number;
+        };
+        QueueCounts: {
+            system: components['schemas']['QueueCount'];
+            endedPollNotification: components['schemas']['QueueCount'];
+            deliver: components['schemas']['QueueCount'];
+            inbox: components['schemas']['QueueCount'];
+            db: components['schemas']['QueueCount'];
+            relationship: components['schemas']['QueueCount'];
+            objectStorage: components['schemas']['QueueCount'];
+            userWebhookDeliver: components['schemas']['QueueCount'];
+            systemWebhookDeliver: components['schemas']['QueueCount'];
+            scheduleNotePost: components['schemas']['QueueCount'];
+            backgroundTask: components['schemas']['QueueCount'];
         };
         Antenna: {
             /** Format: id */
@@ -16997,12 +17089,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK (without any results) */
-            204: {
+            /** @description OK (with results) */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    'application/json': components['schemas']['QueueStat'];
+                };
             };
             /** @description Client error */
             400: {
@@ -17066,33 +17160,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': {
-                        name: string;
-                        counts: {
-                            [key: string]: number;
-                        };
-                        isPaused: boolean;
-                        metrics: {
-                            completed: {
-                                meta: {
-                                    count: number;
-                                    prevTS: number;
-                                    prevCount: number;
-                                };
-                                data: number[];
-                                count: number;
-                            };
-                            failed: {
-                                meta: {
-                                    count: number;
-                                    prevTS: number;
-                                    prevCount: number;
-                                };
-                                data: number[];
-                                count: number;
-                            };
-                        };
-                    }[];
+                    'application/json': components['schemas']['QueueStat'][];
                 };
             };
             /** @description Client error */
@@ -17370,12 +17438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    'application/json': {
-                        deliver: components['schemas']['QueueCount'];
-                        inbox: components['schemas']['QueueCount'];
-                        db: components['schemas']['QueueCount'];
-                        objectStorage: components['schemas']['QueueCount'];
-                    };
+                    'application/json': components['schemas']['QueueCounts'];
                 };
             };
             /** @description Client error */

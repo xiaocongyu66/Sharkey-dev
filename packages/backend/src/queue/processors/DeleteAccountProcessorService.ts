@@ -274,7 +274,7 @@ export class DeleteAccountProcessorService {
 			}) as MiNoteSchedule[];
 
 			for (const note of scheduledNotes) {
-				await this.queueService.ScheduleNotePostQueue.remove(`schedNote:${note.id}`);
+				await this.queueService.scheduleNotePostQueue.remove(`schedNote:${note.id}`);
 			}
 
 			await this.noteScheduleRepository.delete({

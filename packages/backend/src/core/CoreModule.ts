@@ -20,6 +20,9 @@ import { ApLogService } from '@/core/ApLogService.js';
 import { CollapsedQueueService } from '@/core/CollapsedQueueService.js';
 import { InstanceStatsService } from '@/core/InstanceStatsService.js';
 import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
+import { QueueStatsService } from '@/core/QueueStatsService.js';
+import { ServerStatsService } from '@/core/ServerStatsService.js';
+import { GlobalModule } from '@/GlobalModule.js';
 import { AccountMoveService } from './AccountMoveService.js';
 import { AccountUpdateService } from './AccountUpdateService.js';
 import { AnnouncementService } from './AnnouncementService.js';
@@ -159,7 +162,6 @@ import { QueueModule } from './QueueModule.js';
 import { QueueService } from './QueueService.js';
 import { SponsorsService } from './SponsorsService.js';
 import type { Provider } from '@nestjs/common';
-import { GlobalModule } from '@/GlobalModule.js';
 
 //#region 文字列ベースでのinjection用(循環参照対応のため)
 const $AbuseReportService: Provider = { provide: 'AbuseReportService', useExisting: AbuseReportService };
@@ -199,6 +201,9 @@ const $PollService: Provider = { provide: 'PollService', useExisting: PollServic
 const $SystemAccountService: Provider = { provide: 'SystemAccountService', useExisting: SystemAccountService };
 const $PushNotificationService: Provider = { provide: 'PushNotificationService', useExisting: PushNotificationService };
 const $QueryService: Provider = { provide: 'QueryService', useExisting: QueryService };
+const $QueueService: Provider = { provide: 'QueueService', useExisting: QueueService };
+const $QueueStatsService: Provider = { provide: 'QueueStatsService', useExisting: QueueStatsService };
+const $ServerStatsService: Provider = { provide: 'ServerStatsService', useExisting: ServerStatsService };
 const $ReactionService: Provider = { provide: 'ReactionService', useExisting: ReactionService };
 const $ReactionsBufferingService: Provider = { provide: 'ReactionsBufferingService', useExisting: ReactionsBufferingService };
 const $RelayService: Provider = { provide: 'RelayService', useExisting: RelayService };
@@ -471,6 +476,8 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		ApQuestionService,
 		ApUtilityService,
 		QueueService,
+		QueueStatsService,
+		ServerStatsService,
 
 		SponsorsService,
 
@@ -512,6 +519,9 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		$SystemAccountService,
 		$PushNotificationService,
 		$QueryService,
+		$QueueService,
+		$QueueStatsService,
+		$ServerStatsService,
 		$ReactionService,
 		$ReactionsBufferingService,
 		$RelayService,
@@ -779,6 +789,8 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		ApQuestionService,
 		ApUtilityService,
 		QueueService,
+		QueueStatsService,
+		ServerStatsService,
 
 		SponsorsService,
 
@@ -820,6 +832,9 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		$SystemAccountService,
 		$PushNotificationService,
 		$QueryService,
+		$QueueService,
+		$QueueStatsService,
+		$ServerStatsService,
 		$ReactionService,
 		$ReactionsBufferingService,
 		$RelayService,

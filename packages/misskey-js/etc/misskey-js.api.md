@@ -311,6 +311,9 @@ type AdminQueueQueuesResponse = operations['admin___queue___queues']['responses'
 type AdminQueueQueueStatsRequest = operations['admin___queue___queue-stats']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
+type AdminQueueQueueStatsResponse = operations['admin___queue___queue-stats']['responses']['200']['content']['application/json'];
+
+// @public (undocumented)
 type AdminQueueRemoveJobRequest = operations['admin___queue___remove-job']['requestBody']['content']['application/json'];
 
 // @public (undocumented)
@@ -874,8 +877,8 @@ export type Channels = {
     queueStats: {
         params: null;
         events: {
-            stats: (payload: QueueStats) => void;
-            statsLog: (payload: QueueStatsLog) => void;
+            stats: (payload: QueueLogs) => void;
+            statsLog: (payload: QueueLogs[]) => void;
         };
         receives: {
             requestLog: {
@@ -1529,8 +1532,8 @@ declare namespace entities {
         ModerationLog,
         ServerStats,
         ServerStatsLog,
-        QueueStats,
-        QueueStatsLog,
+        QUEUE_TYPES,
+        QueueType,
         EmojiAdded,
         EmojiUpdated,
         EmojiDeleted,
@@ -1638,6 +1641,7 @@ declare namespace entities {
         AdminQueueJobsResponse,
         AdminQueuePromoteJobsRequest,
         AdminQueueQueueStatsRequest,
+        AdminQueueQueueStatsResponse,
         AdminQueueQueuesResponse,
         AdminQueueRemoveJobRequest,
         AdminQueueRetryJobRequest,
@@ -2252,7 +2256,12 @@ declare namespace entities {
         Page,
         PageBlock,
         Channel,
+        QueueStat,
+        QueueStats,
+        QueueLog,
+        QueueLogs,
         QueueCount,
+        QueueCounts,
         Antenna,
         Clip,
         FederationInstance,
@@ -3543,32 +3552,28 @@ type PureRenote = Omit<Note, 'renote' | 'renoteId' | 'reply' | 'replyId' | 'text
 } & NonNullableRecord<Pick<Note, 'renote' | 'renoteId'>>;
 
 // @public (undocumented)
+const QUEUE_TYPES: readonly ["system", "endedPollNotification", "deliver", "inbox", "db", "relationship", "objectStorage", "userWebhookDeliver", "systemWebhookDeliver", "scheduleNotePost", "backgroundTask"];
+
+// @public (undocumented)
 type QueueCount = components['schemas']['QueueCount'];
 
 // @public (undocumented)
-type QueueStats = {
-    deliver: {
-        activeSincePrevTick: number;
-        active: number;
-        waiting: number;
-        delayed: number;
-    };
-    inbox: {
-        activeSincePrevTick: number;
-        active: number;
-        waiting: number;
-        delayed: number;
-    };
-    background: {
-        activeSincePrevTick: number;
-        active: number;
-        waiting: number;
-        delayed: number;
-    };
-};
+type QueueCounts = components['schemas']['QueueCounts'];
 
 // @public (undocumented)
-type QueueStatsLog = QueueStats[];
+type QueueLog = components['schemas']['QueueLog'];
+
+// @public (undocumented)
+type QueueLogs = components['schemas']['QueueLogs'];
+
+// @public (undocumented)
+type QueueStat = components['schemas']['QueueStat'];
+
+// @public (undocumented)
+type QueueStats = components['schemas']['QueueStats'];
+
+// @public (undocumented)
+type QueueType = typeof QUEUE_TYPES[number];
 
 // @public (undocumented)
 type RenoteMuteCreateRequest = operations['renote-mute___create']['requestBody']['content']['application/json'];

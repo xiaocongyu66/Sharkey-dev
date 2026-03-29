@@ -178,7 +178,7 @@ import { useInterval } from '@@/js/use-interval.js';
 import XChart from './job-queue.chart.vue';
 import XJob from './job-queue.job.vue';
 import type { Ref } from 'vue';
-import type * as Misskey from 'misskey-js';
+import * as Misskey from 'misskey-js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
@@ -194,28 +194,14 @@ import MkInput from '@/components/MkInput.vue';
 import bytes from '@/filters/bytes.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 
-const QUEUE_TYPES = [
-	'system',
-	'endedPollNotification',
-	'deliver',
-	'inbox',
-	'db',
-	'relationship',
-	'objectStorage',
-	'userWebhookDeliver',
-	'systemWebhookDeliver',
-	'scheduleNotePost',
-	'backgroundTask',
-] as const;
-
-const tab: Ref<typeof QUEUE_TYPES[number] | '-'> = ref('-');
+const tab: Ref<Misskey.entities.QueueType | '-'> = ref('-');
 const jobState = ref<'all' | 'latest' | 'completed' | 'failed' | 'active' | 'delayed' | 'wait' | 'paused'>('all');
 const jobs = ref<Misskey.entities.AdminQueueJobsResponse>([]);
 const jobsFetching = ref(false);
 const queuesFetching = ref(false);
 const currentQueueFetching = ref(false);
-const queueInfos = ref<Misskey.entities.AdminQueueQueuesResponse>([]);
-const queueInfo = ref<Misskey.entities.AdminQueueQueueStatsRequest | null>(null);
+const queueInfos = ref<Misskey.entities.QueueStat[]>([]);
+const queueInfo = ref<Misskey.entities.QueueStat | null>(null);
 const searchQuery = ref('');
 
 async function fetchQueues(force = false) {
@@ -274,7 +260,7 @@ watch([tab], async () => {
 			await fetchCurrentQueue(true);
 			await fetchJobs(true);
 		}
-	});
+	}, () => {});
 }, { immediate: true });
 
 watch([jobState], async () => {
@@ -358,7 +344,7 @@ const headerTabs = computed(() => {
 		title: i18n.ts.overview,
 		icon: 'ti ti-dashboard',
 	}];
-	for (const t of QUEUE_TYPES) {
+	for (const t of Misskey.entities.QUEUE_TYPES) {
 		tabs.push({
 			key: t,
 			title: t,
