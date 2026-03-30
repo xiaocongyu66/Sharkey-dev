@@ -15,6 +15,7 @@ import type { Logger } from '@/logger.js';
 import { SkRateLimiterService } from '@/server/SkRateLimiterService.js';
 import { BucketRateLimit, Keyed, LegacyRateLimit } from '@/misc/rate-limit-utils.js';
 import { CacheManagementService } from '@/global/CacheManagementService.js';
+import { LoggerService } from '@/core/LoggerService.js';
 
 describe(SkRateLimiterService, () => {
 	// Real service instances
@@ -39,12 +40,16 @@ describe(SkRateLimiterService, () => {
 		mockEnvService = new MockEnvService();
 
 		mockRedis = new MockRedis(mockTimeService);
-		const fakeConfig = { host: 'example.com' } as unknown as Config;
+		const fakeConfig = {
+			url: 'https://example.com',
+			host: 'example.com',
+			id: 'aidx',
+		} as unknown as Config;
 		mockInternalEventService = MockInternalEventService.create({ config: fakeConfig });
 
 		mockConsole = new MockConsole();
 
-		const loggerService = new RootLoggerService(mockConsole, mockTimeService, mockEnvService);
+		const loggerService = new LoggerService(mockConsole, mockTimeService, mockEnvService);
 		globalLogger = loggerService.getLogger('global');
 
 		cacheManagementService = new CacheManagementService(mockRedis, mockTimeService, mockInternalEventService, globalLogger);

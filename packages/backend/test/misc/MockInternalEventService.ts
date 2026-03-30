@@ -14,6 +14,7 @@ import { InternalEventService } from '@/global/InternalEventService.js';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
 import { TimeService } from '@/global/TimeService.js';
+import { IdService } from '@/core/IdService.js';
 
 type FakeCall<K extends keyof InternalEventService> = [K, Parameters<InternalEventService[K]>];
 
@@ -54,8 +55,11 @@ export class MockInternalEventService extends InternalEventService {
 
 		@Inject(DI.redisForSub)
 		redisForSub: Redis,
+
+		@Inject(IdService)
+		idService: IdService,
 	) {
-		super(redisForPub, redisForSub, config);
+		super(redisForPub, redisForSub, config, idService);
 	}
 
 	@bindThis
@@ -110,13 +114,19 @@ export class MockInternalEventService extends InternalEventService {
 		redisForPub?: Redis,
 		redisForSub?: Redis,
 		config?: Config,
+		idService?: IdService,
 	}): MockInternalEventService {
 		const timeService = opts?.timeService ?? new GodOfTimeService();
 		const redisForPub = opts?.redisForPub ?? opts?.redisForSub ?? new MockRedis(timeService);
 		const redisForSub = opts?.redisForSub ?? redisForPub;
-		const config = opts?.config ?? { host: 'example.com' } as Config;
+		const config = opts?.config ?? {
+			url: 'https://example.com',
+			host: 'example.com',
+			id: 'aidx',
+		} as Config;
+		const idService = opts?.idService ?? new IdService(timeService, config);
 
-		return new MockInternalEventService(config, redisForPub, redisForSub);
+		return new MockInternalEventService(config, redisForPub, redisForSub, idService);
 	}
 }
 

@@ -23,6 +23,7 @@ describe('ApMfmService', () => {
 		config = {
 			url: 'https://example.com',
 			host: 'example.com',
+			id: 'aidx',
 		} as unknown as Config;
 		meta = {} as unknown as MiMeta;
 		envService = new MockEnvService();

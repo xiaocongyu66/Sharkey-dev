@@ -21,9 +21,10 @@ export class IdService {
 	private method: string;
 
 	constructor(
-		@Inject(DI.config)
-		private config: Config,
 		private readonly timeService: TimeService,
+
+		@Inject(DI.config)
+		config: Config,
 	) {
 		this.method = config.id.toLowerCase();
 	}

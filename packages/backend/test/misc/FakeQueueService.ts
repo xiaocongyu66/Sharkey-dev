@@ -26,11 +26,16 @@ export class FakeQueueService extends QueueService implements OnApplicationBoots
 		@Inject(DI.config)
 		config: Config,
 
+		@Inject(TimeService)
 		timeService: TimeService,
+
+		@Inject(EnvService)
 		envService: EnvService,
+
+		@Inject(LoggerService)
 		loggerService: LoggerService,
 	) {
-		super(moduleRef, meta, config, timeService, envService, loggerService);
+		super(moduleRef, config, timeService, envService, loggerService);
 	}
 
 	@bindThis

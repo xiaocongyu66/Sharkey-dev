@@ -22,7 +22,7 @@ import { QueryService } from '@/core/QueryService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
-import type { IdService } from '@/core/IdService.js';
+import { IdService } from '@/core/IdService.js';
 import type { ReactionsBufferingService } from '@/core/ReactionsBufferingService.js';
 import type { Config } from '@/config.js';
 import type { NoteVisibilityData, PopulatedMe, PopulatedNote, NoteVisibilityHint } from '@/core/NoteVisibilityService.js';
@@ -72,7 +72,6 @@ export class NoteEntityService implements OnModuleInit {
 	private customEmojiService: CustomEmojiService;
 	private reactionService: ReactionService;
 	private reactionsBufferingService: ReactionsBufferingService;
-	private idService: IdService;
 	private noteLoader = new DebounceLoader(this.findNoteOrFail);
 	private channelLoader = new DebounceLoader(this.findChannelOrFail);
 
@@ -115,12 +114,7 @@ export class NoteEntityService implements OnModuleInit {
 		private readonly queryService: QueryService,
 		private readonly timeService: TimeService,
 		private readonly roleService: RoleService,
-		//private userEntityService: UserEntityService,
-		//private driveFileEntityService: DriveFileEntityService,
-		//private customEmojiService: CustomEmojiService,
-		//private reactionService: ReactionService,
-		//private reactionsBufferingService: ReactionsBufferingService,
-		//private idService: IdService,
+		private readonly idService: IdService,
 	) {
 	}
 
@@ -132,7 +126,6 @@ export class NoteEntityService implements OnModuleInit {
 		this.customEmojiService = this.moduleRef.get('CustomEmojiService');
 		this.reactionService = this.moduleRef.get('ReactionService');
 		this.reactionsBufferingService = this.moduleRef.get('ReactionsBufferingService');
-		this.idService = this.moduleRef.get('IdService');
 	}
 
 	// Implementation moved to NoteVisibilityService

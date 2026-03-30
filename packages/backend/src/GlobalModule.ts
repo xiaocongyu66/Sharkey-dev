@@ -28,7 +28,7 @@ import { CacheManagementService } from '@/global/CacheManagementService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
 import { DependencyService } from '@/global/DependencyService.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import { UtilityService } from '@/core/UtilityService.js';
+import { IdService } from '@/core/IdService.js';
 import { repositoryProviders } from '@/models/RepositoryModule.js';
 import { DI } from './di-symbols.js';
 
@@ -154,6 +154,7 @@ const $EnvService: Provider[] = [EnvService, { provide: 'EnvService', useExistin
 const $LoggerService: Provider[] = [LoggerService, { provide: 'LoggerService', useExisting: LoggerService }];
 const $Console: Provider[] = [{ provide: DI.console, useFactory: () => global.console }]; // useValue will break overrideProvider for some reason
 const $DependencyService: Provider[] = [DependencyService, { provide: 'DependencyService', useExisting: DependencyService }];
+const $IdService: Provider[] = [IdService, { provide: 'IdService', useExisting: IdService }];
 
 @Global()
 @Module({
@@ -181,6 +182,7 @@ const $DependencyService: Provider[] = [DependencyService, { provide: 'Dependenc
 		$LoggerService,
 		$Console,
 		$DependencyService,
+		$IdService,
 
 		// Internals (not exported)
 		$GlobalLogger,
@@ -209,6 +211,7 @@ const $DependencyService: Provider[] = [DependencyService, { provide: 'Dependenc
 		$LoggerService,
 		$Console,
 		$DependencyService,
+		$IdService,
 	].flat(),
 })
 export class GlobalModule implements OnModuleInit, OnApplicationShutdown {

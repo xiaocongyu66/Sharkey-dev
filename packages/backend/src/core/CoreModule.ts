@@ -42,7 +42,6 @@ import { FetchInstanceMetadataService } from './FetchInstanceMetadataService.js'
 import { GlobalEventService } from './GlobalEventService.js';
 import { HashtagService } from './HashtagService.js';
 import { HttpRequestService } from './HttpRequestService.js';
-import { IdService } from './IdService.js';
 import { ImageProcessingService } from './ImageProcessingService.js';
 import { SystemAccountService } from './SystemAccountService.js';
 import { InternalStorageService } from './InternalStorageService.js';
@@ -185,7 +184,6 @@ const $FetchInstanceMetadataService: Provider = { provide: 'FetchInstanceMetadat
 const $GlobalEventService: Provider = { provide: 'GlobalEventService', useExisting: GlobalEventService };
 const $HashtagService: Provider = { provide: 'HashtagService', useExisting: HashtagService };
 const $HttpRequestService: Provider = { provide: 'HttpRequestService', useExisting: HttpRequestService };
-const $IdService: Provider = { provide: 'IdService', useExisting: IdService };
 const $ImageProcessingService: Provider = { provide: 'ImageProcessingService', useExisting: ImageProcessingService };
 const $InternalStorageService: Provider = { provide: 'InternalStorageService', useExisting: InternalStorageService };
 const $MetaService: Provider = { provide: 'MetaService', useExisting: MetaService };
@@ -350,7 +348,6 @@ const $Imports = [
 		GlobalEventService,
 		HashtagService,
 		HttpRequestService,
-		IdService,
 		ImageProcessingService,
 		InternalStorageService,
 		MetaService,
@@ -506,7 +503,6 @@ const $Imports = [
 		$GlobalEventService,
 		$HashtagService,
 		$HttpRequestService,
-		$IdService,
 		$ImageProcessingService,
 		$InternalStorageService,
 		$MetaService,
@@ -667,7 +663,6 @@ const $Imports = [
 		GlobalEventService,
 		HashtagService,
 		HttpRequestService,
-		IdService,
 		ImageProcessingService,
 		InternalStorageService,
 		MetaService,
@@ -822,7 +817,6 @@ const $Imports = [
 		$GlobalEventService,
 		$HashtagService,
 		$HttpRequestService,
-		$IdService,
 		$ImageProcessingService,
 		$InternalStorageService,
 		$MetaService,

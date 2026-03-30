@@ -48,10 +48,10 @@ import { getCallerId } from '@/misc/attach-caller-id.js';
 import { isSystemAccount } from '@/misc/is-system-account.js';
 import { TimeService } from '@/global/TimeService.js';
 import { UtilityService } from '@/core/UtilityService.js';
+import { IdService } from '@/core/IdService.js';
 import type { RolePolicies, RoleService } from '@/core/RoleService.js';
 import type { ApPersonService } from '@/core/activitypub/models/ApPersonService.js';
 import type { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
-import type { IdService } from '@/core/IdService.js';
 import type { AnnouncementService } from '@/core/AnnouncementService.js';
 import type { CustomEmojiService } from '@/core/CustomEmojiService.js';
 import type { AvatarDecorationService } from '@/core/AvatarDecorationService.js';
@@ -85,7 +85,6 @@ export class UserEntityService implements OnModuleInit {
 	private announcementService: AnnouncementService;
 	private roleService: RoleService;
 	private federatedInstanceService: FederatedInstanceService;
-	private idService: IdService;
 	private avatarDecorationService: AvatarDecorationService;
 	private chatService: ChatService;
 	private cacheService: CacheService;
@@ -137,6 +136,7 @@ export class UserEntityService implements OnModuleInit {
 
 		private readonly timeService: TimeService,
 		private readonly utilityService: UtilityService,
+		private readonly idService: IdService,
 	) {
 	}
 
@@ -150,7 +150,6 @@ export class UserEntityService implements OnModuleInit {
 		this.announcementService = this.moduleRef.get('AnnouncementService');
 		this.roleService = this.moduleRef.get('RoleService');
 		this.federatedInstanceService = this.moduleRef.get('FederatedInstanceService');
-		this.idService = this.moduleRef.get('IdService');
 		this.avatarDecorationService = this.moduleRef.get('AvatarDecorationService');
 		this.chatService = this.moduleRef.get('ChatService');
 		this.cacheService = this.moduleRef.get('CacheService');

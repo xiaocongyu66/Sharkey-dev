@@ -36,7 +36,6 @@ import { UtilityService } from '@/core/UtilityService.js';
 import { bindThis } from '@/decorators.js';
 import { RoleService } from '@/core/RoleService.js';
 import type { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
-import type { AccountMoveService } from '@/core/AccountMoveService.js';
 import { ApUtilityService } from '@/core/activitypub/ApUtilityService.js';
 import { AppLockService } from '@/core/AppLockService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
@@ -83,9 +82,7 @@ export class ApPersonService implements OnModuleInit {
 	private hashtagService: HashtagService;
 	private usersChart: UsersChart;
 	private instanceChart: InstanceChart;
-	private accountMoveService: AccountMoveService;
 	private logger: Logger;
-	private idService: IdService;
 
 	constructor(
 		private moduleRef: ModuleRef,
@@ -124,6 +121,7 @@ export class ApPersonService implements OnModuleInit {
 		private readonly queueService: QueueService,
 		private readonly collapsedQueueService: CollapsedQueueService,
 		private readonly internalEventService: InternalEventService,
+		private readonly idService: IdService,
 
 		apLoggerService: ApLoggerService,
 	) {
@@ -164,8 +162,6 @@ export class ApPersonService implements OnModuleInit {
 		this.hashtagService = this.moduleRef.get('HashtagService');
 		this.usersChart = this.moduleRef.get('UsersChart');
 		this.instanceChart = this.moduleRef.get('InstanceChart');
-		this.accountMoveService = this.moduleRef.get('AccountMoveService');
-		this.idService = this.moduleRef.get('IdService');
 	}
 
 	/**

@@ -13,11 +13,12 @@ import type { QuantumKVOpts } from '@/misc/QuantumKVCache.js';
 import type { RedisKVCacheOpts, RedisSingleCacheOpts, MemoryCacheOpts } from '@/misc/cache.js';
 import type { Redis } from 'ioredis';
 import type { Config } from '@/config.js';
-import type { Logger, LogConsole } from '@/logger.js';
+import type { Logger } from '@/logger.js';
 import { TimeService } from '@/global/TimeService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { EnvService } from '@/global/EnvService.js';
+import { IdService } from '@/core/IdService.js';
 import {
 	CacheManagementService,
 	type ManagedMemoryKVCache,
@@ -42,7 +43,10 @@ export class FakeCacheManagementService extends CacheManagementService {
 		@Inject(DI.globalLogger)
 		globalLogger: Logger,
 
+		@Inject(TimeService)
 		timeService: TimeService,
+
+		@Inject(InternalEventService)
 		internalEventService: InternalEventService,
 	) {
 		super(redisClient, timeService, internalEventService, globalLogger);
@@ -92,6 +96,7 @@ export class FakeCacheManagementService extends CacheManagementService {
 		redisForSub?: Redis,
 		config?: Config,
 		internalEventService?: InternalEventService,
+		idService?: IdService,
 	}): FakeCacheManagementService {
 		// Global services
 		const timeService = opts?.timeService ?? new GodOfTimeService();
@@ -99,6 +104,12 @@ export class FakeCacheManagementService extends CacheManagementService {
 		const envService = opts?.envService ?? new MockEnvService();
 		const loggerService = opts?.loggerService ?? new LoggerService(console, timeService, envService);
 		const globalLogger = opts?.globalLogger ?? loggerService.getLogger('global');
+		const config = opts?.config ?? {
+			url: 'https://example.com',
+			host: 'example.com',
+			id: 'aidx',
+		} as Config;
+		const idService = opts?.idService ?? new IdService(timeService, config);
 
 		// Redis connections
 		const redisClient = opts?.redisClient ?? opts?.redisForPub ?? opts?.redisForSub ?? new MockRedis(timeService);
@@ -106,7 +117,7 @@ export class FakeCacheManagementService extends CacheManagementService {
 		const redisForSub = opts?.redisForSub ?? redisClient;
 
 		// Core services
-		const internalEventService = opts?.internalEventService ?? MockInternalEventService.create({ config: opts?.config, redisForPub, redisForSub });
+		const internalEventService = opts?.internalEventService ?? MockInternalEventService.create({ config, redisForPub, redisForSub, idService });
 
 		return new FakeCacheManagementService(redisClient, globalLogger, timeService, internalEventService);
 	}
