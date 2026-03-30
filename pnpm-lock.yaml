@@ -737,6 +737,9 @@ importers:
       katex:
         specifier: 0.16.22
         version: 0.16.22
+      locales:
+        specifier: workspace:*
+        version: link:../../locales
       matter-js:
         specifier: 0.20.0
         version: 0.20.0
@@ -1015,6 +1018,9 @@ importers:
       json5:
         specifier: 2.2.3
         version: 2.2.3
+      locales:
+        specifier: workspace:*
+        version: link:../../locales
       mfm-js:
         specifier: npm:@transfem-org/sfm-js@0.26.1
         version: '@transfem-org/sfm-js@0.26.1'
@@ -1203,6 +1209,9 @@ importers:
       execa:
         specifier: 9.6.0
         version: 9.6.0
+      locales:
+        specifier: workspace:*
+        version: link:../../locales
       nodemon:
         specifier: 3.1.10
         version: 3.1.10
@@ -1459,6 +1468,9 @@ importers:
       idb-keyval:
         specifier: 6.2.2
         version: 6.2.2
+      locales:
+        specifier: workspace:*
+        version: link:../../locales
       misskey-js:
         specifier: workspace:*
         version: link:../misskey-js

@@ -3,9 +3,9 @@ import tsParser from '@typescript-eslint/parser';
 import parser from 'vue-eslint-parser';
 import pluginVue from 'eslint-plugin-vue';
 import pluginMisskey from '@misskey-dev/eslint-plugin';
+import { build as buildLocales } from 'locales';
 import sharedConfig from '../shared/eslint.config.js';
 import localeRule from '../shared/eslint/locale-eslint-rule.js';
-import { build as buildLocales } from '../../locales/index.js';
 
 export default [
 	...sharedConfig,

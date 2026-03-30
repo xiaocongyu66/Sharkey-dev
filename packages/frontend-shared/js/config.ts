@@ -5,7 +5,7 @@
 
 import { markRaw } from 'vue';
 import { I18n } from '@@/js/i18n.js';
-import type { Locale } from '../../../locales/index.js';
+import type { Locale } from 'locales';
 
 // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
 const address = new URL(document.querySelector<HTMLMetaElement>('meta[property="instance_url"]')?.content || location.href);

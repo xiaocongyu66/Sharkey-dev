@@ -20,6 +20,7 @@
 		"buraha": "0.0.1",
 		"frontend-shared": "workspace:*",
 		"json5": "2.2.3",
+		"locales": "workspace:*",
 		"mfm-js": "npm:@transfem-org/sfm-js@0.26.1",
 		"misskey-js": "workspace:*",
 		"punycode.js": "2.3.1",

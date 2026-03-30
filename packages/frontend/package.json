@@ -51,6 +51,7 @@
 		"is-file-animated": "1.0.2",
 		"json5": "2.2.3",
 		"katex": "0.16.22",
+		"locales": "workspace:*",
 		"matter-js": "0.20.0",
 		"mfm-js": "npm:@transfem-org/sfm-js@0.26.1",
 		"misskey-bubble-game": "workspace:*",
