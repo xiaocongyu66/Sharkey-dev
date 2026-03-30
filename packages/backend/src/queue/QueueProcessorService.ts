@@ -671,20 +671,23 @@ export class QueueProcessorService implements BeforeApplicationShutdown {
 	}
 
 	@bindThis
-	public async start(): Promise<void> {
-		await Promise.all([
-			this.systemQueueWorker.run(),
-			this.dbQueueWorker.run(),
-			this.deliverQueueWorker.run(),
-			this.inboxQueueWorker.run(),
-			this.userWebhookDeliverQueueWorker.run(),
-			this.systemWebhookDeliverQueueWorker.run(),
-			this.relationshipQueueWorker.run(),
-			this.objectStorageQueueWorker.run(),
-			this.endedPollNotificationQueueWorker.run(),
-			this.schedulerNotePostQueueWorker.run(),
-			this.backgroundTaskWorker.run(),
-		]);
+	public start() {
+		// TODO refactor so that we can detect startup errors.
+		//   Due to Bull's unfortunate Worker implementation, the *only* way to reliably detect exceptions is by attaching events at construction time.
+		//   These calls to run only return on shutdown or error, so we can't await them.
+		//   They also don't emit any events when starting, so we can wrap in a promise either.
+
+		this.systemQueueWorker.run();
+		this.dbQueueWorker.run();
+		this.deliverQueueWorker.run();
+		this.inboxQueueWorker.run();
+		this.userWebhookDeliverQueueWorker.run();
+		this.systemWebhookDeliverQueueWorker.run();
+		this.relationshipQueueWorker.run();
+		this.objectStorageQueueWorker.run();
+		this.endedPollNotificationQueueWorker.run();
+		this.schedulerNotePostQueueWorker.run();
+		this.backgroundTaskWorker.run();
 	}
 
 	@bindThis

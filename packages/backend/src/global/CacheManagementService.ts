@@ -28,7 +28,6 @@ import {
 import { CollapsedQueue, type CollapsedQueueOpts, type CollapsedQueueServices } from '@/misc/collapsed-queue.js';
 import { TimeService, type TimerHandle } from '@/global/TimeService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
-import { LoggerService } from '@/core/LoggerService.js';
 import { callAllAsync, callAllOn, callAllOnAsync } from '@/misc/call-all.js';
 import { bindThis } from '@/decorators.js';
 import { DI } from '@/di-symbols.js';
@@ -73,9 +72,10 @@ export class CacheManagementService implements BeforeApplicationShutdown, OnAppl
 		private readonly timeService: TimeService,
 		private readonly internalEventService: InternalEventService,
 
-		loggerService: LoggerService,
+		@Inject(DI.globalLogger)
+		globalLogger: Logger,
 	) {
-		this.collapsedQueueLogger = loggerService.getLogger('collapsed-queue');
+		this.collapsedQueueLogger = globalLogger.createSubLogger('defer');
 	}
 
 	private get cacheServices(): CacheServices {

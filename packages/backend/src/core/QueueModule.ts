@@ -3,7 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Module, type OnApplicationShutdown, type Provider } from '@nestjs/common';
+import {
+	Global,
+	Module,
+	type Import,
+	type Provider,
+	type OnApplicationShutdown,
+} from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import * as Bull from 'bullmq';
 import { DI } from '@/di-symbols.js';
@@ -14,6 +20,7 @@ import { allSettled } from '@/misc/promise-tracker.js';
 import { promiseTry } from '@/misc/promise-try.js';
 import { bindThis } from '@/decorators.js';
 import { Logger } from '@/logger.js';
+import { GlobalModule } from '@/GlobalModule.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type {
 	DeliverJobData,
@@ -216,9 +223,14 @@ const $backgroundTask: Provider[] = [{
 	useExisting: 'queue:backgroundTask:events',
 }];
 
+/** External module dependencies */
+const $Imports = [
+	GlobalModule,
+] as const satisfies Import[];
+
+@Global()
 @Module({
-	imports: [
-	],
+	imports: $Imports,
 	providers: [
 		$system,
 		$endedPollNotification,
@@ -244,6 +256,7 @@ const $backgroundTask: Provider[] = [{
 		$systemWebhookDeliver,
 		$scheduleNotePost,
 		$backgroundTask,
+		$Imports,
 	].flat(),
 })
 export class QueueModule implements OnApplicationShutdown {

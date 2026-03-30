@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable, type BeforeApplicationShutdown } from '@nestjs/common';
+import { Injectable, type BeforeApplicationShutdown, type OnApplicationBootstrap } from '@nestjs/common';
 import { bindThis } from '@/decorators.js';
 import { ChartLoggerService } from '@/core/chart/ChartLoggerService.js';
 import { TimeService, type TimerHandle } from '@/global/TimeService.js';
@@ -25,7 +25,7 @@ import PerUserDriveChart from './charts/per-user-drive.js';
 import ApRequestChart from './charts/ap-request.js';
 
 @Injectable()
-export class ChartManagementService implements BeforeApplicationShutdown {
+export class ChartManagementService implements BeforeApplicationShutdown, OnApplicationBootstrap {
 	private saveIntervalId: TimerHandle;
 	private readonly logger: Logger;
 	private readonly charts: IChart[];
@@ -66,25 +66,36 @@ export class ChartManagementService implements BeforeApplicationShutdown {
 	}
 
 	@bindThis
-	public async start() {
+	public onApplicationBootstrap(): void {
+		if (this.envService.env.NODE_ENV === 'test') {
+			this.logger.debug('Skipping startup; ChartManagementService disabled in TEST environment.');
+			return;
+		}
+
+		this.start();
+	}
+
+	@bindThis
+	private start(): void {
 		// TODO random offset so different processes don't clash
 		// 20分おきにメモリ情報をDBに書き込み
 		this.saveIntervalId = this.timeService.startTimer(async () => {
 			await this.saveAll('timer');
 		}, 1000 * 60 * 20, { repeated: true });
+
+		this.logger.debug('Started ChartManagementService timer.');
 	}
 
 	@bindThis
-	public async dispose(): Promise<void> {
+	private async dispose(): Promise<void> {
 		this.timeService.stopTimer(this.saveIntervalId);
+		this.logger.debug('Stopped ChartManagementService timer.');
 
-		if (this.envService.env.NODE_ENV !== 'test') {
-			await this.saveAll('shutdown');
-		}
+		await this.saveAll('shutdown');
 	}
 
 	@bindThis
-	public async saveAll(reason: string): Promise<void> {
+	private async saveAll(reason: string): Promise<void> {
 		this.logger.info(`Saving charts for ${reason}...`);
 		for (const chart of this.charts) {
 			try {
@@ -98,6 +109,11 @@ export class ChartManagementService implements BeforeApplicationShutdown {
 
 	@bindThis
 	public async beforeApplicationShutdown(): Promise<void> {
+		if (this.envService.env.NODE_ENV === 'test') {
+			this.logger.debug('Skipping shutdown; ChartManagementService disabled in TEST environment.');
+			return;
+		}
+
 		await this.dispose();
 	}
 }

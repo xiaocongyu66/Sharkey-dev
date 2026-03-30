@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { ModuleMetadata } from '@nestjs/common';
+import type { ModuleMetadata, DynamicModule, ForwardReference, Type } from '@nestjs/common';
 
 declare module '@nestjs/common' {
 	export type Import = NonNullable<ModuleMetadata['imports']>[number];
+	export type IEntryNestModule = Type<unknown> | DynamicModule | ForwardReference | Promise<IEntryNestModule>;
 }

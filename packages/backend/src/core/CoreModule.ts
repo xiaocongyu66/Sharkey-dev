@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Module } from '@nestjs/common';
+import { Module, type Provider, type Import } from '@nestjs/common';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { AbuseReportService } from '@/core/AbuseReportService.js';
 import { SystemWebhookEntityService } from '@/core/entities/SystemWebhookEntityService.js';
@@ -162,7 +162,6 @@ import { ApQuestionService } from './activitypub/models/ApQuestionService.js';
 import { QueueModule } from './QueueModule.js';
 import { QueueService } from './QueueService.js';
 import { SponsorsService } from './SponsorsService.js';
-import type { Provider } from '@nestjs/common';
 
 //#region 文字列ベースでのinjection用(循環参照対応のため)
 const $AbuseReportService: Provider = { provide: 'AbuseReportService', useExisting: AbuseReportService };
@@ -321,11 +320,14 @@ const $ApUtilityService: Provider = { provide: 'ApUtilityService', useExisting: 
 
 const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: SponsorsService };
 
+/** External module dependencies */
+const $Imports = [
+	GlobalModule,
+	QueueModule,
+] as const satisfies Import[];
+
 @Module({
-	imports: [
-		GlobalModule,
-		QueueModule,
-	],
+	imports: $Imports,
 	providers: [
 		AbuseReportService,
 		AbuseReportNotificationService,
@@ -644,7 +646,6 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		QueueLoggerService,
 	],
 	exports: [
-		QueueModule,
 		AbuseReportService,
 		AbuseReportNotificationService,
 		AccountMoveService,
@@ -953,6 +954,8 @@ const $SponsorsService: Provider = { provide: 'SponsorsService', useExisting: Sp
 		//#endregion
 
 		$SponsorsService,
-	],
+
+		$Imports,
+	].flat(),
 })
 export class CoreModule { }

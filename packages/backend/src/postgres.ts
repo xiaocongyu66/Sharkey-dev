@@ -11,7 +11,6 @@ import { entities as charts } from '@/core/chart/entities.js';
 import { Config } from '@/config.js';
 import type MisskeyLogger from '@/logger.js';
 import type { Data } from '@/logger.js';
-import type { LoggerService } from '@/core/LoggerService.js';
 import type { EnvService } from '@/global/EnvService.js';
 import { bindThis } from '@/decorators.js';
 
@@ -95,6 +94,7 @@ import { SkLatestNote } from '@/models/LatestNote.js';
 import { SkApContext } from '@/models/SkApContext.js';
 import { SkApFetchLog } from '@/models/SkApFetchLog.js';
 import { SkApInboxLog } from '@/models/SkApInboxLog.js';
+import { coreEnvService, coreLogger } from '@/boot/coreLogger.js';
 
 // Types are incorrect - TypeId is not a real enum and therefore does not exist at runtime.
 // This construction defines the value by hand, but still allows TypeScript to verify it.
@@ -303,11 +303,14 @@ export const entities = [
 	...charts,
 ];
 
-export function createPostgresDataSource(config: Config, loggerService: LoggerService, envService: EnvService) {
+export function createPostgresDataSource(config: Config, globalLogger?: MisskeyLogger, envService?: EnvService) {
+	envService ??= coreEnvService;
+	globalLogger ??= coreLogger.createSubLogger('global');
+
 	const log = envService.env.NODE_ENV !== 'production' && !envService.options.quiet;
 	const verbose = envService.options.verbose;
 
-	const dbLogger = loggerService.getLogger('db');
+	const dbLogger = globalLogger.createSubLogger('db');
 	return new DataSource({
 		type: 'postgres',
 		host: config.db.host,
@@ -355,6 +358,7 @@ export function createPostgresDataSource(config: Config, loggerService: LoggerSe
 		}, dbLogger),
 		maxQueryExecutionTime: config.db.slowQueryThreshold,
 		entities: entities,
+		// TODO only pass this when running migrations
 		migrations: ['../../migration/*.js'],
 	});
 }

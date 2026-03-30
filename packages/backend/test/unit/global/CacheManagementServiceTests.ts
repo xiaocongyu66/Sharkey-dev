@@ -9,14 +9,15 @@ import { MockConsole } from '../../misc/MockConsole.js';
 import { GodOfTimeService } from '../../misc/GodOfTimeService.js';
 import { MockInternalEventService } from '../../misc/MockInternalEventService.js';
 import { MockEnvService } from '../../misc/MockEnvService.js';
+import type { Logger } from '@/logger.js';
 import {
 	CacheManagementService,
 	GC_INTERVAL,
 	type CacheManager,
 	type QueueManager,
 } from '@/global/CacheManagementService.js';
-import { LoggerService } from '@/core/LoggerService.js';
 import { MemoryKVCache } from '@/misc/cache.js';
+import { LoggerService } from '@/core/LoggerService.js';
 
 describe(CacheManagementService, () => {
 	let mockTimeService: GodOfTimeService;
@@ -24,7 +25,7 @@ describe(CacheManagementService, () => {
 	let mockInternalEventService: MockInternalEventService;
 	let mockConsole: MockConsole;
 	let mockEnvService: MockEnvService;
-	let fakeLoggerService: LoggerService;
+	let fakeGlobalLogger: Logger;
 
 	let serviceUnderTest: CacheManagementService;
 	let internalsUnderTest: { managedCaches: Map<string, CacheManager>, managedQueues: Map<string, QueueManager> };
@@ -35,7 +36,9 @@ describe(CacheManagementService, () => {
 		mockInternalEventService = MockInternalEventService.create();
 		mockConsole = new MockConsole();
 		mockEnvService = new MockEnvService();
-		fakeLoggerService = new LoggerService(mockConsole, mockTimeService, mockEnvService);
+
+		const loggerService = new LoggerService(mockConsole, mockTimeService, mockEnvService);
+		fakeGlobalLogger = loggerService.getLogger('global');
 	});
 
 	afterAll(() => {
@@ -50,7 +53,7 @@ describe(CacheManagementService, () => {
 		mockEnvService.mockReset();
 		mockConsole.mockReset();
 
-		serviceUnderTest = new CacheManagementService(mockRedisClient, mockTimeService, mockInternalEventService, fakeLoggerService);
+		serviceUnderTest = new CacheManagementService(mockRedisClient, mockTimeService, mockInternalEventService, fakeGlobalLogger);
 		internalsUnderTest = {
 			get managedCaches() { return Reflect.get(serviceUnderTest, 'managedCaches'); },
 			get managedQueues() { return Reflect.get(serviceUnderTest, 'managedQueues'); },

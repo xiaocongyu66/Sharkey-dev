@@ -3,41 +3,62 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Global, Inject, Module } from '@nestjs/common';
+import {
+	Global,
+	Inject,
+	Module,
+	type Provider,
+	type OnModuleInit,
+	type OnApplicationShutdown,
+} from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { DataSource, IsNull, Not } from 'typeorm';
+import { IsNull, Not, type DataSource } from 'typeorm';
 import { MeiliSearch } from 'meilisearch';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MetasRepository } from '@/models/_.js';
 import type { Logger } from '@/logger.js';
 import { bindThis } from '@/decorators.js';
+import { loadConfig, type Config } from '@/config.js';
+import { allSettled } from '@/misc/promise-tracker.js';
 import { renderInlineError } from '@/misc/render-inline-error.js';
+import { createPostgresDataSource } from '@/postgres.js';
 import { TimeService, NativeTimeService } from '@/global/TimeService.js';
 import { EnvService } from '@/global/EnvService.js';
 import { CacheManagementService } from '@/global/CacheManagementService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
 import { DependencyService } from '@/global/DependencyService.js';
 import { LoggerService } from '@/core/LoggerService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { repositoryProviders } from '@/models/RepositoryModule.js';
 import { DI } from './di-symbols.js';
-import { Config, loadConfig } from './config.js';
-import { createPostgresDataSource } from './postgres.js';
-import { RepositoryModule } from './models/RepositoryModule.js';
-import { allSettled } from './misc/promise-tracker.js';
-import type { Provider, OnApplicationShutdown, OnApplicationBootstrap } from '@nestjs/common';
+
+async function fetchMeta(metasRepository: MetasRepository, logger: Logger): Promise<MiMeta> {
+	let meta = await metasRepository.findOne({ where: { id: Not(IsNull()) }, order: { id: 'DESC' } });
+
+	if (!meta) {
+		logger.info('Meta table is empty; populating with defaults.');
+
+		// No-op UPSERT to safely create the row
+		await metasRepository.upsert({ id: 'x' }, ['id']);
+		meta = await metasRepository.findOneOrFail({ where: { id: Not(IsNull()) }, order: { id: 'DESC' } });
+	}
+
+	return meta;
+}
 
 const $config: Provider = {
 	provide: DI.config,
-	useFactory: (loggerService: LoggerService) => loadConfig(loggerService),
-	inject: [LoggerService],
+	useFactory: (globalLogger: Logger) => loadConfig(globalLogger),
+	inject: [DI.globalLogger, EnvService],
 };
 
 const $db: Provider = {
 	provide: DI.db,
-	useFactory: async (config: Config, loggerService: LoggerService, envService: EnvService) => {
-		const db = createPostgresDataSource(config, loggerService, envService);
+	useFactory: async (config: Config, globalLogger: Logger, envService: EnvService) => {
+		const db = createPostgresDataSource(config, globalLogger, envService);
 		return await db.initialize();
 	},
-	inject: [DI.config, LoggerService, EnvService],
+	inject: [DI.config, DI.globalLogger, EnvService],
 };
 
 const $meilisearch: Provider = {
@@ -70,8 +91,7 @@ const $redis: Provider = {
 const $redisForPub: Provider = {
 	provide: DI.redisForPub,
 	useFactory: (config: Config) => {
-		const redis = new Redis.Redis(config.redisForPubsub);
-		return redis;
+		return new Redis.Redis(config.redisForPubsub);
 	},
 	inject: [DI.config],
 };
@@ -112,42 +132,10 @@ const $redisForRateLimit: Provider = {
 
 const $meta: Provider = {
 	provide: DI.meta,
-	useFactory: async (metasRepository: MetasRepository, internalEventService: InternalEventService, loggerService: LoggerService) => {
-		const logger = loggerService.getLogger('meta');
-
-		const metaSingleton: MiMeta & OnApplicationShutdown & OnApplicationBootstrap = {
-			...await fetchMeta(),
-			onApplicationBootstrap() {
-				internalEventService.on('metaUpdated', onMetaUpdated);
-			},
-			onApplicationShutdown() {
-				internalEventService.off('metaUpdated', onMetaUpdated);
-			},
-		};
-
-		async function fetchMeta(): Promise<MiMeta> {
-			let meta = await metasRepository.findOne({ where: { id: Not(IsNull()) }, order: { id: 'DESC' } });
-
-			if (!meta) {
-				logger.info('Meta table is empty; populating with defaults');
-
-				// No-op UPSERT to safely create the row
-				await metasRepository.upsert({ id: 'x' }, ['id']);
-				meta = await metasRepository.findOneOrFail({ where: { id: Not(IsNull()) }, order: { id: 'DESC' } });
-			}
-
-			return meta;
-		}
-
-		async function onMetaUpdated(): Promise<void> {
-			const updated = await fetchMeta();
-			Object.assign(metaSingleton, updated);
-			logger.debug('Updated meta from remote change: ', { updated });
-		}
-
-		return metaSingleton;
+	useFactory: async (metasRepository: MetasRepository, globalLogger: Logger) => {
+		return await fetchMeta(metasRepository, globalLogger);
 	},
-	inject: [DI.metasRepository, InternalEventService, LoggerService],
+	inject: [DI.metasRepository, DI.globalLogger],
 };
 
 const $GlobalLogger: Provider = {
@@ -169,44 +157,138 @@ const $DependencyService: Provider[] = [DependencyService, { provide: 'Dependenc
 
 @Global()
 @Module({
-	imports: [RepositoryModule],
-	providers: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions, $redisForRateLimit, $CacheManagementService, $InternalEventService, $TimeService, $EnvService, $LoggerService, $Console, $DependencyService, $GlobalLogger].flat(),
-	exports: [$config, $db, $meta, $meilisearch, $redis, $redisForPub, $redisForSub, $redisForTimelines, $redisForReactions, $redisForRateLimit, $CacheManagementService, $InternalEventService, $TimeService, $EnvService, $LoggerService, $Console, $DependencyService, RepositoryModule].flat(),
+	providers: [
+		// Resources
+		$config,
+		$db,
+		$meilisearch,
+		$redis,
+		$redisForPub,
+		$redisForSub,
+		$redisForTimelines,
+		$redisForReactions,
+		$redisForRateLimit,
+
+		// Repositories
+		repositoryProviders,
+		$meta,
+
+		// Services
+		$CacheManagementService,
+		$InternalEventService,
+		$TimeService,
+		$EnvService,
+		$LoggerService,
+		$Console,
+		$DependencyService,
+
+		// Internals (not exported)
+		$GlobalLogger,
+	].flat(),
+	exports: [
+		// Resources
+		$config,
+		$db,
+		$meilisearch,
+		$redis,
+		$redisForPub,
+		$redisForSub,
+		$redisForTimelines,
+		$redisForReactions,
+		$redisForRateLimit,
+
+		// Repositories
+		repositoryProviders,
+		$meta,
+
+		// Services
+		$CacheManagementService,
+		$InternalEventService,
+		$TimeService,
+		$EnvService,
+		$LoggerService,
+		$Console,
+		$DependencyService,
+	].flat(),
 })
-export class GlobalModule implements OnApplicationShutdown {
+export class GlobalModule implements OnModuleInit, OnApplicationShutdown {
 	constructor(
-		@Inject(DI.db) private db: DataSource,
-		@Inject(DI.redis) private redisClient: Redis.Redis,
-		@Inject(DI.redisForPub) private redisForPub: Redis.Redis,
-		@Inject(DI.redisForSub) private redisForSub: Redis.Redis,
-		@Inject(DI.redisForTimelines) private redisForTimelines: Redis.Redis,
-		@Inject(DI.redisForReactions) private redisForReactions: Redis.Redis,
-		@Inject(DI.redisForRateLimit) private redisForRateLimit: Redis.Redis,
-		@Inject(DI.globalLogger) private logger: Logger,
+		@Inject(DI.db)
+		private readonly db: DataSource,
+
+		@Inject(DI.redis)
+		private readonly redisClient: Redis.Redis,
+
+		@Inject(DI.redisForPub)
+		private readonly redisForPub: Redis.Redis,
+
+		@Inject(DI.redisForSub)
+		private readonly redisForSub: Redis.Redis,
+
+		@Inject(DI.redisForTimelines)
+		private readonly redisForTimelines: Redis.Redis,
+
+		@Inject(DI.redisForReactions)
+		private readonly redisForReactions: Redis.Redis,
+
+		@Inject(DI.redisForRateLimit)
+		private readonly redisForRateLimit: Redis.Redis,
+
+		@Inject(DI.metasRepository)
+		private readonly metasRepository: MetasRepository,
+
+		@Inject(DI.meta)
+		private readonly meta: MiMeta,
+
+		@Inject(DI.globalLogger)
+		private readonly logger: Logger,
+
+		private readonly internalEventService: InternalEventService,
 	) { }
 
-	public async dispose(): Promise<void> {
+	@bindThis
+	public async onApplicationShutdown(): Promise<void> {
 		// Wait for all potential DB queries
-		this.logger.info('Finalizing active promises...');
+		this.logger.info('Finalizing active tasks...');
 		await allSettled();
-		// And then disconnect from DB
-		this.logger.info('Disconnected from data sources...');
+
+		// Terminate meta sync
+		this.internalEventService.off('metaUpdated', this.onMetaUpdated);
+
+		// Disconnect from Postgres
+		// (this must come before Redis in case caching is enabled)
+		this.logger.info('Disconnecting from Postgres...');
 		await this.db.destroy();
+
+		// Disconnect from Redis
+		this.logger.info('Disconnecting from Redis...');
 		this.safeDisconnect(this.redisClient);
 		this.safeDisconnect(this.redisForPub);
 		this.safeDisconnect(this.redisForSub);
 		this.safeDisconnect(this.redisForTimelines);
 		this.safeDisconnect(this.redisForReactions);
 		this.safeDisconnect(this.redisForRateLimit);
-		this.logger.info('Global module disposed.');
+
+		this.logger.info('Global module terminated.');
 	}
 
 	@bindThis
-	public async onApplicationShutdown(signal: string): Promise<void> {
-		await this.dispose();
+	public async onModuleInit(): Promise<void> {
+		// Begin meta sync
+		this.internalEventService.on('metaUpdated', this.onMetaUpdated);
 	}
 
-	private safeDisconnect(redis: { disconnect(): void }): void {
+	@bindThis
+	private async onMetaUpdated(): Promise<void> {
+		const before = Object.assign({}, this.meta);
+		const after = await fetchMeta(this.metasRepository, this.logger);
+
+		Object.assign(this.meta, after);
+		this.logger.debug('Updated meta from remote change: ', { before, after });
+	}
+
+	@bindThis
+	private safeDisconnect(redis: Redis.Redis): void {
 		try {
 			redis.disconnect();
 		} catch (err) {
