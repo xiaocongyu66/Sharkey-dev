@@ -8,14 +8,14 @@ import { In } from 'typeorm';
 import type { InstancesRepository } from '@/models/_.js';
 import type { MiMeta } from '@/models/Meta.js';
 import type { MiInstance } from '@/models/Instance.js';
-import type { InternalEventTypes } from '@/core/GlobalEventService.js';
 import type { PartialEntityUpdate } from '@/types.js';
 import { IdService } from '@/core/IdService.js';
 import { DI } from '@/di-symbols.js';
-import { UtilityService } from '@/core/UtilityService.js';
-import { CacheManagementService, type ManagedQuantumKVCache } from '@/global/CacheManagementService.js';
-import { InternalEventService } from '@/global/InternalEventService.js';
 import { TimeService } from '@/global/TimeService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { RemoteLoggerService } from '@/core/RemoteLoggerService.js';
+import { CacheManagementService, type ManagedQuantumKVCache } from '@/global/CacheManagementService.js';
+import { InternalEventService, type InternalEventTypes } from '@/global/InternalEventService.js';
 import { diffArrays } from '@/misc/diff-arrays.js';
 import { bindThis } from '@/decorators.js';
 

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { In, IsNull, Not } from 'typeorm';
 import type {
 	BlockingsRepository,
@@ -22,13 +22,12 @@ import type {
 } from '@/models/_.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
 import type { MiUserListMembership } from '@/models/UserListMembership.js';
-import { isLocalUser, isRemoteUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
+import { isLocalUser, isRemoteUser } from '@/models/User.js';
 import { bindThis } from '@/decorators.js';
 import { toArray } from '@/misc/prelude/array.js';
 import { IsOne } from '@/misc/is-one.js';
-import type { InternalEventTypes } from '@/core/GlobalEventService.js';
-import { InternalEventService, type InternalEventContext } from '@/global/InternalEventService.js';
+import { InternalEventService, type InternalEventContext, type InternalEventTypes } from '@/global/InternalEventService.js';
 import { UtilityService } from '@/core/UtilityService.js';
 import * as Acct from '@/misc/acct.js';
 import { IdentifiableError, errorCodes } from '@/misc/identifiable-error.js';
@@ -37,7 +36,6 @@ import {
 	type ManagedMemoryKVCache,
 	type ManagedQuantumKVCache,
 } from '@/global/CacheManagementService.js';
-import type { OnApplicationShutdown } from '@nestjs/common';
 
 export interface FollowStats {
 	localFollowing: number;

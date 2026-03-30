@@ -4,9 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { MiChannel } from '@/models/Channel.js';
 import type { MiUser } from '@/models/User.js';
-import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { MiNote } from '@/models/Note.js';
 import type { MiAntenna } from '@/models/Antenna.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
@@ -15,19 +13,15 @@ import type { MiUserList } from '@/models/UserList.js';
 import type { MiAbuseUserReport } from '@/models/AbuseUserReport.js';
 import type { MiSignin } from '@/models/Signin.js';
 import type { MiPage } from '@/models/Page.js';
-import type { MiWebhook } from '@/models/Webhook.js';
-import type { MiSystemWebhook } from '@/models/SystemWebhook.js';
-import type { MiMeta } from '@/models/Meta.js';
-import type { MiAvatarDecoration, MiChatMessage, MiChatRoom, MiReversiGame, MiRole, MiRoleAssignment } from '@/models/_.js';
+import type { MiChatMessage, MiChatRoom, MiReversiGame, MiRole } from '@/models/_.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type { EmptyObject, Serialized } from '@/types.js';
 import { bindThis } from '@/decorators.js';
-import { InternalEventService } from '@/global/InternalEventService.js';
+import type { InternalEventTypes } from '@/global/InternalEventService.js';
 import type * as Redis from 'ioredis';
 import type * as Reversi from 'misskey-reversi';
-import type * as Misskey from 'misskey-js';
 
 //#region Stream type-body definitions
 export interface BroadcastEventTypes {
@@ -227,84 +221,6 @@ type UndefinedAsNullAll<T> = {
 	[K in keyof T]: T[K] extends undefined ? null : T[K];
 };
 
-export interface InternalEventTypes {
-	userChangeSuspendedState: { id: MiUser['id']; isSuspended: MiUser['isSuspended']; };
-	userChangeDeletedState: { id: MiUser['id']; isDeleted: MiUser['isDeleted']; token: string | null, uri: string | null, usernameLower: string, host: string | null };
-	userChangeHibernatedState: { id: MiUser['id'] | MiUser['id'][]; isHibernated: MiUser['isHibernated']; };
-	userMemoChanged: { userId: MiUser['id'], targetUserId: MiUser['id'], memo: string | null };
-	userTokenRegenerated: { id: MiUser['id']; oldToken: string | null; newToken: string; };
-	/** @deprecated Use userUpdated or usersUpdated instead */
-	remoteUserUpdated: { id: MiUser['id']; };
-	/** @deprecated Use userUpdated or usersUpdated instead */
-	localUserUpdated: { id: MiUser['id']; };
-	usersUpdated: { ids: MiUser['id'][]; };
-	userUpdated: { id: MiUser['id']; };
-	follow: { followerId: MiUser['id']; followeeId: MiUser['id'] | MiUser['id'][]; withReplies?: boolean, notify?: 'normal' | 'none' };
-	followChanged: { followerId: MiUser['id']; followeeId: MiUser['id'] | MiUser['id'][] | null; withReplies?: boolean, notify?: 'normal' | 'none' };
-	unfollow: { followerId: MiUser['id']; followeeId: MiUser['id'] | MiUser['id'][] | null; withReplies?: undefined, notify?: undefined };
-	followRequested: { followerId: MiUser['id']; followeeId: MiUser['id']; }
-	followRequestCancelled: { followerId: MiUser['id']; followeeId: MiUser['id']; }
-	blockingCreated: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
-	blockingDeleted: { blockerId: MiUser['id']; blockeeId: MiUser['id']; };
-	policiesUpdated: MiRole['policies'];
-	roleCreated: MiRole;
-	roleDeleted: MiRole;
-	roleUpdated: MiRole;
-	userRoleAssigned: MiRoleAssignment;
-	userRoleUnassigned: MiRoleAssignment;
-	webhookCreated: { id: MiWebhook['id'] };
-	webhookDeleted: { id: MiWebhook['id'] };
-	webhookUpdated: { id: MiWebhook['id'] };
-	systemWebhookCreated: { id: MiSystemWebhook['id'] };
-	systemWebhookDeleted: { id: MiSystemWebhook['id'] };
-	systemWebhookUpdated: { id: MiSystemWebhook['id'] };
-	antennaCreated: MiAntenna;
-	antennaDeleted: MiAntenna;
-	antennaUpdated: MiAntenna;
-	avatarDecorationCreated: MiAvatarDecoration;
-	avatarDecorationDeleted: MiAvatarDecoration;
-	avatarDecorationUpdated: MiAvatarDecoration;
-	metaUpdated: { before: MiMeta; after: MiMeta; };
-	followChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
-	unfollowChannel: { userId: MiUser['id']; channelId: MiChannel['id']; };
-	updateUserProfile: {
-		/**
-		 * ID of the user profile being updated.
-		 * This is also the user ID.
-		 */
-		userId: MiUserProfile['userId'],
-
-		/**
-		 * List of keys that may have been changed.
-		 * Null means that all keys are potentially changed.
-		 */
-		keys: (keyof MiUserProfile)[] | null,
-	};
-	mute: { muterId: MiUser['id']; muteeId: MiUser['id'] | MiUser['id'][]; };
-	unmute: { muterId: MiUser['id']; muteeId: MiUser['id'] | MiUser['id'][]; };
-	muteRenotes: { muterId: MiUser['id']; muteeId: MiUser['id'] | MiUser['id'][]; };
-	unmuteRenotes: { muterId: MiUser['id']; muteeId: MiUser['id'] | MiUser['id'][]; };
-	userListMemberAdded: { userListId: MiUserList['id']; memberId: MiUser['id']; };
-	userListMemberUpdated: { userListId: MiUserList['id']; memberId: MiUser['id']; };
-	userListMemberRemoved: { userListId: MiUserList['id']; memberId: MiUser['id']; };
-	userListMemberBulkAdded: { userListIds: MiUserList['id'][]; memberId: MiUser['id']; };
-	userListMemberBulkUpdated: { userListIds: MiUserList['id'][]; memberId: MiUser['id']; };
-	userListMemberBulkRemoved: { userListIds: MiUserList['id'][]; memberId: MiUser['id']; };
-	quantumCacheUpdated: { name: string, keys: string[] };
-	quantumCacheReset: { name: string };
-	/**
-	 * Emitted by the ServerStatsService when a new stats snapshot is available.
-	 * Migrated from xev.
-	 */
-	pushServerStats: Misskey.entities.ServerStats;
-
-	/**
-	 * Emitted by the QueueStatsService when a new stats snapshot is available.
-	 * Migrated from xev.
-	 */
-	pushQueueCounts: Packed<'QueueLogs'>;
-}
-
 type EventTypesToEventPayload<T extends object> = EventUnionFromDictionary<UndefinedAsNullAll<SerializedAll<T>> | T>;
 
 // name/messages(spec) pairs dictionary
@@ -383,10 +299,12 @@ export type GlobalEventBody<E extends GlobalEventNames, Type extends GlobalEvent
 	? GlobalEventPayload<E>
 	: Extract<GlobalEventPayload<E>, { type: Type, body: GlobalEventBodies<E> }>['body'];
 export type GlobalEvent<E extends GlobalEventNames> = {
+	node?: string;
 	channel: E;
 	message: GlobalEvent<E> extends [infer Payload] ? Payload : never;
 };
 
+// TODO extract a common EventBus<TMap> class from InternalEventService, then use that for each stream type.
 @Injectable()
 export class GlobalEventService {
 	constructor(
@@ -395,8 +313,6 @@ export class GlobalEventService {
 
 		@Inject(DI.redisForPub)
 		private redisForPub: Redis.Redis,
-
-		private readonly internalEventService: InternalEventService,
 	) {
 	}
 
@@ -410,12 +326,6 @@ export class GlobalEventService {
 			channel: channel,
 			message: message,
 		}));
-	}
-
-	/** @deprecated use InternalEventService instead */
-	@bindThis
-	public async publishInternalEvent<Type extends keyof InternalEventTypes>(type: Type, value: InternalEventTypes[Type]): Promise<void> {
-		await this.internalEventService.emit(type, value);
 	}
 
 	@bindThis

@@ -5,9 +5,9 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { MetaService } from '@/core/MetaService.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { InternalEventService } from '@/global/InternalEventService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import type { MiMeta } from '@/models/Meta.js';
@@ -49,9 +49,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private serverSettings: MiMeta,
 
 		private metaService: MetaService,
-		private globalEventService: GlobalEventService,
 		private moderationLogService: ModerationLogService,
 		private roleService: RoleService,
+		private readonly internalEventService: InternalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			try {
@@ -73,7 +73,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				policies: ps.policies,
 			});
 
-			this.globalEventService.publishInternalEvent('policiesUpdated', after.policies);
+			await this.internalEventService.emit('policiesUpdated', after.policies);
 			this.moderationLogService.log(me, 'updateServerSettings', {
 				before: before.policies,
 				after: after.policies,

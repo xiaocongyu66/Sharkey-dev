@@ -4,7 +4,6 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import * as Redis from 'ioredis';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { NotesRepository, AntennasRepository } from '@/models/_.js';
 import { QueryService } from '@/core/QueryService.js';
@@ -12,8 +11,8 @@ import { DI } from '@/di-symbols.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { IdService } from '@/core/IdService.js';
 import { TimeService } from '@/global/TimeService.js';
+import { InternalEventService } from '@/global/InternalEventService.js';
 import { FanoutTimelineService } from '@/core/FanoutTimelineService.js';
-import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { UserService } from '@/core/UserService.js';
 import { CollapsedQueueService } from '@/core/CollapsedQueueService.js';
 import { ApiError } from '../../error.js';
@@ -76,10 +75,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private noteEntityService: NoteEntityService,
 		private queryService: QueryService,
 		private fanoutTimelineService: FanoutTimelineService,
-		private globalEventService: GlobalEventService,
 		private readonly timeService: TimeService,
 		private readonly collapsedQueueService: CollapsedQueueService,
 		private readonly userService: UserService,
+		private readonly internalEventService: InternalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			this.userService.markUserActive(me);
@@ -105,7 +104,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			if (needPublishEvent) {
-				this.globalEventService.publishInternalEvent('antennaUpdated', antenna);
+				await this.internalEventService.emit('antennaUpdated', antenna);
 			}
 
 			let noteIds = await this.fanoutTimelineService.get(`antennaTimeline:${antenna.id}`, untilId, sinceId);
