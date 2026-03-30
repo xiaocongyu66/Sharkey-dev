@@ -156,14 +156,15 @@ export class CacheManagementService implements BeforeApplicationShutdown, OnAppl
 	public async dispose(): Promise<void> {
 		this.stopGcTimer();
 
-		const toDispose = [
-			...this.managedCaches.values(),
-			...this.managedQueues.values(),
-		];
-		this.managedCaches.clear();
+		const queuesToDispose = this.managedQueues.values().toArray();
 		this.managedQueues.clear();
 
-		await callAllOnAsync(toDispose, 'dispose');
+		const cachesToDispose = this.managedCaches.values().toArray();
+		this.managedCaches.clear();
+
+		// Queues first, since some of the persist methods call into caches.
+		await callAllOnAsync(queuesToDispose, 'dispose');
+		await callAllOnAsync(cachesToDispose, 'dispose');
 	}
 
 	@bindThis
