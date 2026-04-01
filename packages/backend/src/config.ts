@@ -10,7 +10,9 @@ import * as yaml from 'js-yaml';
 import fastGlob from 'fast-glob';
 import ipaddr from 'ipaddr.js';
 import { coreLogger } from '@/boot/coreLogger.js';
-import type Logger from './logger.js';
+import { QUEUE_TYPES, type QueueType } from '@/queue/const.js';
+import type { UnionToIntersection } from '@/types.js';
+import type { Logger } from './logger.js';
 import type * as Sentry from '@sentry/node';
 import type * as SentryVue from '@sentry/vue';
 import type { RedisOptions } from 'ioredis';
@@ -28,10 +30,23 @@ type RedisOptionsSource = Partial<RedisOptions> & {
 	prefix?: string;
 };
 
+const QUEUE_FIELDS = ['JobConcurrency', 'JobPerSec', 'JobMaxAttempts'] as const;
+type QueueField = typeof QUEUE_FIELDS[number];
+
+type QueueConfigUnion = {
+	[Q in QueueType]: {
+		[F in `${Q}${QueueField}`]: number;
+	};
+}[QueueType];
+type QueueConfigIntersection = UnionToIntersection<QueueConfigUnion>;
+type QueueConfig = {
+	[K in keyof QueueConfigIntersection]: QueueConfigIntersection[K] | null;
+};
+
 /**
  * 設定ファイルの型
  */
-type Source = {
+type Source = Partial<QueueConfig> & {
 	url?: string;
 	port?: number;
 	address?: string;
@@ -110,16 +125,9 @@ type Source = {
 	outgoingAddress?: string;
 	outgoingAddressFamily?: 'ipv4' | 'ipv6' | 'dual';
 
-	deliverJobConcurrency?: number;
-	inboxJobConcurrency?: number;
-	relationshipJobConcurrency?: number;
+	// Alias for legacy config keys
 	backgroundJobConcurrency?: number;
-	deliverJobPerSec?: number;
-	inboxJobPerSec?: number;
-	relationshipJobPerSec?: number;
 	backgroundJobPerSec?: number;
-	deliverJobMaxAttempts?: number;
-	inboxJobMaxAttempts?: number;
 	backgroundJobMaxAttempts?: number;
 
 	mediaDirectory?: string;
@@ -219,7 +227,7 @@ function parseIpOrMask(ipOrMask: string): CIDR | null {
 	return null;
 }
 
-export type Config = {
+export type Config = QueueConfig & {
 	url: string;
 	port: number;
 	address: string;
@@ -274,17 +282,6 @@ export type Config = {
 	id: string;
 	outgoingAddress: string | undefined;
 	outgoingAddressFamily: 'ipv4' | 'ipv6' | 'dual' | undefined;
-	deliverJobConcurrency: number | undefined;
-	inboxJobConcurrency: number | undefined;
-	relationshipJobConcurrency: number | undefined;
-	backgroundJobConcurrency: number | undefined;
-	deliverJobPerSec: number | undefined;
-	inboxJobPerSec: number | undefined;
-	relationshipJobPerSec: number | undefined;
-	backgroundJobPerSec: number | undefined;
-	deliverJobMaxAttempts: number | undefined;
-	inboxJobMaxAttempts: number | undefined;
-	backgroundJobMaxAttempts: number | undefined;
 	proxyRemoteFiles: boolean | undefined;
 	customMOTD: string[] | undefined;
 	signToActivityPubGet: boolean;
@@ -427,6 +424,14 @@ export function loadConfig(logger?: Logger): Config {
 	// 0 => undefined (disabled)
 	const slowQueryThreshold = (config.db.slowQueryThreshold ?? 300) || undefined;
 
+	const queueConfig = {} as QueueConfig;
+	for (const queue of QUEUE_TYPES) {
+		for (const field of QUEUE_FIELDS) {
+			const key = `${queue}${field}`;
+			queueConfig[key] = config[key] ?? null;
+		}
+	}
+
 	return {
 		version,
 		publishTarballInsteadOfProvideRepositoryUrl: !!config.publishTarballInsteadOfProvideRepositoryUrl,
@@ -477,17 +482,12 @@ export function loadConfig(logger?: Logger): Config {
 		clusterLimit: config.clusterLimit,
 		outgoingAddress: config.outgoingAddress,
 		outgoingAddressFamily: config.outgoingAddressFamily,
-		deliverJobConcurrency: config.deliverJobConcurrency,
-		inboxJobConcurrency: config.inboxJobConcurrency,
-		relationshipJobConcurrency: config.relationshipJobConcurrency,
-		backgroundJobConcurrency: config.backgroundJobConcurrency,
-		deliverJobPerSec: config.deliverJobPerSec,
-		inboxJobPerSec: config.inboxJobPerSec,
-		relationshipJobPerSec: config.relationshipJobPerSec,
-		backgroundJobPerSec: config.backgroundJobPerSec,
-		deliverJobMaxAttempts: config.deliverJobMaxAttempts,
-		inboxJobMaxAttempts: config.inboxJobMaxAttempts,
-		backgroundJobMaxAttempts: config.backgroundJobMaxAttempts,
+		// Correct queue config
+		...queueConfig,
+		// Legacy queue config
+		backgroundTaskJobConcurrency: queueConfig.backgroundTaskJobConcurrency ?? config.backgroundJobConcurrency ?? null,
+		backgroundTaskJobPerSec: queueConfig.backgroundTaskJobPerSec ?? config.backgroundJobPerSec ?? null,
+		backgroundTaskJobMaxAttempts: queueConfig.backgroundTaskJobMaxAttempts ?? config.backgroundJobMaxAttempts ?? null,
 		proxyRemoteFiles: config.proxyRemoteFiles,
 		customMOTD: config.customMOTD,
 		signToActivityPubGet: config.signToActivityPubGet ?? true,

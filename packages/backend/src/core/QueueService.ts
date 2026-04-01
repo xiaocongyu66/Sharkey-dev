@@ -1082,7 +1082,7 @@ export class QueueService implements OnModuleInit, OnApplicationBootstrap {
 			data,
 			{
 				// https://docs.bullmq.io/guide/retrying-failing-jobs#custom-back-off-strategies
-				attempts: this.config.backgroundJobMaxAttempts ?? 8,
+				attempts: this.config.backgroundTaskJobMaxAttempts ?? 8,
 				backoff: {
 					// Resolves to QueueProcessorService::HttpRelatedBackoff()
 					type: 'custom',

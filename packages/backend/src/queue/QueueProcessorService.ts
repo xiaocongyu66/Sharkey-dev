@@ -607,9 +607,9 @@ export class QueueProcessorService implements BeforeApplicationShutdown {
 			this.backgroundTaskWorker = new Bull.Worker(QUEUE.BACKGROUND_TASK, async (job) => await this.backgroundTaskProcessorService.process(job.data), {
 				...baseWorkerOptions(this.config, QUEUE.BACKGROUND_TASK),
 				autorun: false,
-				concurrency: this.config.backgroundJobConcurrency ?? 32,
+				concurrency: this.config.backgroundTaskJobConcurrency ?? 32,
 				limiter: {
-					max: this.config.backgroundJobPerSec ?? 256,
+					max: this.config.backgroundTaskJobPerSec ?? 256,
 					duration: 1000,
 				},
 				settings: {

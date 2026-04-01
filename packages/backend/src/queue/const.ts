@@ -8,10 +8,10 @@ import type { Config } from '@/config.js';
 import type * as Bull from 'bullmq';
 
 export const QUEUE_TYPES = [
-	'system',
-	'endedPollNotification',
 	'deliver',
 	'inbox',
+	'system',
+	'endedPollNotification',
 	'db',
 	'relationship',
 	'objectStorage',
