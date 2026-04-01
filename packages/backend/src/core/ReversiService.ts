@@ -5,7 +5,6 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import * as Redis from 'ioredis';
-import { reversiUpdateKeys } from '@/const.js';
 import * as Reversi from 'misskey-reversi';
 import { IsNull, LessThan, MoreThan } from 'typeorm';
 import type {
@@ -14,6 +13,7 @@ import type {
 } from '@/models/_.js';
 import type { MiUser } from '@/models/User.js';
 import { DI } from '@/di-symbols.js';
+import { reversiUpdateKeys } from '@/const.js';
 import { bindThis } from '@/decorators.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
