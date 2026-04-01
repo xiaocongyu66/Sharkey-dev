@@ -334,13 +334,13 @@ id: 'aidx'
 ## Deliver queue - processes ActivityPub messages (AKA "Activities") being set to remote instances.
 ## All inbound activities are queued and processed in chronological order by this queue.
 #deliverJobConcurrency: 128
-#deliverJobPerSec: 128
+#deliverJobPerSec: 0
 #deliverJobMaxAttempts: 12
 #
 ## Inbox queue - processes ActivityPub messages (AKA "Activities") received from remote instances.
 ## All inbound activities are queued and processed in chronological order by this job.
 #inboxJobConcurrency: 16
-#inboxJobPerSec: 32
+#inboxJobPerSec: 0
 #inboxJobMaxAttempts: 8
 #
 ## System queue - processes scheduled maintenance and operational tasks.
@@ -370,12 +370,12 @@ id: 'aidx'
 #
 ## User Webhook Deliver queue - processes events for user-created Webhooks.
 #userWebhookDeliverJobConcurrency: 64
-#userWebhookDeliverJobPerSec: 64
+#userWebhookDeliverJobPerSec: 0
 #userWebhookDeliverJobMaxAttempts: 4
 #
 ## System Webhook Deliver queue - processes events for system (admin-created) Webhooks.
 #systemWebhookDeliverJobConcurrency: 16
-#systemWebhookDeliverJobPerSec: 16
+#systemWebhookDeliverJobPerSec: 0
 #systemWebhookDeliverJobMaxAttempts: 4
 #
 ## Scheduled Note Post queue - processes scheduled notes.
@@ -385,7 +385,7 @@ id: 'aidx'
 #
 ## Background Task queue - processes background synchronization tasks that need to happen soon (but not immediately), such as remote user updates and instance metadata updates.
 #backgroundTaskJobConcurrency: 32
-#backgroundTaskJobPerSec: 256
+#backgroundTaskJobPerSec: 0
 #backgroundTaskJobMaxAttempts: 8
 
 # Local address used for outgoing requests

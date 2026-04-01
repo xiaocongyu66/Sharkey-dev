@@ -66,11 +66,9 @@ export type QueueData = {
 // Keep in sync with all the YML configs!
 export const QueueDefaults: Partial<Config> = {
 	deliverJobConcurrency: 128,
-	deliverJobPerSec: 128,
 	deliverJobMaxAttempts: 12,
 
 	inboxJobConcurrency: 16,
-	inboxJobPerSec: 32,
 	inboxJobMaxAttempts: 8,
 
 	relationshipJobConcurrency: 16,
@@ -80,15 +78,12 @@ export const QueueDefaults: Partial<Config> = {
 	objectStorageJobMaxAttempts: 4,
 
 	userWebhookDeliverJobConcurrency: 64,
-	userWebhookDeliverJobPerSec: 64,
 	userWebhookDeliverJobMaxAttempts: 4,
 
 	systemWebhookDeliverJobConcurrency: 16,
-	systemWebhookDeliverJobPerSec: 16,
 	systemWebhookDeliverJobMaxAttempts: 4,
 
 	backgroundTaskJobConcurrency: 32,
-	backgroundTaskJobPerSec: 256,
 	backgroundTaskJobMaxAttempts: 8,
 };
 
