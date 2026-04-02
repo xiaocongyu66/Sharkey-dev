@@ -69,12 +69,14 @@ export class IdService {
 	 *
 	 * Keep in sync with frontend randomId().
 	 *
-	 * @param random 	Unit float (-1.0 to +1.0) used as source of random.
+	 * @param random 	Unit float (0.0 to 1.0) used as source of random.
 	 * 								Exposed for unit testing only; should be undefined for production mode!
 	 * @returns 10-digit string containing 50 bits of non-secure entropy.
 	 */
 	@bindThis
 	public genSimple(random?: number): string {
+		if (random != null && random < 0) throw new Error(`random basis out of range: ${random}`);
+		if (random != null && random > 1) throw new Error(`random basis out of range: ${random}`);
 		const randomFloat = random ?? Math.random();
 		const randomInt = Math.round(randomFloat * MAX_SIMPLE_ID);
 		return randomInt.toString(26).padStart(10, '0');
