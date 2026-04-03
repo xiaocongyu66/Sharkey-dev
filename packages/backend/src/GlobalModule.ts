@@ -253,6 +253,9 @@ export class GlobalModule implements OnModuleInit, OnApplicationShutdown {
 		@Inject(DI.globalLogger)
 		private readonly logger: Logger,
 
+		@Inject(DI.nodeId)
+		private readonly nodeId: string,
+
 		private readonly internalEventService: InternalEventService,
 	) { }
 
@@ -279,13 +282,15 @@ export class GlobalModule implements OnModuleInit, OnApplicationShutdown {
 		this.safeDisconnect(this.redisForReactions);
 		this.safeDisconnect(this.redisForRateLimit);
 
-		this.logger.info('Global module terminated.');
+		this.logger.info(`Node ${this.nodeId} terminated.`);
 	}
 
 	@bindThis
 	public async onModuleInit(): Promise<void> {
 		// Begin meta sync
 		this.internalEventService.on('metaUpdated', this.onMetaUpdated);
+
+		this.logger.info(`Node ${this.nodeId} started in process ${process.pid}.`);
 	}
 
 	@bindThis
