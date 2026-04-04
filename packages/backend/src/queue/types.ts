@@ -36,7 +36,7 @@ export type QueueData = {
 
 export type Queues = {
 	// <data type, result type, name type>
-	[QT in QueueType]: Bull.Queue<QueueData[QT], FIXME, string>;
+	[QT in QueueType]: Bull.Queue<QueueData[QT], string | void, string>;
 };
 
 export type QueueEvents = {
@@ -44,7 +44,7 @@ export type QueueEvents = {
 };
 
 export type Jobs = {
-	[QT in QueueType]: Bull.Job<QueueData[QT]>;
+	[QT in QueueType]: Bull.Job<QueueData[QT], string | void, string>;
 };
 
 export type Workers = {
