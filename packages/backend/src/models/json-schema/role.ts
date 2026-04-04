@@ -276,6 +276,10 @@ export const packedRolePoliciesSchema = {
 			type: 'integer',
 			optional: false, nullable: false,
 		},
+		canImportNotes: {
+			type: 'boolean',
+			optional: false, nullable: false,
+		},
 		avatarDecorationLimit: {
 			type: 'integer',
 			optional: false, nullable: false,
