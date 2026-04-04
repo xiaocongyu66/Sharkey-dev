@@ -316,6 +316,7 @@ export class QueueService implements OnModuleInit, OnApplicationBootstrap {
 		return await this.queues[qt].add(name, data, opts);
 	}
 
+	@bindThis
 	public async addBulk<
 		QT extends QueueType,
 		Data extends Bull.ExtractDataType<QueueData[QT], QueueData[QT]>,
