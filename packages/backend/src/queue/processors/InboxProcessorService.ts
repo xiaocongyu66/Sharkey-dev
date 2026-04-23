@@ -212,6 +212,11 @@ export class InboxProcessorService implements OnApplicationShutdown {
 				const copy = { ...activity, signature: undefined };
 				try {
 					activity = await this.jsonLdService.compact(copy) as IActivity;
+
+					const reasonForSuspicion = this.jsonLdService.isSuspicious(activity);
+					if (reasonForSuspicion) {
+						throw new Bull.UnrecoverableError(`skip: activity is suspicious: ${reasonForSuspicion}`);
+					}
 				} catch (e) {
 					throw new Bull.UnrecoverableError(`skip: failed to compact activity: ${e}`);
 				}

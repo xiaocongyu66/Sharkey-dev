@@ -16,6 +16,12 @@ import { validateContentTypeSetAsJsonLD } from './misc/validator.js';
 import type { ContextDefinition, JsonLdDocument } from 'jsonld';
 import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.js';
 
+const suspiciousKeys = new Set([
+	'@included',
+	'@graph',
+	'@reverse',
+]);
+
 // https://stackoverflow.com/a/66252656
 type RemoveIndex<T> = {
 	[ K in keyof T as string extends K
@@ -142,6 +148,29 @@ export class JsonLdService {
 		return (await import('jsonld')).default.normalize(data, {
 			documentLoader: customLoader,
 		});
+	}
+
+	@bindThis
+	public isSuspicious(data: Document): string | undefined {
+		if (Array.isArray(data)) {
+			for (const node of data) {
+				const result = this.isSuspicious(node);
+				if (result) return result;
+			}
+		} else {
+			for (const [key, value] of Object.entries(data)) {
+				if (key in suspiciousKeys) {
+					return `${key} in ActivityPub data is suspicious`;
+				}
+
+				if (typeof value === 'object' && value !== null) {
+					const result = this.isSuspicious(value);
+					if (result) return result;
+				}
+			}
+		}
+
+		return;
 	}
 
 	@bindThis
