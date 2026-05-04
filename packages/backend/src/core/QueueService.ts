@@ -837,7 +837,7 @@ export class QueueService implements OnModuleInit, OnApplicationBootstrap {
 	}
 
 	protected async createBackgroundTask<T extends BackgroundTaskJobData>(data: T, duplication?: string | { id: string, ttl?: number }): Promise<void> {
-		this.add(
+		await this.add(
 			'backgroundTask',
 			data.type,
 			data,
