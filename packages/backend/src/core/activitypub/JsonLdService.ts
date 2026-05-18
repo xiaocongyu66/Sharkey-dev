@@ -171,7 +171,7 @@ export class JsonLd {
 			} else {
 				const object = value;
 				for (const [key, value] of Object.entries(object)) {
-					if (key in JsonLd.forbiddenDirectives) {
+					if (JsonLd.forbiddenDirectives.has(key)) {
 						throw new JsonLdForbiddenDriectiveError(key);
 					}
 

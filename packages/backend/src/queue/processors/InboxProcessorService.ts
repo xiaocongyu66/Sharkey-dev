@@ -209,6 +209,11 @@ export class InboxProcessorService implements OnApplicationShutdown {
 				} catch (error) {
 					throw new Bull.UnrecoverableError(`skip: failed to compact activity: ${error}`);
 				}
+				try {
+					jsonLd.checkForForbiddenDirectives(activity);
+				} catch (error) {
+					throw new Bull.UnrecoverableError(`skip: ${error}`);
+				}
 
 				//#region Log
 				const compactedInfo = Object.assign({}, activity);
