@@ -23,8 +23,8 @@ packages/sw/.yarn/cache
 # pnpm
 .pnpm-store
 
-# Vitest Browser Mode
-packages/frontend/test/e2e/screenshots
+# Playwright
+packages/frontend/test/e2e/artifacts
 
 # Coverage
 coverage
