@@ -35,13 +35,27 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkSelect>
 			</div>
 			<div :class="$style.inputs">
-				<MkInput v-model="searchUsername" style="flex: 1;" type="text" :spellcheck="false" debounce>
+				<MkInput v-model="searchUsername" style="flex: 1;" type="text" :spellcheck="false" :debounce="true">
 					<template #prefix>@</template>
 					<template #label>{{ i18n.ts.username }}</template>
 				</MkInput>
-				<MkInput v-model="searchHost" style="flex: 1;" type="text" :spellcheck="false" :disabled="pagination.params.origin === 'local'">
+				<MkInput v-model="searchHost" style="flex: 1;" type="text" :spellcheck="false" :disabled="origin === 'local'" :debounce="true">
 					<template #prefix>@</template>
 					<template #label>{{ i18n.ts.host }}</template>
+				</MkInput>
+			</div>
+			<div v-if="iAmAdmin" :class="$style.inputs">
+				<MkInput v-model="searchEmail" style="flex: 1;" type="search" :spellcheck="false" :debounce="true">
+					<template #prefix><i class="ti ti-mail"></i></template>
+					<template #label>{{ filterEmailLabel }}</template>
+				</MkInput>
+				<MkInput v-model="searchIp" style="flex: 1;" type="search" :spellcheck="false" :debounce="true">
+					<template #prefix><i class="ti ti-network"></i></template>
+					<template #label>{{ filterIpLabel }}</template>
+				</MkInput>
+				<MkInput v-model="searchFingerprint" style="flex: 1;" type="search" :spellcheck="false" :debounce="true">
+					<template #prefix><i class="ti ti-fingerprint"></i></template>
+					<template #label>{{ filterFpLabel }}</template>
 				</MkInput>
 			</div>
 
@@ -70,6 +84,7 @@ import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import { dateString } from '@/filters/date.js';
+import { iAmAdmin } from '@/i.js';
 
 type SearchQuery = {
 	sort?: string;
@@ -77,6 +92,9 @@ type SearchQuery = {
 	origin?: string;
 	username?: string;
 	hostname?: string;
+	email?: string;
+	ip?: string;
+	fingerprint?: string;
 };
 
 const paginationComponent = useTemplateRef('paginationComponent');
@@ -87,6 +105,14 @@ const state = ref(storedQuery.state ?? 'all');
 const origin = ref(storedQuery.origin ?? 'local');
 const searchUsername = ref(storedQuery.username ?? '');
 const searchHost = ref(storedQuery.hostname ?? '');
+const searchEmail = ref(storedQuery.email ?? '');
+const searchIp = ref(storedQuery.ip ?? '');
+const searchFingerprint = ref(storedQuery.fingerprint ?? '');
+
+const filterEmailLabel = '邮箱';
+const filterIpLabel = 'IP';
+const filterFpLabel = '指纹';
+
 const pagination = {
 	endpoint: 'admin/show-users' as const,
 	limit: 10,
@@ -94,8 +120,13 @@ const pagination = {
 		sort: sort.value,
 		state: state.value,
 		origin: origin.value,
-		username: searchUsername.value,
-		hostname: searchHost.value,
+		username: searchUsername.value || null,
+		hostname: searchHost.value || null,
+		...(iAmAdmin ? {
+			email: searchEmail.value || null,
+			ip: searchIp.value || null,
+			fingerprint: searchFingerprint.value || null,
+		} : {}),
 	})),
 	offsetMode: true,
 };
@@ -121,12 +152,12 @@ async function addUser() {
 	os.apiWithDialog('admin/accounts/create', {
 		username: username,
 		password: password,
-	}).then(res => {
+	}).then(() => {
 		paginationComponent.value?.reload();
 	});
 }
 
-function show(user) {
+function show(user: { id: string }) {
 	os.pageWindow(`/admin/user/${user.id}`);
 }
 
@@ -136,6 +167,9 @@ function resetQuery() {
 	origin.value = 'local';
 	searchUsername.value = '';
 	searchHost.value = '';
+	searchEmail.value = '';
+	searchIp.value = '';
+	searchFingerprint.value = '';
 }
 
 const headerActions = computed(() => [{
@@ -163,6 +197,9 @@ watchEffect(() => {
 		origin: origin.value,
 		username: searchUsername.value,
 		hostname: searchHost.value,
+		email: searchEmail.value,
+		ip: searchIp.value,
+		fingerprint: searchFingerprint.value,
 	}));
 });
 

@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable } from '@nestjs/common';
-import type { UsersRepository } from '@/models/_.js';
+import type { NotesRepository, SigninsRepository, UserIpsRepository, UserProfilesRepository, UsersRepository } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
@@ -45,6 +45,12 @@ export const paramDef = {
 			default: null,
 			description: 'The local host is represented with `null`.',
 		},
+		/** Admin-only: match user profile email (ILIKE partial) */
+		email: { type: 'string', nullable: true, default: null },
+		/** Admin-only: match user_ip.ip (ILIKE partial) */
+		ip: { type: 'string', nullable: true, default: null },
+		/** Admin-only: match signin.fingerprint or note.clientFingerprint */
+		fingerprint: { type: 'string', nullable: true, default: null },
 		detail: {
 			type: 'boolean',
 			nullable: false,
@@ -60,11 +66,24 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
 
+		@Inject(DI.userProfilesRepository)
+		private userProfilesRepository: UserProfilesRepository,
+
+		@Inject(DI.userIpsRepository)
+		private userIpsRepository: UserIpsRepository,
+
+		@Inject(DI.signinsRepository)
+		private signinsRepository: SigninsRepository,
+
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
+
 		private userEntityService: UserEntityService,
 		private roleService: RoleService,
 		private readonly timeService: TimeService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			const meIsAdmin = await this.roleService.isAdministrator(me);
 			const query = this.usersRepository.createQueryBuilder('user');
 
 			switch (ps.state) {
@@ -103,6 +122,68 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (ps.hostname) {
 				query.andWhere('user.host = :hostname', { hostname: ps.hostname.toLowerCase() });
+			}
+
+			// --- Admin-only filters: email / IP / fingerprint ---
+			if (meIsAdmin && ps.email && ps.email.trim()) {
+				const profiles = await this.userProfilesRepository.createQueryBuilder('p')
+					.select('p.userId')
+					.where('p.email ILIKE :email', { email: `%${ps.email.trim()}%` })
+					.getMany();
+				const ids = profiles.map(p => p.userId);
+				if (ids.length === 0) return [];
+				query.andWhere('user.id IN (:...emailUserIds)', { emailUserIds: ids });
+			}
+
+			if (meIsAdmin && ps.ip && ps.ip.trim()) {
+				const uip = `%${ps.ip.trim()}%`;
+				const rows = await this.userIpsRepository.createQueryBuilder('ip')
+					.select('ip.userId')
+					.where('ip.ip ILIKE :uip', { uip })
+					.getMany();
+				// Also match note.clientIp and signin.ip for broader coverage
+				const noteRows = await this.notesRepository.createQueryBuilder('n')
+					.select('n.userId')
+					.distinct(true)
+					.where('n.clientIp ILIKE :uip', { uip })
+					.getMany();
+				const signinRows = await this.signinsRepository.createQueryBuilder('s')
+					.select('s.userId')
+					.distinct(true)
+					.where('s.ip ILIKE :uip', { uip })
+					.getMany();
+				const idSet = new Set<string>([
+					...rows.map(r => r.userId),
+					...noteRows.map(r => r.userId),
+					...signinRows.map(r => r.userId),
+				]);
+				if (idSet.size === 0) return [];
+				query.andWhere('user.id IN (:...ipUserIds)', { ipUserIds: Array.from(idSet) });
+			}
+
+			if (meIsAdmin && ps.fingerprint && ps.fingerprint.trim()) {
+				const fp = `%${ps.fingerprint.trim()}%`;
+				const signinRows = await this.signinsRepository.createQueryBuilder('s')
+					.select('s.userId')
+					.distinct(true)
+					.where('s.fingerprint ILIKE :fp', { fp })
+					.getMany();
+				const noteRows = await this.notesRepository.createQueryBuilder('n')
+					.select('n.userId')
+					.distinct(true)
+					.where('n.clientFingerprint ILIKE :fp', { fp })
+					.getMany();
+				const idSet = new Set<string>([
+					...signinRows.map(r => r.userId),
+					...noteRows.map(r => r.userId),
+				]);
+				if (idSet.size === 0) return [];
+				query.andWhere('user.id IN (:...fpUserIds)', { fpUserIds: Array.from(idSet) });
+			}
+
+			// Non-admins cannot use email/ip/fingerprint filters (ignore silently)
+			if (!meIsAdmin && ((ps.email && ps.email.trim()) || (ps.ip && ps.ip.trim()) || (ps.fingerprint && ps.fingerprint.trim()))) {
+				// Moderators without admin: only username/host work
 			}
 
 			switch (ps.sort) {

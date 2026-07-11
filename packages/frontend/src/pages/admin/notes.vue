@@ -175,6 +175,13 @@ const anFb = {
 	hide: '隐藏',
 	unhide: '取消隐藏',
 	hidden: '已隐藏',
+	hideConfirm: '确定隐藏所选帖子？隐藏后普通用户不可见，管理员仍可在「已隐藏」中查看。',
+	unhideConfirm: '确定取消隐藏所选帖子？',
+	hideOneConfirm: '确定隐藏这条帖子？',
+	unhideOneConfirm: '确定取消隐藏这条帖子？',
+	deleteConfirm: '确定永久删除这条帖子？此操作不可恢复。',
+	batchDeleteConfirm: '确定永久删除已选帖子？此操作不可恢复。',
+	suspendConfirm: '确定封禁该用户？其帖子将被隐藏，账号将无法正常使用。',
 	suspendHideChat: '同时隐藏该用户的聊天记录',
 	keywordBlock: '屏蔽关键词',
 	keywordBlockCaption: '支持多种格式：每行一条规则；同一行内空格分隔的词需同时匹配（AND）；使用 /正则/flags 可写正则。敏感词命中会强制标为敏感，禁止词命中将拒绝发帖。',
@@ -316,9 +323,17 @@ async function batchDelete() {
 	if (ids.length === 0) return;
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		text: `${an.batchDelete} (${ids.length})?`,
+		title: an.batchDelete,
+		text: `${an.batchDeleteConfirm}（${ids.length}）`,
 	});
 	if (canceled) return;
+	// second confirm for destructive batch delete
+	const second = await os.confirm({
+		type: 'warning',
+		title: an.batchDelete,
+		text: `${an.deleteConfirm}（${ids.length}）`,
+	});
+	if (second.canceled) return;
 	await os.apiWithDialog('admin/notes-batch-delete' as any, { noteIds: ids } as any);
 	items.value = items.value.filter(n => !selectedIds.value.has(n.id));
 	clearSelection();
@@ -327,6 +342,12 @@ async function batchDelete() {
 async function batchHide(isHidden: boolean) {
 	const ids = Array.from(selectedIds.value);
 	if (ids.length === 0) return;
+	const { canceled } = await os.confirm({
+		type: 'warning',
+		title: isHidden ? an.batchHide : an.batchUnhide,
+		text: `${isHidden ? an.hideConfirm : an.unhideConfirm}（${ids.length}）`,
+	});
+	if (canceled) return;
 	await os.apiWithDialog('admin/notes-set-hidden' as any, { noteIds: ids, isHidden } as any);
 	if (viewTab.value === 'all' && isHidden) {
 		items.value = items.value.filter(n => !selectedIds.value.has(n.id));
@@ -342,6 +363,12 @@ async function batchHide(isHidden: boolean) {
 
 async function toggleHideOne(note: AdminNote) {
 	const next = !note.isHidden;
+	const { canceled } = await os.confirm({
+		type: 'warning',
+		title: next ? an.hide : an.unhide,
+		text: next ? an.hideOneConfirm : an.unhideOneConfirm,
+	});
+	if (canceled) return;
 	await os.apiWithDialog('admin/notes-set-hidden' as any, {
 		noteIds: [note.id],
 		isHidden: next,
@@ -358,14 +385,29 @@ async function toggleHideOne(note: AdminNote) {
 async function deleteNote(note: AdminNote) {
 	const { canceled } = await os.confirm({
 		type: 'warning',
-		text: i18n.ts.noteDeleteConfirm,
+		title: i18n.ts.delete,
+		text: an.deleteConfirm,
 	});
 	if (canceled) return;
+	const second = await os.confirm({
+		type: 'warning',
+		title: i18n.ts.delete,
+		text: i18n.ts.noteDeleteConfirm || an.deleteConfirm,
+	});
+	if (second.canceled) return;
 	await os.apiWithDialog('notes/delete', { noteId: note.id });
 	items.value = items.value.filter(x => x.id !== note.id);
 }
 
 async function suspendUser(note: AdminNote) {
+	// First confirm: intentional ban
+	const first = await os.confirm({
+		type: 'warning',
+		title: an.suspendUser,
+		text: `${an.suspendConfirm}\n@${note.user?.username ?? note.userId}`,
+	});
+	if (first.canceled) return;
+	// Second step: choose whether to also hide chat
 	const { canceled, result } = await os.actions({
 		type: 'warning',
 		title: an.suspendUser,
