@@ -32,7 +32,7 @@ export const meta = {
 export const paramDef = {
 	type: 'object',
 	properties: {
-		limit: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 30 },
 		sinceId: { type: 'string', format: 'misskey:id' },
 		untilId: { type: 'string', format: 'misskey:id' },
 		userId: { type: 'string', format: 'misskey:id', nullable: true },
@@ -41,11 +41,22 @@ export const paramDef = {
 		email: { type: 'string', nullable: true },
 		clientIp: { type: 'string', nullable: true },
 		clientFingerprint: { type: 'string', nullable: true },
-		/** false = local only; true = include federated (remote) posts */
+		/**
+		 * local = 本站非隐藏
+		 * remote = 远程非隐藏
+		 * hidden = 已隐藏（本站+远程）
+		 * all = 全部非隐藏（本站+远程）— legacy
+		 */
+		scope: {
+			type: 'string',
+			enum: ['local', 'remote', 'hidden', 'all'],
+			default: 'local',
+		},
+		/** @deprecated use scope=remote / all */
 		includeRemote: { type: 'boolean', default: false },
-		/** only staff-hidden posts */
+		/** @deprecated use scope=hidden */
 		onlyHidden: { type: 'boolean', default: false },
-		/** exclude hidden (default true for normal view) */
+		/** @deprecated use scope */
 		excludeHidden: { type: 'boolean', default: true },
 	},
 	required: [],
@@ -68,15 +79,36 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const meIsAdmin = await this.roleService.isAdministrator(me);
 			const meIsMod = await this.roleService.isModerator(me);
 
+			// Resolve scope from new param or legacy flags
+			let scope: 'local' | 'remote' | 'hidden' | 'all' = ps.scope ?? 'local';
+			if (ps.onlyHidden) scope = 'hidden';
+			else if (ps.includeRemote && scope === 'local') scope = 'all';
+
 			const query = this.queryService.makePaginationQuery(
 				this.notesRepository.createQueryBuilder('note'),
 				ps.sinceId,
 				ps.untilId,
 			)
-				.innerJoinAndSelect('note.user', 'user');
+				// leftJoin so notes remain listed even if user row is missing
+				.leftJoinAndSelect('note.user', 'user');
 
-			if (!ps.includeRemote) {
+			// Scope: local / remote / all / hidden
+			if (scope === 'local') {
 				query.andWhere('note.userHost IS NULL');
+			} else if (scope === 'remote') {
+				query.andWhere('note.userHost IS NOT NULL');
+			}
+			// all / hidden: no host filter
+
+			if (meIsMod) {
+				if (scope === 'hidden') {
+					query.andWhere('note.isHidden = true');
+				} else {
+					// local / remote / all: non-hidden by default
+					query.andWhere('(note.isHidden = false OR note.isHidden IS NULL)');
+				}
+			} else {
+				query.andWhere('(note.isHidden = false OR note.isHidden IS NULL)');
 			}
 
 			if (ps.userId) {
@@ -85,7 +117,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (ps.username && ps.username.trim()) {
 				const un = ps.username.trim().replace(/^@/, '').toLowerCase();
-				query.andWhere('user.usernameLower = :usernameLower', { usernameLower: un });
+				// partial match so lists are not empty when typing
+				query.andWhere('user.usernameLower LIKE :usernameLower', { usernameLower: `${un}%` });
 			}
 
 			if (ps.query && ps.query.trim().length > 0) {
@@ -110,31 +143,25 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				query.andWhere('note.userId IN (:...emailUserIds)', { emailUserIds: ids });
 			}
 
-			if (meIsMod) {
-				if (ps.onlyHidden) {
-					query.andWhere('note.isHidden = true');
-				} else if (ps.excludeHidden !== false) {
-					// normal list: hide staff-hidden unless viewing "hidden" tab
-					// still show them to mods if onlyHidden is off and excludeHidden false
-					query.andWhere('note.isHidden = false');
-				}
-			} else {
-				query.andWhere('note.isHidden = false');
-			}
-
 			const notes = await query.limit(ps.limit).getMany();
+
+			// skipHide: moderators must see full text of followers-only / DM-ish notes for moderation
 			const packed = await this.noteEntityService.packMany(notes, me, {
-				// force detail for moderation
+				detail: true,
+				skipHide: true,
 			} as any);
 
-			return packed.map((p, i) => {
-				const raw = notes[i];
+			// Map by id — packMany may not preserve array order in edge cases
+			const byId = new Map(notes.map(n => [n.id, n]));
+
+			return packed.map((p) => {
+				const raw = byId.get(p.id);
 				return {
 					...p,
-					isHidden: raw.isHidden === true,
+					isHidden: raw?.isHidden === true,
 					...(meIsAdmin ? {
-						clientIp: raw.clientIp ?? null,
-						clientFingerprint: raw.clientFingerprint ?? null,
+						clientIp: raw?.clientIp ?? null,
+						clientFingerprint: raw?.clientFingerprint ?? null,
 					} : {
 						clientIp: null,
 						clientFingerprint: null,

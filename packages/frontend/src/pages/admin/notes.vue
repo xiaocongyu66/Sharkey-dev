@@ -62,9 +62,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</MkInput>
 					</div>
 					<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-						<MkSwitch v-model="includeRemote">
-							<template #label>{{ an.includeRemote }}</template>
-						</MkSwitch>
+						<div :class="$style.scopeHint">{{ scopeHint }}</div>
 						<MkButton small rounded @click="reload">{{ i18n.ts.search }}</MkButton>
 					</div>
 				</div>
@@ -88,6 +86,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<input type="checkbox" :checked="selectedIds.has(note.id)" @change="toggleSelect(note.id, $event)"/>
 					</label>
 					<div :class="$style.noteWrap">
+						<div v-if="note.user?.host" :class="$style.remoteBadge">
+							<i class="ti ti-planet"></i> {{ note.user.host }}
+						</div>
+						<!-- withHardMute=false + detail pack so moderators see full note body -->
 						<DynamicNote :class="$style.note" :note="note" :withHardMute="false"/>
 						<div :class="$style.audit">
 							<div v-if="iAmAdmin" :class="$style.auditRow">
@@ -164,8 +166,12 @@ const anFb = {
 	filterUsername: '用户名',
 	filterEmail: '邮箱',
 	includeRemote: '显示联合（远程）帖子',
-	tabAll: '全部',
+	tabAll: '本站',
+	tabRemote: '远程',
 	tabHidden: '已隐藏',
+	scopeLocalHint: '本站帖子（未隐藏）',
+	scopeRemoteHint: '联合远程帖子（未隐藏）',
+	scopeHiddenHint: '管理员隐藏的帖子（本站 + 远程）',
 	selected: '已选',
 	selectAll: '全选本页',
 	clearSelection: '取消选择',
@@ -205,13 +211,13 @@ type AdminNote = Misskey.entities.Note & {
 	isHidden?: boolean;
 };
 
-const viewTab = ref<'all' | 'hidden'>('all');
+/** local = 本站 | remote = 远程 | hidden = 已隐藏 */
+const viewTab = ref<'local' | 'remote' | 'hidden'>('local');
 const username = ref('');
 const email = ref('');
 const query = ref('');
 const clientIp = ref('');
 const clientFingerprint = ref('');
-const includeRemote = ref(false);
 const items = ref<AdminNote[]>([]);
 const loading = ref(true);
 const loadingMore = ref(false);
@@ -220,6 +226,14 @@ const disableLocalNoteCreation = ref(false);
 const selectedIds = ref(new Set<string>());
 const prohibitedWords = ref('');
 const sensitiveWords = ref('');
+
+const PAGE_SIZE = 30;
+
+const scopeHint = computed(() => {
+	if (viewTab.value === 'remote') return an.scopeRemoteHint;
+	if (viewTab.value === 'hidden') return an.scopeHiddenHint;
+	return an.scopeLocalHint;
+});
 
 try {
 	const meta = await misskeyApi('admin/meta') as unknown as {
@@ -242,16 +256,18 @@ async function saveKeywordBlocks() {
 }
 
 async function fetchPage(untilId?: string) {
+	const scope =
+		viewTab.value === 'remote' ? 'remote'
+			: viewTab.value === 'hidden' ? 'hidden'
+				: 'local';
 	const res = await misskeyApi('admin/notes' as any, {
-		limit: 20,
+		limit: PAGE_SIZE,
 		username: username.value || null,
 		email: email.value || null,
 		query: query.value || null,
 		clientIp: clientIp.value || null,
 		clientFingerprint: clientFingerprint.value || null,
-		includeRemote: includeRemote.value,
-		onlyHidden: viewTab.value === 'hidden',
-		excludeHidden: viewTab.value !== 'hidden',
+		scope,
 		untilId: untilId ?? undefined,
 	} as any) as AdminNote[];
 	return res;
@@ -263,26 +279,30 @@ async function reload() {
 	try {
 		const res = await fetchPage();
 		items.value = res;
-		canLoadMore.value = res.length >= 20;
+		canLoadMore.value = res.length >= PAGE_SIZE;
 	} finally {
 		loading.value = false;
 	}
 }
 
 async function loadMore() {
-	if (items.value.length === 0) return;
+	if (items.value.length === 0 || loadingMore.value) return;
 	loadingMore.value = true;
 	try {
 		const last = items.value[items.value.length - 1];
 		const res = await fetchPage(last.id);
-		items.value.push(...res);
-		canLoadMore.value = res.length >= 20;
+		// de-dupe by id
+		const seen = new Set(items.value.map(n => n.id));
+		for (const n of res) {
+			if (!seen.has(n.id)) items.value.push(n);
+		}
+		canLoadMore.value = res.length >= PAGE_SIZE;
 	} finally {
 		loadingMore.value = false;
 	}
 }
 
-watch([username, email, query, clientIp, clientFingerprint, includeRemote, viewTab], () => {
+watch([username, email, query, clientIp, clientFingerprint, viewTab], () => {
 	reload();
 });
 
@@ -349,7 +369,8 @@ async function batchHide(isHidden: boolean) {
 	});
 	if (canceled) return;
 	await os.apiWithDialog('admin/notes-set-hidden' as any, { noteIds: ids, isHidden } as any);
-	if (viewTab.value === 'all' && isHidden) {
+	// local/remote tabs exclude hidden; hidden tab excludes unhidden
+	if ((viewTab.value === 'local' || viewTab.value === 'remote') && isHidden) {
 		items.value = items.value.filter(n => !selectedIds.value.has(n.id));
 	} else if (viewTab.value === 'hidden' && !isHidden) {
 		items.value = items.value.filter(n => !selectedIds.value.has(n.id));
@@ -373,7 +394,7 @@ async function toggleHideOne(note: AdminNote) {
 		noteIds: [note.id],
 		isHidden: next,
 	} as any);
-	if (viewTab.value === 'all' && next) {
+	if ((viewTab.value === 'local' || viewTab.value === 'remote') && next) {
 		items.value = items.value.filter(n => n.id !== note.id);
 	} else if (viewTab.value === 'hidden' && !next) {
 		items.value = items.value.filter(n => n.id !== note.id);
@@ -437,8 +458,9 @@ function copy(v: string | null | undefined) {
 }
 
 const headerTabs = computed(() => [
-	{ key: 'all', title: an.tabAll },
-	{ key: 'hidden', title: an.tabHidden },
+	{ key: 'local', title: an.tabAll, icon: 'ti ti-home' },
+	{ key: 'remote', title: an.tabRemote, icon: 'ti ti-planet' },
+	{ key: 'hidden', title: an.tabHidden, icon: 'ti ti-eye-off' },
 ]);
 
 definePage(() => ({
@@ -503,6 +525,26 @@ definePage(() => ({
 .fp {
 	word-break: break-all;
 	text-align: left;
+}
+
+.scopeHint {
+	flex: 1;
+	min-width: 0;
+	font-size: 0.88em;
+	opacity: 0.75;
+}
+
+.remoteBadge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 6px 4px;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 0.78em;
+	font-weight: 600;
+	background: color-mix(in srgb, var(--MI_THEME-accent) 14%, transparent);
+	color: var(--MI_THEME-accent);
 }
 
 .actions {
