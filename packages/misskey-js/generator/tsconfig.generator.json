@@ -1,0 +1,16 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../../shared/tsconfig.scripts.jsonc",
+	"include": [
+		"src/**/*.ts"
+	],
+	"exclude": [
+		"**/node_modules",
+		"**/built-test",
+		"**/js-built",
+		"**/temp",
+		"**/coverage",
+		"**/*.min.js",
+		"**/built/**/*.js"
+	]
+}

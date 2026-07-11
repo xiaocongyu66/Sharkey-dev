@@ -1,0 +1,127 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import * as fs from 'node:fs';
+import { Inject, Injectable } from '@nestjs/common';
+import { IsNull, MoreThan } from 'typeorm';
+import { format as dateFormat } from 'date-fns';
+import { DI } from '@/di-symbols.js';
+import type { MutingsRepository, UsersRepository, MiMuting } from '@/models/_.js';
+import type Logger from '@/logger.js';
+import { DriveService } from '@/core/DriveService.js';
+import { createTemp } from '@/misc/create-temp.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { NotificationService } from '@/core/NotificationService.js';
+import { bindThis } from '@/decorators.js';
+import { TimeService } from '@/global/TimeService.js';
+import { CacheService } from '@/core/CacheService.js';
+import { QueueLoggerService } from '../QueueLoggerService.js';
+import type * as Bull from 'bullmq';
+import type { DbExportMutingJobData } from '../types.js';
+
+@Injectable()
+export class ExportMutingProcessorService {
+	private logger: Logger;
+
+	constructor(
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		@Inject(DI.mutingsRepository)
+		private mutingsRepository: MutingsRepository,
+
+		private utilityService: UtilityService,
+		private driveService: DriveService,
+		private queueLoggerService: QueueLoggerService,
+		private notificationService: NotificationService,
+		private readonly timeService: TimeService,
+		private readonly cacheService: CacheService,
+	) {
+		this.logger = this.queueLoggerService.logger.createSubLogger('export-muting');
+	}
+
+	@bindThis
+	public async process(job: Bull.Job<DbExportMutingJobData>): Promise<void> {
+		const user = await this.usersRepository.findOneBy({ id: job.data.user.id });
+		if (user == null) {
+			this.logger.debug(`Skip: user ${job.data.user.id} does not exist`);
+			return;
+		}
+
+		this.logger.debug(`Exporting muting of ${job.data.user.id} ...`);
+
+		// Create temp file
+		const [path, cleanup] = await createTemp();
+
+		this.logger.debug(`Temp file is ${path}`);
+
+		try {
+			const stream = fs.createWriteStream(path, { flags: 'a' });
+
+			let exportedCount = 0;
+			let cursor: MiMuting['id'] | null = null;
+
+			while (true) {
+				const mutes = await this.mutingsRepository.find({
+					where: {
+						muterId: user.id,
+						expiresAt: IsNull(),
+						...(cursor ? { id: MoreThan(cursor) } : {}),
+					},
+					take: 100,
+					order: {
+						id: 1,
+					},
+				});
+
+				if (mutes.length === 0) {
+					await job.updateProgress(100);
+					break;
+				}
+
+				cursor = mutes.at(-1)?.id ?? null;
+
+				const muteeIds = mutes.map(f => f.muteeId);
+				const mutees = await this.cacheService.findUsersById(muteeIds);
+
+				for (const u of mutees.values()) {
+					const content = this.utilityService.getFullApAccount(u.username, u.host);
+					await new Promise<void>((res, rej) => {
+						stream.write(content + '\n', err => {
+							if (err) {
+								this.logger.error('Error exporting mutings:', err);
+								rej(err);
+							} else {
+								res();
+							}
+						});
+					});
+				}
+
+				const total = await this.mutingsRepository.countBy({
+					muterId: user.id,
+				});
+
+				exportedCount += mutes.length;
+				await job.updateProgress(exportedCount / total);
+			}
+
+			stream.end();
+			this.logger.debug(`Exported to: ${path}`);
+
+			const fileName = 'mute-' + dateFormat(this.timeService.date, 'yyyy-MM-dd-HH-mm-ss') + '.csv';
+			const driveFile = await this.driveService.addFile({ user, path, name: fileName, force: true, ext: 'csv' });
+
+			this.logger.debug(`Exported to: ${driveFile.id}`);
+
+			this.notificationService.createNotification(user.id, 'exportCompleted', {
+				exportedEntity: 'muting',
+				fileId: driveFile.id,
+			});
+		} finally {
+			cleanup();
+		}
+	}
+}

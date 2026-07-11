@@ -1,0 +1,60 @@
+---
+disableDrawer: "ไม่แสดงเมนูในรูปแบบลิ้นชัก"
+forwardReport: "ส่งต่อรายงานไปยังเซิร์ฟเวอร์ระยะไกล"
+forwardReportIsAnonymous: "ข้อมูลของคุณจะไม่ปรากฏบนเซิร์ฟเวอร์ระยะไกลและปรากฏเป็นบัญชีระบบที่ไม่ระบุชื่อ"
+abuseMarkAsResolved: "ทำเครื่องหมายรายงานว่าแก้ไขแล้ว"
+_initialTutorial:
+  _reaction:
+    letsTryReacting: "คุณสามารถเพิ่มรีแอคชั่นได้ด้วยการคลิกปุ่ม “{reaction}” บนโน้ต ลองรีแอคชั่นโน้ตตัวอย่างนี้ดูสิ!"
+    reactDone: "คุณสามารถยกเลิกรีแอคชั่นได้โดยการกดปุ่ม “{undo}”"
+_achievements:
+  _types:
+    _notes1:
+      title: "just setting up my shonk"
+poweredByMisskeyDescription: "{name} เป็นหนึ่งในเซิร์ฟเวอร์ของแพลตฟอร์มโอเพ่นซอร์ส <b>Sharkey</b>"
+introMisskey: "ยินดีต้อนรับทุกคนจ้า! Sharkey คือ ซอฟต์แวร์โอเพนซอร์สสำหรับบริการไมโครบล็อกกิ้ง (MicroBlogging) แบบกระจายศูนย์อำนาจ (Decentralized) \n\nเขียน “โน้ต (Note)” เพื่อส่งต่อเรื่องราวของคุณให้ทั้งโลกได้รับรู้📡\nและอย่าลืมที่จะ “รีแอคชั่น” กับเรื่องราวของคนอื่น ๆ ด้วยนะ! 👍\n\nท่องสำรวจโลกใบใหม่กันเถอะ🚀"
+misskeyUpdated: "Sharkey ได้รับการอัปเดตแล้ว!"
+didYoulikeMisskey: "คุณชอบ Sharkey ไหม?"
+pleaseDonate: "Sharkey เป็นซอฟต์แวร์ฟรีที่ใช้งานโดย {host} เราขอขอบคุณการสนับสนุนของคุณอย่างสูงเพื่อให้การพัฒนา Sharkey สามารถดำเนินต่อไปได้!"
+aboutMisskey: "เกี่ยวกับ Sharkey"
+thisPostIsMissingAltTextCancel: "ยกเลิก"
+thisPostIsMissingAltTextIgnore: "โพสต์ต่อไป"
+thisPostIsMissingAltText: "ไฟล์หนึ่งที่แนบไปกับโพสต์นี้ไม่มีข้อความอื่น โปรดตรวจสอบให้แน่ใจว่าไฟล์แนบทั้งหมดมีข้อความอื่น"
+_timelineDescription:
+    bubble: "ในไทม์ไลน์ฟองคุณสามารถดูบันทึกจากเซิร์ฟเวอร์ที่เชื่อมต่อซึ่งผู้ดูแลระบบของคุณเลือก"
+
+_timelines:
+    bubble: "ฟอง"
+
+scheduleNoteFailed: "การกำหนดเวลาเผยแพร่โพสต์ล้มเหลว"
+
+scheduleNotePosted: "มีการโพสต์กำหนดการแล้ว"
+
+schedulePost: "กำหนดเวลาการโพสต์"
+schedulePostList: "รายการของโพสต์ที่กำหนดเวลาไว้"
+postOn: "โพสต์เมื่อ"
+ScheduledNotes: "การโพสต์ตามกำหนดเวลา"
+
+_externalNavigationWarning:
+    title: "นำทางไปยังไซต์ภายนอก"
+    description: "ออกจาก {host} และไปยังไซต์ภายนอก"
+    trustThisDomain: "วางใจโดเมนนี้บนอุปกรณ์นี้ในอนาคต"
+
+mutuals: "ติดตามกันและกัน"
+
+_moderationLogTypes:
+  approve: "ที่ได้รับการอนุมัติ"
+  decline: "ปฏิเสธ"
+  setMandatoryCW: "ตั้งค่าคำเตือนเนื้อหาสำหรับผู้ใช้"
+  rejectRemoteInstanceReports: "รายงานถูกปฏิเสธจากเซิร์ฟเวอร์ระยะไกล"
+  acceptRemoteInstanceReports: "รายงานได้รับการยอมรับจากเซิร์ฟเวอร์ระยะไกล"
+  rejectQuotesUser: "โพสต์คำพูดของผู้ใช้ถูกบล็อค/ลบ"
+  allowQuotesUser: "อนุญาตให้อ้างอิงข้อความจากผู้ใช้"
+  clearUserFiles: "ล้างไฟล์ไดรฟ์ของผู้ใช้"
+  nsfwUser: "ผู้ใช้ถูกทำเครื่องหมายเป็น NSFW"
+  unNsfwUser: "ผู้ใช้ที่ไม่ได้ทำเครื่องหมายเป็น NSFW"
+  silenceUser: "ผู้ใช้ที่ถูกปิดเสียง"
+  unSilenceUser: "ผู้ใช้ที่ไม่ได้รับการปิดเสียง"
+  createAccount: "สร้างบัญชีแล้ว"
+  clearRemoteFiles: "ล้างไฟล์ไดรฟ์ระยะไกล"
+  clearOwnerlessFiles: "ล้างไฟล์ไดรฟ์ที่ไม่มีเจ้าของ"

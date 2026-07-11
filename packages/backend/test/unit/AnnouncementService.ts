@@ -1,0 +1,230 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { MockRedis } from '../misc/MockRedis.js';
+
+process.env.NODE_ENV = 'test';
+
+import { jest } from '@jest/globals';
+import { ModuleMocker } from 'jest-mock';
+import { Test } from '@nestjs/testing';
+import { FakeCacheManagementService } from '../misc/FakeCacheManagementService.js';
+import { MockInternalEventService } from '../misc/MockInternalEventService.js';
+import type { MockMetadata } from 'jest-mock';
+import { CacheManagementService } from '@/global/CacheManagementService.js';
+import { GlobalModule } from '@/GlobalModule.js';
+import { AnnouncementService } from '@/core/AnnouncementService.js';
+import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
+import { InternalEventService } from '@/global/InternalEventService.js';
+import type {
+	AnnouncementReadsRepository,
+	AnnouncementsRepository,
+	MiAnnouncement,
+	MiUser,
+	UsersRepository,
+} from '@/models/_.js';
+import { DI } from '@/di-symbols.js';
+import { genAidx } from '@/misc/id/aidx.js';
+import { IdService } from '@/core/IdService.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { ModerationLogService } from '@/core/ModerationLogService.js';
+import { RoleService } from '@/core/RoleService.js';
+import { CoreModule } from '@/core/CoreModule.js';
+import { secureRndstr } from '@/misc/secure-rndstr.js';
+import type { TestingModule } from '@nestjs/testing';
+import type { Redis } from 'ioredis';
+
+const moduleMocker = new ModuleMocker(global);
+
+describe('AnnouncementService', () => {
+	let app: TestingModule;
+	let announcementService: AnnouncementService;
+	let usersRepository: UsersRepository;
+	let announcementsRepository: AnnouncementsRepository;
+	let announcementReadsRepository: AnnouncementReadsRepository;
+	let globalEventService: jest.Mocked<GlobalEventService>;
+	let moderationLogService: jest.Mocked<ModerationLogService>;
+	let cacheManagementService: CacheManagementService;
+
+	function createUser(data: Partial<MiUser> = {}) {
+		const un = secureRndstr(16);
+		return usersRepository.insert({
+			id: genAidx(Date.now()),
+			username: un,
+			usernameLower: un.toLowerCase(),
+			...data,
+		})
+			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	}
+
+	function createAnnouncement(data: Partial<MiAnnouncement & { createdAt: Date }> = {}) {
+		return announcementsRepository.insert({
+			id: genAidx(data.createdAt?.getTime() ?? Date.now()),
+			updatedAt: null,
+			title: 'Title',
+			text: 'Text',
+			...data,
+		})
+			.then(x => announcementsRepository.findOneByOrFail(x.identifiers[0]));
+	}
+
+	beforeAll(async () => {
+		app = await Test.createTestingModule({
+			imports: [
+				GlobalModule,
+				CoreModule,
+			],
+		})
+			.useMocker((token) => {
+				if (typeof token === 'function') {
+					const mockMetadata = moduleMocker.getMetadata(token) as MockMetadata<any, any>;
+					const Mock = moduleMocker.generateFromMetadata(mockMetadata);
+					return new Mock();
+				}
+			})
+			.overrideProvider(GlobalEventService).useValue({
+				publishMainStream: jest.fn(),
+				publishBroadcastStream: jest.fn(),
+			} as unknown as GlobalEventService)
+			.overrideProvider(ModerationLogService).useValue({
+				log: jest.fn(),
+			})
+			.overrideProvider(RoleService).useValue({
+				getUserRoles: jest.fn((_) => []),
+			})
+			.overrideProvider(DI.redis).useClass(MockRedis)
+			.overrideProvider(DI.redisForPub).useFactory({ inject: [DI.redis], factory: (redisClient: Redis) => redisClient })
+			.overrideProvider(DI.redisForSub).useFactory({ inject: [DI.redis], factory: (redisClient: Redis) => redisClient })
+			.overrideProvider(DI.redisForRateLimit).useFactory({ inject: [DI.redis], factory: (redisClient: Redis) => redisClient })
+			.overrideProvider(DI.redisForReactions).useFactory({ inject: [DI.redis], factory: (redisClient: Redis) => redisClient })
+			.overrideProvider(DI.redisForTimelines).useFactory({ inject: [DI.redis], factory: (redisClient: Redis) => redisClient })
+			.overrideProvider(CacheManagementService).useClass(FakeCacheManagementService)
+			.compile();
+
+		await app.init();
+		app.enableShutdownHooks();
+	});
+
+	afterAll(async () => {
+		await app.close();
+	});
+
+	beforeEach(() => {
+		announcementService = app.get<AnnouncementService>(AnnouncementService);
+		usersRepository = app.get<UsersRepository>(DI.usersRepository);
+		announcementsRepository = app.get<AnnouncementsRepository>(DI.announcementsRepository);
+		announcementReadsRepository = app.get<AnnouncementReadsRepository>(DI.announcementReadsRepository);
+		globalEventService = app.get<GlobalEventService>(GlobalEventService) as jest.Mocked<GlobalEventService>;
+		moderationLogService = app.get<ModerationLogService>(ModerationLogService) as jest.Mocked<ModerationLogService>;
+		cacheManagementService = app.get(CacheManagementService);
+	});
+
+	afterEach(async () => {
+		await app.get(DI.metasRepository).deleteAll();
+		await usersRepository.deleteAll();
+		await announcementsRepository.deleteAll();
+		await announcementReadsRepository.deleteAll();
+		moderationLogService.log.mockReset();
+		globalEventService.publishMainStream.mockReset();
+		globalEventService.publishBroadcastStream.mockReset();
+		await cacheManagementService.clear();
+	});
+
+	describe('getUnreadAnnouncements', () => {
+		test('通常', async () => {
+			const user = await createUser();
+			const announcement = await createAnnouncement({
+				title: '1',
+			});
+
+			const result = await announcementService.getUnreadAnnouncements(user);
+
+			expect(result.length).toBe(1);
+			expect(result[0].title).toBe(announcement.title);
+		});
+
+		test('isActiveがfalseは除外', async () => {
+			const user = await createUser();
+			await createAnnouncement({
+				isActive: false,
+			});
+
+			const result = await announcementService.getUnreadAnnouncements(user);
+
+			expect(result.length).toBe(0);
+		});
+
+		test('forExistingUsers', async () => {
+			const user = await createUser();
+			const [announcementAfter, announcementBefore, announcementBefore2] = await Promise.all([
+				createAnnouncement({
+					title: 'after',
+					createdAt: new Date(),
+					forExistingUsers: true,
+				}),
+				createAnnouncement({
+					title: 'before',
+					createdAt: new Date(Date.now() - 1000),
+					forExistingUsers: true,
+				}),
+				createAnnouncement({
+					title: 'before2',
+					createdAt: new Date(Date.now() - 1000),
+					forExistingUsers: false,
+				}),
+			]);
+
+			const result = await announcementService.getUnreadAnnouncements(user);
+
+			expect(result.length).toBe(2);
+			expect(result.some(a => a.title === announcementAfter.title)).toBe(true);
+			expect(result.some(a => a.title === announcementBefore.title)).toBe(false);
+			expect(result.some(a => a.title === announcementBefore2.title)).toBe(true);
+		});
+	});
+
+	describe('create', () => {
+		test('通常', async () => {
+			const me = await createUser();
+			const result = await announcementService.create({
+				title: 'Title',
+				text: 'Text',
+			}, me);
+
+			expect(result.raw.title).toBe('Title');
+			expect(result.packed.title).toBe('Title');
+
+			expect(globalEventService.publishBroadcastStream).toHaveBeenCalled();
+			expect(globalEventService.publishBroadcastStream.mock.lastCall![0]).toBe('announcementCreated');
+			expect((globalEventService.publishBroadcastStream.mock.lastCall![1] as any).announcement).toBe(result.packed);
+			expect(moderationLogService.log).toHaveBeenCalled();
+		});
+
+		test('ユーザー指定', async () => {
+			const me = await createUser();
+			const user = await createUser();
+			const result = await announcementService.create({
+				title: 'Title',
+				text: 'Text',
+				userId: user.id,
+			}, me);
+
+			expect(result.raw.title).toBe('Title');
+			expect(result.packed.title).toBe('Title');
+
+			expect(globalEventService.publishBroadcastStream).not.toHaveBeenCalled();
+			expect(globalEventService.publishMainStream).toHaveBeenCalled();
+			expect(globalEventService.publishMainStream.mock.lastCall![0]).toBe(user.id);
+			expect(globalEventService.publishMainStream.mock.lastCall![1]).toBe('announcementCreated');
+			expect((globalEventService.publishMainStream.mock.lastCall![2] as any).announcement).toBe(result.packed);
+			expect(moderationLogService.log).toHaveBeenCalled();
+		});
+	});
+
+	describe('read', () => {
+		// TODO
+	});
+});
+

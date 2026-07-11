@@ -1,0 +1,13 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../packages/shared/tsconfig.web.jsonc",
+	"compilerOptions": {
+		"types": ["cypress", "node"],
+	},
+	"include": [
+		"**/*.js",
+		"**/*.mjs",
+		"**/*.cjs",
+		"**/*.ts"
+	]
+}

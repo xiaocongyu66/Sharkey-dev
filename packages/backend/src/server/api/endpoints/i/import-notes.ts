@@ -1,0 +1,86 @@
+/*
+ * SPDX-FileCopyrightText: marie and other Sharkey contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import { QueueService } from '@/core/QueueService.js';
+import type { DbImportNotesJobData } from '@/queue/types.js';
+import type { DriveFilesRepository } from '@/models/_.js';
+import type { IEndpointMeta } from '@/server/api/endpoints.js';
+import type { Schema } from '@/misc/json-schema.js';
+import { DI } from '@/di-symbols.js';
+import { RoleService } from '@/core/RoleService.js';
+import { ApiError } from '../../error.js';
+
+type ImportSource = DbImportNotesJobData['source'];
+const importSources = ['Misskey', 'Mastodon', 'Pleroma', 'Twitter', 'Instagram', 'Facebook'] as const satisfies ImportSource[];
+
+export const meta = {
+	secure: true,
+	requireCredential: true,
+	prohibitMoved: true,
+
+	// 1 per minute
+	limit: {
+		type: 'bucket',
+		size: 1,
+		dripRate: 1000 * 60,
+	},
+
+	errors: {
+		noSuchFile: {
+			message: 'No such file.',
+			code: 'NO_SUCH_FILE',
+			id: 'b98644cf-a5ac-4277-a502-0b8054a709a3',
+		},
+
+		emptyFile: {
+			message: 'That file is empty.',
+			code: 'EMPTY_FILE',
+			id: '31a1b42c-06f7-42ae-8a38-a661c5c9f691',
+		},
+
+		notPermitted: {
+			message: 'You are not allowed to import notes.',
+			code: 'NO_PERMISSION',
+			id: '31a1b42c-06f7-42ae-8a38-a661c5c9f692',
+		},
+	},
+
+	res: {},
+} as const satisfies IEndpointMeta;
+
+export const paramDef = {
+	type: 'object',
+	properties: {
+		fileId: { type: 'string', format: 'misskey:id' },
+		type: { type: 'string', enum: importSources },
+	},
+	required: ['fileId', 'type'],
+} as const satisfies Schema;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		@Inject(DI.driveFilesRepository)
+		private driveFilesRepository: DriveFilesRepository,
+
+		private queueService: QueueService,
+		private roleService: RoleService,
+	) {
+		super(meta, paramDef, async (ps, me) => {
+			const [file, policies] = await Promise.all([
+				this.driveFilesRepository.findOneBy({ id: ps.fileId }),
+				this.roleService.getUserPolicies(me),
+			]);
+
+			if (file == null) throw new ApiError(meta.errors.noSuchFile);
+			if (file.size === 0) throw new ApiError(meta.errors.emptyFile);
+			if (!policies.canImportNotes) throw new ApiError(meta.errors.notPermitted);
+
+			await this.queueService.createImportNotesJob(me, file.id, ps.type);
+		});
+	}
+}

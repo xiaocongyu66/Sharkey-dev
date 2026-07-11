@@ -1,0 +1,97 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import { RoleEntityService } from '@/core/entities/RoleEntityService.js';
+import { RoleService } from '@/core/RoleService.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { ApiError } from '../../../error.js';
+
+export const meta = {
+	tags: ['admin', 'role'],
+
+	requireCredential: true,
+	requireAdmin: true,
+	kind: 'write:admin:roles',
+
+	res: {
+		type: 'object',
+		optional: false, nullable: false,
+		ref: 'Role',
+	},
+
+	errors: {
+		badValues: {
+			message: 'Invalid policy values',
+			code: 'BAD_POLICY_VALUES',
+			id: '39d78ad7-0f00-4bff-b2e2-2e7db889e05d',
+		},
+	},
+} as const;
+
+export const paramDef = {
+	type: 'object',
+	properties: {
+		name: { type: 'string' },
+		description: { type: 'string' },
+		color: { type: 'string', nullable: true },
+		iconUrl: { type: 'string', nullable: true },
+		target: { type: 'string', enum: ['manual', 'conditional'] },
+		condFormula: { type: 'object' },
+		isPublic: { type: 'boolean' },
+		isModerator: { type: 'boolean' },
+		isAdministrator: { type: 'boolean' },
+		isExplorable: { type: 'boolean', default: false }, // optional for backward compatibility
+		asBadge: { type: 'boolean' },
+		preserveAssignmentOnMoveAccount: { type: 'boolean' },
+		canEditMembersByModerator: { type: 'boolean' },
+		displayOrder: { type: 'number' },
+		policies: {
+			type: 'object',
+		},
+	},
+	required: [
+		'name',
+		'description',
+		'color',
+		'iconUrl',
+		'target',
+		'condFormula',
+		'isPublic',
+		'isModerator',
+		'isAdministrator',
+		'asBadge',
+		'canEditMembersByModerator',
+		'displayOrder',
+		'policies',
+	],
+} as const;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		private roleEntityService: RoleEntityService,
+		private roleService: RoleService,
+	) {
+		super(meta, paramDef, async (ps, me) => {
+			const created = await this.roleService.create(ps, me);
+
+			try {
+				return await this.roleEntityService.pack(created, me);
+			} catch (e) {
+				if (e instanceof IdentifiableError) {
+					if (e.id === '39d78ad7-0f00-4bff-b2e2-2e7db889e05d') {
+						throw new ApiError(
+							meta.errors.badValues,
+							e.cause,
+						);
+					}
+				}
+				throw e;
+			}
+		});
+	}
+}

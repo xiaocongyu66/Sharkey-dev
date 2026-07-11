@@ -1,0 +1,72 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { URL } from 'node:url';
+import { Inject, Injectable } from '@nestjs/common';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import type { Queues } from '@/queue/types.js';
+
+export const meta = {
+	tags: ['admin'],
+
+	requireCredential: true,
+	requireModerator: true,
+	kind: 'read:admin:queue',
+
+	res: {
+		type: 'array',
+		optional: false, nullable: false,
+		items: {
+			type: 'array',
+			optional: false, nullable: false,
+			prefixItems: [
+				{
+					type: 'string',
+				},
+				{
+					type: 'number',
+				},
+			],
+			unevaluatedItems: false,
+		},
+		example: [[
+			'example.com',
+			12,
+		]],
+	},
+} as const;
+
+export const paramDef = {
+	type: 'object',
+	properties: {},
+	required: [],
+} as const;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		@Inject('queue:inbox')
+		private readonly inboxQueue: Queues['inbox'],
+	) {
+		super(meta, paramDef, async (ps, me) => {
+			const jobs = await this.inboxQueue.getJobs(['delayed']);
+
+			const res = [] as [string, number][];
+
+			for (const job of jobs) {
+				const host = new URL(job.data.signature.keyId).host;
+				if (res.find(x => x[0] === host)) {
+					res.find(x => x[0] === host)![1]++;
+				} else {
+					res.push([host, 1]);
+				}
+			}
+
+			res.sort((a, b) => b[1] - a[1]);
+
+			return res;
+		});
+	}
+}

@@ -1,0 +1,983 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { randomUUID } from 'node:crypto';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Inject, Injectable } from '@nestjs/common';
+import ms from 'ms';
+import sharp from 'sharp';
+import pug from 'pug';
+import { In, IsNull } from 'typeorm';
+import fastifyStatic from '@fastify/static';
+import fastifyView from '@fastify/view';
+import fastifyProxy from '@fastify/http-proxy';
+import vary from 'vary';
+import htmlSafeJsonStringify from 'htmlescape';
+import type { Config } from '@/config.js';
+import { getNoteSummary } from '@/misc/get-note-summary.js';
+import { DI } from '@/di-symbols.js';
+import * as Acct from '@/misc/acct.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
+import { PageEntityService } from '@/core/entities/PageEntityService.js';
+import { MetaEntityService } from '@/core/entities/MetaEntityService.js';
+import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
+import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
+import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
+import type {
+	AnnouncementsRepository,
+	ChannelsRepository,
+	ClipsRepository,
+	FlashsRepository,
+	GalleryPostsRepository,
+	MiMeta,
+	NotesRepository,
+	PagesRepository,
+	ReversiGamesRepository,
+	UserProfilesRepository,
+	UsersRepository,
+} from '@/models/_.js';
+import type Logger from '@/logger.js';
+import { handleRequestRedirectToOmitSearch } from '@/misc/fastify-hook-handlers.js';
+import { renderInlineError } from '@/misc/render-inline-error.js';
+import { isIdentifiableError } from '@/misc/identifiable-error.js';
+import { bindThis } from '@/decorators.js';
+import { FlashEntityService } from '@/core/entities/FlashEntityService.js';
+import { RoleService } from '@/core/RoleService.js';
+import { TimeService } from '@/global/TimeService.js';
+import { EnvService } from '@/global/EnvService.js';
+import { CacheService } from '@/core/CacheService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { InstanceStatsService } from '@/core/InstanceStatsService.js';
+import { ReversiGameEntityService } from '@/core/entities/ReversiGameEntityService.js';
+import { AnnouncementEntityService } from '@/core/entities/AnnouncementEntityService.js';
+import { FeedService } from './FeedService.js';
+import { UrlPreviewService } from './UrlPreviewService.js';
+import { ClientLoggerService } from './ClientLoggerService.js';
+import type { FastifyInstance, FastifyPluginOptions, FastifyReply } from 'fastify';
+
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
+
+const staticAssets = `${_dirname}/../../../assets/`;
+const clientAssets = `${_dirname}/../../../../frontend/assets/`;
+const assets = `${_dirname}/../../../../../built/_frontend_dist_/`;
+const swAssets = `${_dirname}/../../../../../built/_sw_dist_/`;
+const frontendViteOut = `${_dirname}/../../../../../built/_frontend_vite_/`;
+const frontendEmbedViteOut = `${_dirname}/../../../../../built/_frontend_embed_vite_/`;
+const tarball = `${_dirname}/../../../../../built/tarball/`;
+
+@Injectable()
+export class ClientServerService {
+	private logger: Logger;
+
+	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
+		@Inject(DI.meta)
+		private meta: MiMeta,
+
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		@Inject(DI.userProfilesRepository)
+		private userProfilesRepository: UserProfilesRepository,
+
+		@Inject(DI.notesRepository)
+		private notesRepository: NotesRepository,
+
+		@Inject(DI.galleryPostsRepository)
+		private galleryPostsRepository: GalleryPostsRepository,
+
+		@Inject(DI.channelsRepository)
+		private channelsRepository: ChannelsRepository,
+
+		@Inject(DI.clipsRepository)
+		private clipsRepository: ClipsRepository,
+
+		@Inject(DI.pagesRepository)
+		private pagesRepository: PagesRepository,
+
+		@Inject(DI.flashsRepository)
+		private flashsRepository: FlashsRepository,
+
+		@Inject(DI.reversiGamesRepository)
+		private reversiGamesRepository: ReversiGamesRepository,
+
+		@Inject(DI.announcementsRepository)
+		private announcementsRepository: AnnouncementsRepository,
+
+		private flashEntityService: FlashEntityService,
+		private userEntityService: UserEntityService,
+		private noteEntityService: NoteEntityService,
+		private pageEntityService: PageEntityService,
+		private metaEntityService: MetaEntityService,
+		private galleryPostEntityService: GalleryPostEntityService,
+		private clipEntityService: ClipEntityService,
+		private channelEntityService: ChannelEntityService,
+		private reversiGameEntityService: ReversiGameEntityService,
+		private announcementEntityService: AnnouncementEntityService,
+		private urlPreviewService: UrlPreviewService,
+		private feedService: FeedService,
+		private roleService: RoleService,
+		private clientLoggerService: ClientLoggerService,
+		private readonly timeService: TimeService,
+		private readonly envService: EnvService,
+		private readonly cacheService: CacheService,
+		private readonly utilityService: UtilityService,
+		private readonly instanceStatsService: InstanceStatsService,
+	) {
+		//this.createServer = this.createServer.bind(this);
+	}
+
+	@bindThis
+	private async manifestHandler(reply: FastifyReply) {
+		let manifest = {
+			// 空文字列の場合右辺を使いたいため
+			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+			'short_name': this.meta.shortName || this.meta.name || this.config.host,
+			// 空文字列の場合右辺を使いたいため
+			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+			'name': this.meta.name || this.config.host,
+			'start_url': '/',
+			'display': 'standalone',
+			'background_color': '#313a42',
+			// 空文字列の場合右辺を使いたいため
+			// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+			'theme_color': this.meta.themeColor || '#86b300',
+			'icons': [{
+				// 空文字列の場合右辺を使いたいため
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				'src': this.meta.app192IconUrl || '/static-assets/icons/192.png',
+				'sizes': '192x192',
+				'type': 'image/png',
+				'purpose': 'maskable',
+			}, {
+				// 空文字列の場合右辺を使いたいため
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				'src': this.meta.app512IconUrl || '/static-assets/icons/512.png',
+				'sizes': '512x512',
+				'type': 'image/png',
+				'purpose': 'maskable',
+			}, {
+				// 空文字列の場合右辺を使いたいため
+				// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+				'src': this.meta.app512IconUrl || '/static-assets/icons/512.png',
+				'sizes': '300x300',
+				'type': 'image/png',
+				'purpose': 'any',
+			}],
+			'share_target': {
+				'action': '/share/',
+				'method': 'GET',
+				'enctype': 'application/x-www-form-urlencoded',
+				'params': {
+					'title': 'title',
+					'text': 'text',
+					'url': 'url',
+				},
+			},
+		};
+
+		manifest = {
+			...manifest,
+			...JSON.parse(this.meta.manifestJsonOverride === '' ? '{}' : this.meta.manifestJsonOverride),
+		};
+
+		reply.header('Cache-Control', 'max-age=300');
+		return (manifest);
+	}
+
+	@bindThis
+	private async generateCommonPugData(meta: MiMeta) {
+		return {
+			instanceName: meta.name ?? 'Sharkey',
+			icon: meta.iconUrl,
+			appleTouchIcon: meta.app512IconUrl,
+			themeColor: meta.themeColor,
+			serverErrorImageUrl: meta.serverErrorImageUrl ?? '/client-assets/status/error.png',
+			infoImageUrl: meta.infoImageUrl ?? '/client-assets/status/nothinghere.png',
+			notFoundImageUrl: meta.notFoundImageUrl ?? '/client-assets/status/missingpage.webp',
+			instanceUrl: this.config.url,
+			randomMOTD: this.config.customMOTD ? this.config.customMOTD[Math.floor(Math.random() * this.config.customMOTD.length)] : undefined,
+			metaJson: htmlSafeJsonStringify(await this.metaEntityService.packDetailed(meta)),
+			now: this.timeService.now,
+		};
+	}
+
+	@bindThis
+	public createServer(fastify: FastifyInstance, options: FastifyPluginOptions, done: (err?: Error) => void) {
+		fastify.register(fastifyView, {
+			root: _dirname + '/views',
+			engine: {
+				pug: pug,
+			},
+			defaultContext: {
+				version: this.config.version,
+				config: this.config,
+			},
+		});
+
+		fastify.addHook('onRequest', (request, reply, done) => {
+			// クリックジャッキング防止のためiFrameの中に入れられないようにする
+			reply.header('X-Frame-Options', 'DENY');
+			done();
+		});
+
+		//#region vite assets
+		if (this.config.frontendEmbedManifestExists) {
+			fastify.register((fastify, options, done) => {
+				fastify.register(fastifyStatic, {
+					root: frontendViteOut,
+					prefix: '/vite/',
+					maxAge: ms('30 days'),
+					immutable: true,
+					decorateReply: false,
+				});
+				fastify.register(fastifyStatic, {
+					root: frontendEmbedViteOut,
+					prefix: '/embed_vite/',
+					maxAge: ms('30 days'),
+					immutable: true,
+					decorateReply: false,
+				});
+				fastify.addHook('onRequest', handleRequestRedirectToOmitSearch);
+				done();
+			});
+		} else {
+			const port = (this.envService.env.VITE_PORT ?? '5173');
+			fastify.register(fastifyProxy, {
+				upstream: `http://localhost:${port}`,
+				prefix: '/vite',
+				rewritePrefix: '/vite',
+			});
+
+			const embedPort = (this.envService.env.EMBED_VITE_PORT ?? '5174');
+			fastify.register(fastifyProxy, {
+				upstream: `http://localhost:${embedPort}`,
+				prefix: '/embed_vite',
+				rewritePrefix: '/embed_vite',
+			});
+		}
+		//#endregion
+
+		//#region static assets
+
+		fastify.register(fastifyStatic, {
+			root: staticAssets,
+			prefix: '/static-assets/',
+			maxAge: ms('7 days'),
+			decorateReply: false,
+		});
+
+		fastify.register(fastifyStatic, {
+			root: clientAssets,
+			prefix: '/client-assets/',
+			maxAge: ms('7 days'),
+			decorateReply: false,
+		});
+
+		fastify.register(fastifyStatic, {
+			root: assets,
+			prefix: '/assets/',
+			maxAge: ms('7 days'),
+			decorateReply: false,
+		});
+
+		fastify.register((fastify, options, done) => {
+			fastify.register(fastifyStatic, {
+				root: tarball,
+				prefix: '/tarball/',
+				maxAge: ms('30 days'),
+				immutable: true,
+				decorateReply: false,
+			});
+			fastify.addHook('onRequest', handleRequestRedirectToOmitSearch);
+			done();
+		});
+
+		fastify.get('/favicon.ico', async (request, reply) => {
+			return reply.sendFile('/favicon.ico', staticAssets);
+		});
+
+		fastify.get('/apple-touch-icon.png', async (request, reply) => {
+			return reply.sendFile('/apple-touch-icon.png', staticAssets);
+		});
+
+		fastify.get<{ Params: { path: string } }>('/fluent-emoji/:path(.*)', async (request, reply) => {
+			const path = request.params.path;
+
+			if (!path.match(/^[0-9a-f-]+\.png$/)) {
+				reply.code(404);
+				return;
+			}
+
+			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
+
+			return await reply.sendFile(path, `${_dirname}/../../../../../fluent-emojis/dist/`, {
+				maxAge: ms('30 days'),
+			});
+		});
+
+		fastify.get<{ Params: { path: string } }>('/twemoji/:path(.*)', async (request, reply) => {
+			const path = request.params.path;
+
+			if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+				reply.code(404);
+				return;
+			}
+
+			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
+
+			return await reply.sendFile(path, `${_dirname}/../../../node_modules/@discordapp/twemoji/dist/svg/`, {
+				maxAge: ms('30 days'),
+			});
+		});
+
+		fastify.get<{ Params: { path: string } }>('/tossface/:path(.*)', async (request, reply) => {
+			const path = request.params.path;
+
+			if (!path.match(/^[0-9a-f-]+\.svg$/)) {
+				reply.code(404);
+				return;
+			}
+
+			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
+
+			return await reply.sendFile(path, `${_dirname}/../../../../../tossface-emojis/dist`, {
+				maxAge: ms('30 days'),
+			});
+		});
+
+		fastify.get<{ Params: { path: string } }>('/twemoji-badge/:path(.*)', async (request, reply) => {
+			const path = request.params.path;
+
+			if (!path.match(/^[0-9a-f-]+\.png$/)) {
+				reply.code(404);
+				return;
+			}
+
+			const mask = await sharp(
+				`${_dirname}/../../../node_modules/@discordapp/twemoji/dist/svg/${path.replace('.png', '')}.svg`,
+				{ density: 1000 },
+			)
+				.resize(488, 488)
+				.greyscale()
+				.normalise()
+				.linear(1.75, -(128 * 1.75) + 128) // 1.75x contrast
+				.flatten({ background: '#000' })
+				.extend({
+					top: 12,
+					bottom: 12,
+					left: 12,
+					right: 12,
+					background: '#000',
+				})
+				.toColorspace('b-w')
+				.png()
+				.toBuffer();
+
+			const buffer = await sharp({
+				create: { width: 512, height: 512, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+			})
+				.pipelineColorspace('b-w')
+				.boolean(mask, 'eor')
+				.resize(96, 96)
+				.png()
+				.toBuffer();
+
+			reply.header('Content-Security-Policy', 'default-src \'none\'; style-src \'unsafe-inline\'');
+			reply.header('Cache-Control', 'max-age=2592000');
+			reply.header('Content-Type', 'image/png');
+			return buffer;
+		});
+
+		// ServiceWorker
+		fastify.get('/sw.js', async (request, reply) => {
+			return await reply.sendFile('/sw.js', swAssets, {
+				maxAge: ms('10 minutes'),
+			});
+		});
+
+		// Manifest
+		fastify.get('/manifest.json', async (request, reply) => await this.manifestHandler(reply));
+
+		// Embed Javascript
+		fastify.get('/embed.js', async (request, reply) => {
+			return await reply.sendFile('/embed.js', staticAssets, {
+				maxAge: ms('1 day'),
+			});
+		});
+
+		fastify.get('/robots.txt', async (request, reply) => {
+			if (this.meta.robotsTxt) {
+				reply.header('Content-Type', 'text/plain');
+				return reply.send(this.meta.robotsTxt);
+			} else {
+				return await reply.sendFile('/robots.txt', staticAssets);
+			}
+		});
+
+		// OpenSearch XML
+		fastify.get('/opensearch.xml', async (request, reply) => {
+			const name = this.meta.name ?? 'Sharkey';
+			let content = '';
+			content += '<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/" xmlns:moz="http://www.mozilla.org/2006/browser/search/">';
+			content += `<ShortName>${name}</ShortName>`;
+			content += `<Description>${name} Search</Description>`;
+			content += '<InputEncoding>UTF-8</InputEncoding>';
+			content += `<Image width="16" height="16" type="image/x-icon">${this.config.url}/favicon.ico</Image>`;
+			content += `<Url type="text/html" template="${this.config.url}/search?q={searchTerms}"/>`;
+			content += '</OpenSearchDescription>';
+
+			reply.header('Content-Type', 'application/opensearchdescription+xml');
+			return await reply.send(content);
+		});
+
+		//#endregion
+
+		const renderBase = async (reply: FastifyReply, data: { [key: string]: any } = {}) => {
+			reply.header('Cache-Control', 'public, max-age=30');
+			return await reply.view('base', {
+				img: this.meta.bannerUrl,
+				url: this.config.url,
+				title: this.meta.name ?? 'Sharkey',
+				desc: this.meta.description,
+				customHead: this.config.customHtml.head,
+				...await this.generateCommonPugData(this.meta),
+				...data,
+			});
+		};
+
+		// URL preview endpoint
+		fastify.get<{ Querystring: { url: string; lang: string; } }>('/url', (request, reply) => this.urlPreviewService.handle(request, reply));
+
+		const getFeed = async (handle: string) => {
+			let user = await this.cacheService.findOptionalUserByAcct(handle);
+			if (!user || !this.utilityService.isActiveUser(user) || user.requireSigninToViewContents || !user.enableRss) {
+				user = undefined;
+			}
+
+			return user && await this.feedService.packFeed(user);
+		};
+
+		// Atom
+		fastify.get<{ Params: { user?: string; } }>('/@:user.atom', async (request, reply) => {
+			if (request.params.user == null) return await renderBase(reply);
+
+			const feed = await getFeed(request.params.user);
+
+			if (feed) {
+				reply.header('Content-Type', 'application/atom+xml; charset=utf-8');
+				return feed.atom1();
+			} else {
+				reply.code(404);
+				return;
+			}
+		});
+
+		// RSS
+		fastify.get<{ Params: { user?: string; } }>('/@:user.rss', async (request, reply) => {
+			if (request.params.user == null) return await renderBase(reply);
+
+			const feed = await getFeed(request.params.user);
+
+			if (feed) {
+				reply.header('Content-Type', 'application/rss+xml; charset=utf-8');
+				return feed.rss2();
+			} else {
+				reply.code(404);
+				return;
+			}
+		});
+
+		// JSON
+		fastify.get<{ Params: { user?: string; } }>('/@:user.json', async (request, reply) => {
+			if (request.params.user == null) return await renderBase(reply);
+
+			const feed = await getFeed(request.params.user);
+
+			if (feed) {
+				reply.header('Content-Type', 'application/json; charset=utf-8');
+				return feed.json1();
+			} else {
+				reply.code(404);
+				return;
+			}
+		});
+
+		//#region SSR
+		// User
+		fastify.get<{ Params: { user: string; sub?: string; } }>('/@:user/:sub?', async (request, reply) => {
+			const user = await this.cacheService.findOptionalUserByAcct(request.params.user);
+
+			vary(reply.raw, 'Accept');
+
+			if (user && this.utilityService.isActiveUser(user) && !user.requireSigninToViewContents) {
+				const profile = await this.cacheService.userProfileCache.fetch(user.id);
+				const me = profile.fields
+					? profile.fields
+						// TODO parse this properly
+						.filter(filed => filed.value != null && filed.value.match(/^https?:/))
+						.map(field => field.value)
+					: [];
+
+				reply.header('Cache-Control', 'public, max-age=15');
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+
+				const [_user, commonData] = await Promise.all([
+					this.userEntityService.pack(user, null, {
+						schema: 'UserDetailed',
+						hint: { userProfile: profile },
+					}),
+					this.generateCommonPugData(this.meta),
+				]);
+
+				return await reply.view('user', {
+					user, profile, me,
+					avatarUrl: _user.avatarUrl,
+					sub: request.params.sub,
+					...commonData,
+					clientCtx: htmlSafeJsonStringify({
+						user: _user,
+					}),
+				});
+			} else {
+				// リモートユーザーなので
+				// モデレータがAPI経由で参照可能にするために404にはしない
+				return await renderBase(reply);
+			}
+		});
+
+		fastify.get<{ Params: { user: string; } }>('/users/:user', async (request, reply) => {
+			const user = await this.cacheService.findOptionalUserById(request.params.user);
+
+			if (!user || !this.utilityService.isActiveUser(user)) {
+				reply.code(404);
+				return;
+			}
+
+			vary(reply.raw, 'Accept');
+
+			reply.redirect(`/@${user.username}${ user.host == null ? '' : '@' + user.host}`);
+		});
+
+		// Note
+		fastify.get<{ Params: { note: string; } }>('/notes/:note', async (request, reply) => {
+			vary(reply.raw, 'Accept');
+
+			const note = await this.notesRepository.findOne({
+				where: {
+					id: request.params.note,
+				},
+			});
+
+			if (!note || ['specified', 'followers'].includes(note.visibility) || note.userHost != null) {
+				return await renderBase(reply);
+			}
+
+			const [user, profile, commonData] = await Promise.all([
+				this.cacheService.findOptionalUserById(note.userId),
+				this.cacheService.userProfileCache.fetchMaybe(note.userId),
+				this.generateCommonPugData(this.meta),
+			]);
+
+			if (user && profile && this.utilityService.isActiveUser(user) && !user.requireSigninToViewContents) {
+				const _note = await this.noteEntityService.pack(note);
+				reply.header('Cache-Control', 'public, max-age=15');
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+				return await reply.view('note', {
+					note: _note,
+					profile,
+					avatarUrl: _note.user.avatarUrl,
+					// TODO: Let locale changeable by instance setting
+					summary: getNoteSummary(_note),
+					...commonData,
+					clientCtx: htmlSafeJsonStringify({
+						note: _note,
+					}),
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Page
+		fastify.get<{ Params: { user: string; page: string; } }>('/@:user/pages/:page', async (request, reply) => {
+			const user = await this.cacheService.findOptionalUserByAcct(request.params.user);
+			if (user == null || !this.utilityService.isActiveUser(user)) {
+				return await renderBase(reply);
+			}
+
+			const [page, profile, commonData] = await Promise.all([
+				this.pagesRepository.findOneBy({
+					name: request.params.page,
+					userId: user.id,
+				}),
+				this.cacheService.userProfileCache.fetchMaybe(user.id),
+				this.generateCommonPugData(this.meta),
+			]);
+
+			if (page && profile) {
+				const _page = await this.pageEntityService.pack(page);
+				if (['public'].includes(page.visibility)) {
+					reply.header('Cache-Control', 'public, max-age=15');
+				} else {
+					reply.header('Cache-Control', 'private, max-age=0, must-revalidate');
+				}
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+				return await reply.view('page', {
+					page: _page,
+					profile,
+					avatarUrl: _page.user.avatarUrl,
+					...commonData,
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Flash
+		fastify.get<{ Params: { id: string; } }>('/play/:id', async (request, reply) => {
+			const flash = await this.flashsRepository.findOneBy({
+				id: request.params.id,
+			});
+
+			if (flash) {
+				const [_flash, user, profile, commonData] = await Promise.all([
+					this.flashEntityService.pack(flash),
+					this.cacheService.findOptionalUserById(flash.userId),
+					this.cacheService.userProfileCache.fetchMaybe(flash.userId),
+					this.generateCommonPugData(this.meta),
+				]);
+				if (!user || !profile || !this.utilityService.isActiveUser(user)) {
+					return await renderBase(reply);
+				}
+
+				reply.header('Cache-Control', 'public, max-age=15');
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+				return await reply.view('flash', {
+					flash: _flash,
+					profile,
+					avatarUrl: _flash.user.avatarUrl,
+					...commonData,
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Clip
+		fastify.get<{ Params: { clip: string; } }>('/clips/:clip', async (request, reply) => {
+			const clip = await this.clipsRepository.findOneBy({
+				id: request.params.clip,
+				isPublic: true,
+			});
+
+			if (clip) {
+				const [_clip, user, profile, commonData] = await Promise.all([
+					this.clipEntityService.pack(clip),
+					this.cacheService.findOptionalUserById(clip.userId),
+					this.cacheService.userProfileCache.fetchMaybe(clip.userId),
+					this.generateCommonPugData(this.meta),
+				]);
+				if (!user || !profile || !this.utilityService.isActiveUser(user) || user.requireSigninToViewContents) {
+					return await renderBase(reply);
+				}
+
+				reply.header('Cache-Control', 'public, max-age=15');
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+				return await reply.view('clip', {
+					clip: _clip,
+					profile,
+					avatarUrl: _clip.user.avatarUrl,
+					...commonData,
+					clientCtx: htmlSafeJsonStringify({
+						clip: _clip,
+					}),
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Gallery post
+		fastify.get<{ Params: { post: string; } }>('/gallery/:post', async (request, reply) => {
+			const post = await this.galleryPostsRepository.findOneBy({ id: request.params.post });
+
+			if (post) {
+				const [_post, user, profile, commonData] = await Promise.all([
+					this.galleryPostEntityService.pack(post),
+					this.cacheService.findOptionalUserById(post.userId),
+					this.cacheService.userProfileCache.fetchMaybe(post.userId),
+					this.generateCommonPugData(this.meta),
+				]);
+				if (!user || !profile || !this.utilityService.isActiveUser(user)) {
+					return await renderBase(reply);
+				}
+
+				reply.header('Cache-Control', 'public, max-age=15');
+				if (profile.preventAiLearning) {
+					reply.header('X-Robots-Tag', 'noimageai');
+					reply.header('X-Robots-Tag', 'noai');
+				}
+				return await reply.view('gallery-post', {
+					post: _post,
+					profile,
+					avatarUrl: _post.user.avatarUrl,
+					...commonData,
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Channel
+		fastify.get<{ Params: { channel: string; } }>('/channels/:channel', async (request, reply) => {
+			const channel = await this.channelsRepository.findOneBy({
+				id: request.params.channel,
+			});
+
+			if (channel) {
+				const _channel = await this.channelEntityService.pack(channel);
+				reply.header('Cache-Control', 'public, max-age=15');
+				return await reply.view('channel', {
+					channel: _channel,
+					...await this.generateCommonPugData(this.meta),
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// Reversi game
+		fastify.get<{ Params: { game: string; } }>('/reversi/g/:game', async (request, reply) => {
+			const game = await this.reversiGamesRepository.findOneBy({
+				id: request.params.game,
+			});
+
+			if (game) {
+				const _game = await this.reversiGameEntityService.packDetail(game);
+				reply.header('Cache-Control', 'public, max-age=3600');
+				return await reply.view('reversi-game', {
+					game: _game,
+					...await this.generateCommonPugData(this.meta),
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+
+		// 個別お知らせページ
+		fastify.get<{ Params: { announcementId: string; } }>('/announcements/:announcementId', async (request, reply) => {
+			const announcement = await this.announcementsRepository.findOneBy({
+				id: request.params.announcementId,
+				userId: IsNull(),
+			});
+
+			if (announcement) {
+				const _announcement = await this.announcementEntityService.pack(announcement);
+				reply.header('Cache-Control', 'public, max-age=3600');
+				return await reply.view('announcement', {
+					announcement: _announcement,
+					...await this.generateCommonPugData(this.meta),
+				});
+			} else {
+				return await renderBase(reply);
+			}
+		});
+		//#endregion
+
+		//#region noindex pages
+		// Tags
+		fastify.get<{ Params: { clip: string; } }>('/tags/:tag', async (request, reply) => {
+			return await renderBase(reply, { noindex: true });
+		});
+
+		// User with Tags
+		fastify.get<{ Params: { clip: string; } }>('/user-tags/:tag', async (request, reply) => {
+			return await renderBase(reply, { noindex: true });
+		});
+		//#endregion
+
+		//#region embed pages
+		fastify.get<{ Params: { user: string; } }>('/embed/user-timeline/:user', async (request, reply) => {
+			reply.removeHeader('X-Frame-Options');
+
+			const user = await this.cacheService.findOptionalUserById(request.params.user);
+
+			if (user == null) return;
+			if (user.host != null) return;
+			if (!this.utilityService.isActiveUser(user)) return;
+			if (user.requireSigninToViewContents) return;
+
+			const [_user, commonData] = await Promise.all([
+				this.userEntityService.pack(user),
+				this.generateCommonPugData(this.meta),
+			]);
+
+			reply.header('Cache-Control', 'public, max-age=3600');
+			return await reply.view('base-embed', {
+				title: this.meta.name ?? 'Sharkey',
+				...commonData,
+				embedCtx: htmlSafeJsonStringify({
+					user: _user,
+				}),
+			});
+		});
+
+		fastify.get<{ Params: { note: string; } }>('/embed/notes/:note', async (request, reply) => {
+			reply.removeHeader('X-Frame-Options');
+
+			const note = await this.notesRepository.findOneBy({
+				id: request.params.note,
+			});
+
+			if (note == null) return;
+			if (['specified', 'followers'].includes(note.visibility)) return;
+			if (note.userHost != null) return;
+
+			const [user, _note, commonData] = await Promise.all([
+				this.cacheService.findOptionalUserById(note.userId),
+				this.noteEntityService.pack(note, null, { detail: true }),
+				this.generateCommonPugData(this.meta),
+			]);
+
+			if (!user) return;
+			if (!this.utilityService.isActiveUser(user)) return;
+			if (user.requireSigninToViewContents) return;
+
+			reply.header('Cache-Control', 'public, max-age=3600');
+			return await reply.view('base-embed', {
+				title: this.meta.name ?? 'Sharkey',
+				...commonData,
+				embedCtx: htmlSafeJsonStringify({
+					note: _note,
+				}),
+			});
+		});
+
+		fastify.get<{ Params: { clip: string; } }>('/embed/clips/:clip', async (request, reply) => {
+			reply.removeHeader('X-Frame-Options');
+
+			const clip = await this.clipsRepository.findOneBy({
+				id: request.params.clip,
+				isPublic: true,
+			});
+
+			if (clip == null) return;
+
+			const [user, _clip, commonData] = await Promise.all([
+				this.cacheService.findOptionalUserById(clip.userId),
+				this.clipEntityService.pack(clip),
+				this.generateCommonPugData(this.meta),
+			]);
+
+			if (user == null) return;
+			if (user.host != null) return;
+			if (!this.utilityService.isActiveUser(user)) return;
+			if (user.requireSigninToViewContents) return;
+
+			reply.header('Cache-Control', 'public, max-age=3600');
+			return await reply.view('base-embed', {
+				title: this.meta.name ?? 'Sharkey',
+				...commonData,
+				embedCtx: htmlSafeJsonStringify({
+					clip: _clip,
+				}),
+			});
+		});
+
+		fastify.get('/embed/*', async (request, reply) => {
+			reply.removeHeader('X-Frame-Options');
+
+			reply.header('Cache-Control', 'public, max-age=3600');
+			return await reply.view('base-embed', {
+				title: this.meta.name ?? 'Sharkey',
+				...await this.generateCommonPugData(this.meta),
+			});
+		});
+
+		fastify.get('/_info_card_', async (request, reply) => {
+			reply.removeHeader('X-Frame-Options');
+
+			const stats = await this.instanceStatsService.fetch();
+			return await reply.view('info-card', {
+				version: this.config.version,
+				host: this.config.host,
+				url: this.config.url,
+				meta: this.meta,
+				originalUsersCount: stats.localUsers,
+				originalNotesCount: stats.localNotes,
+			});
+		});
+		//#endregion
+
+		fastify.get('/bios', async (request, reply) => {
+			return await reply.view('bios', {
+				version: this.config.version,
+			});
+		});
+
+		fastify.get('/cli', async (request, reply) => {
+			return await reply.view('cli', {
+				version: this.config.version,
+			});
+		});
+
+		const override = (source: string, target: string, depth = 0) =>
+			[, ...target.split('/').filter(x => x), ...source.split('/').filter(x => x).splice(depth)].join('/');
+
+		fastify.get('/flush', async (request, reply) => {
+			return await reply.view('flush');
+		});
+
+		// streamingに非WebSocketリクエストが来た場合にbase htmlをキャシュ付きで返すと、Proxy等でそのパスがキャッシュされておかしくなる
+		fastify.get('/streaming', async (request, reply) => {
+			reply.code(503);
+			reply.header('Cache-Control', 'private, max-age=0');
+		});
+
+		// Render base html for all requests
+		fastify.get('*', async (request, reply) => {
+			return await renderBase(reply);
+		});
+
+		fastify.setErrorHandler(async (error, request, reply) => {
+			const errId = randomUUID();
+			const errCode = isIdentifiableError(error)
+				? error.id
+				: (typeof(error) === 'object' && error != null && 'code' in error)
+					? String(error.code)
+					: null;
+			this.clientLoggerService.logger.error(`Internal error occurred in ${request.routeOptions.url}: ${renderInlineError(error)}`);
+			reply.code(500);
+			reply.header('Cache-Control', 'max-age=10, must-revalidate');
+			return await reply.view('error', {
+				code: errCode,
+				id: errId,
+			});
+		});
+
+		done();
+	}
+}

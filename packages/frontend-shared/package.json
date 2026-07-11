@@ -1,0 +1,44 @@
+{
+	"name": "frontend-shared",
+	"type": "module",
+	"scripts": {
+		"build": "pnpm run build:js && pnpm run build:util",
+		"build:js": "node ./build.js",
+		"build:util": "tsc -p tsconfig.util.json",
+		"watch": "pnpm run build:util && nodemon -w package.json -e json --exec \"node ./build.js --watch\"",
+		"watch:fast": "nodemon -w package.json -e json --exec \"node ./build.js --watch --no-clean\"",
+		"eslint": "eslint --quiet --cache -c eslint.config.js .",
+		"typecheck-all": "pnpm run --no-bail typecheck:scripts && pnpm run --no-bail typecheck:util && pnpm run --no-bail typecheck:web",
+		"typecheck": "pnpm run typecheck:scripts && pnpm run typecheck:util && pnpm run typecheck:web",
+		"typecheck:scripts": "tsc -p tsconfig.scripts.json --noEmit",
+		"typecheck:util": "tsc -p tsconfig.util.json --noEmit",
+		"typecheck:web": "tsc -p tsconfig.web.json --noEmit",
+		"lint": "pnpm typecheck && pnpm eslint"
+	},
+	"devDependencies": {
+		"@types/node": "22.18.1",
+		"@typescript-eslint/eslint-plugin": "8.57.1",
+		"@typescript-eslint/parser": "8.57.1",
+		"@rollup/plugin-replace": "6.0.3",
+		"@rollup/pluginutils": "5.3.0",
+		"esbuild": "0.27.4",
+		"eslint": "9.39.4",
+		"eslint-plugin-import": "2.32.0",
+		"eslint-plugin-vue": "10.8.0",
+		"execa": "9.6.0",
+		"locales": "workspace:*",
+		"nodemon": "3.1.10",
+		"rollup": "4.59.0",
+		"typescript": "5.9.3",
+		"vue-eslint-parser": "10.4.0"
+	},
+	"files": [
+		"built/js",
+		"built/util"
+	],
+	"dependencies": {
+		"buraha": "0.0.1",
+		"misskey-js": "workspace:*",
+		"vue": "3.5.21"
+	}
+}

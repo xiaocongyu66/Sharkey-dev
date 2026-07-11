@@ -1,0 +1,30 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../shared/tsconfig.scripts.jsonc",
+	"include": [
+		"*.js",
+		"*.ts",
+		"lib/**/*.ts",
+		"lib/**/*.js",
+		"scripts/**/*.ts",
+		"scripts/**/*.js",
+		"scripts/**/*.mjs",
+		"scripts/**/*.cjs"
+	],
+	"exclude": [
+		"**/node_modules",
+		"**/built",
+		"**/built-test",
+		"**/js-built",
+		"**/temp",
+		"**/coverage",
+		"**/*.min.js",
+		"node_modules",
+		".storybook",
+		"vue-shims.d.ts",
+		"src",
+		"test",
+		"@types",
+		"assets"
+	]
+}

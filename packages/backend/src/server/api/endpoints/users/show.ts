@@ -1,0 +1,174 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { In, IsNull } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import type { UsersRepository } from '@/models/_.js';
+import type { MiUser } from '@/models/User.js';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { RemoteUserResolveService } from '@/core/RemoteUserResolveService.js';
+import { DI } from '@/di-symbols.js';
+import PerUserPvChart from '@/core/chart/charts/per-user-pv.js';
+import { RoleService } from '@/core/RoleService.js';
+import { CacheService } from '@/core/CacheService.js';
+import { UserService } from '@/core/UserService.js';
+import { ApiError } from '../../error.js';
+import { ApiLoggerService } from '../../ApiLoggerService.js';
+import type { FindOptionsWhere } from 'typeorm';
+
+export const meta = {
+	tags: ['users'],
+
+	requireCredential: false,
+
+	description: 'Show the properties of a user.',
+
+	res: {
+		optional: false, nullable: false,
+		oneOf: [
+			{
+				type: 'object',
+				ref: 'User',
+			},
+			{
+				type: 'array',
+				items: {
+					type: 'object',
+					ref: 'User',
+				},
+			},
+		],
+	},
+
+	errors: {
+		failedToResolveRemoteUser: {
+			message: 'Failed to resolve remote user.',
+			code: 'FAILED_TO_RESOLVE_REMOTE_USER',
+			id: 'ef7b9be4-9cba-4e6f-ab41-90ed171c7d3c',
+			kind: 'server',
+		},
+
+		noSuchUser: {
+			message: 'No such user.',
+			code: 'NO_SUCH_USER',
+			id: '4362f8dc-731f-4ad8-a694-be5a88922a24',
+			httpStatusCode: 404,
+		},
+	},
+
+	// up to 50 calls @ 4 per second
+	limit: {
+		type: 'bucket',
+		size: 50,
+		dripRate: 250,
+	},
+} as const;
+
+export const paramDef = {
+	type: 'object',
+	properties: {
+		userId: { type: 'string', format: 'misskey:id' },
+		userIds: { type: 'array', uniqueItems: true, items: {
+			type: 'string', format: 'misskey:id',
+		} },
+		username: { type: 'string' },
+		host: {
+			type: 'string',
+			nullable: true,
+			description: 'The local host is represented with `null`.',
+		},
+		detail: {
+			type: 'boolean',
+			nullable: false,
+			default: true,
+		},
+	},
+	anyOf: [
+		{ required: ['userId'] },
+		{ required: ['userIds'] },
+		{ required: ['username'] },
+	],
+} as const;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		private userEntityService: UserEntityService,
+		private remoteUserResolveService: RemoteUserResolveService,
+		private roleService: RoleService,
+		private perUserPvChart: PerUserPvChart,
+		private apiLoggerService: ApiLoggerService,
+		private readonly cacheService: CacheService,
+		private readonly utilityService: UtilityService,
+		private readonly userService: UserService,
+	) {
+		super(meta, paramDef, async (ps, me, _1, _2, _3, ip) => {
+			let user;
+
+			const isModerator = await this.roleService.isModerator(me);
+			ps.username = ps.username?.trim();
+
+			if (me != null) {
+				this.userService.markUserActive(me);
+			}
+
+			if (ps.userIds) {
+				if (ps.userIds.length === 0) {
+					return [];
+				}
+
+				const users = await this.cacheService.findUsersById(ps.userIds);
+
+				// リクエストされた通りに並べ替え
+				// 順番は保持されるけど数は減ってる可能性がある
+				const _users: MiUser[] = [];
+				for (const id of ps.userIds) {
+					const user = users.get(id);
+					if (user != null) {
+						if (isModerator || this.utilityService.isActiveUser(user)) {
+							_users.push(user);
+						}
+					}
+				}
+
+				const _userMap = await this.userEntityService.packMany(_users, me, { schema: ps.detail ? 'UserDetailed' : 'UserLite' })
+					.then(users => new Map(users.map(u => [u.id, u])));
+				return _users.map(u => _userMap.get(u.id)!);
+			} else {
+				// Lookup user
+				if (ps.username) {
+					user = await this.remoteUserResolveService.resolveUser(ps.username, ps.host ?? null).catch(() => null);
+				} else if (ps.userId != null) {
+					user = await this.cacheService.findOptionalUserById(ps.userId);
+				}
+
+				if (user == null && ps.host != null) {
+					throw new ApiError(meta.errors.failedToResolveRemoteUser);
+				}
+
+				if (user == null || (!isModerator && !this.utilityService.isActiveUser(user))) {
+					throw new ApiError(meta.errors.noSuchUser);
+				}
+
+				if (user.host == null) {
+					if (me == null && ip != null) {
+						this.perUserPvChart.commitByVisitor(user, ip);
+					} else if (me && me.id !== user.id) {
+						this.perUserPvChart.commitByUser(user, me.id);
+					}
+				}
+
+				return await this.userEntityService.pack(user, me, {
+					schema: ps.detail ? 'UserDetailed' : 'UserLite',
+				});
+			}
+		});
+	}
+}

@@ -1,0 +1,326 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { afterEach, beforeEach, describe, expect, jest } from '@jest/globals';
+import { Test, TestingModule } from '@nestjs/testing';
+import { randomString } from '../utils.js';
+import { FakeQueueService } from '../misc/FakeQueueService.js';
+import type { Queues } from '@/queue/types.js';
+import { MiUser } from '@/models/User.js';
+import { MiWebhook, UsersRepository, WebhooksRepository } from '@/models/_.js';
+import { IdService } from '@/core/IdService.js';
+import { GlobalModule } from '@/GlobalModule.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
+import { DI } from '@/di-symbols.js';
+import { QueueService } from '@/core/QueueService.js';
+import { LoggerService } from '@/core/LoggerService.js';
+import { UserWebhookService } from '@/core/UserWebhookService.js';
+import { CacheManagementService } from '@/global/CacheManagementService.js';
+import { CoreModule } from '@/core/CoreModule.js';
+
+describe('UserWebhookService', () => {
+	let app: TestingModule;
+	let service: UserWebhookService;
+
+	// --------------------------------------------------------------------------------------
+
+	let usersRepository: UsersRepository;
+	let userWebhooksRepository: WebhooksRepository;
+	let idService: IdService;
+	let cacheManagementService: CacheManagementService;
+	let userWebhookDeliverQueue: Queues['userWebhookDeliver'];
+
+	// --------------------------------------------------------------------------------------
+
+	let root: MiUser;
+
+	// --------------------------------------------------------------------------------------
+
+	async function createUser(data: Partial<MiUser> = {}) {
+		return await usersRepository
+			.insert({
+				id: idService.gen(),
+				...data,
+			})
+			.then(x => usersRepository.findOneByOrFail(x.identifiers[0]));
+	}
+
+	async function createWebhook(data: Partial<MiWebhook> = {}) {
+		return userWebhooksRepository
+			.insert({
+				id: idService.gen(),
+				name: randomString(),
+				on: ['mention'],
+				url: 'https://example.com',
+				secret: randomString(),
+				userId: root.id,
+				...data,
+			})
+			.then(x => userWebhooksRepository.findOneByOrFail(x.identifiers[0]));
+	}
+
+	// --------------------------------------------------------------------------------------
+
+	beforeAll(async () => {
+		app = await Test
+			.createTestingModule({
+				imports: [
+					GlobalModule,
+					CoreModule,
+				],
+			})
+			.overrideProvider(QueueService).useClass(FakeQueueService)
+			.compile();
+
+		await app.init();
+		app.enableShutdownHooks();
+
+		usersRepository = app.get(DI.usersRepository);
+		userWebhooksRepository = app.get(DI.webhooksRepository);
+
+		service = app.get(UserWebhookService);
+		idService = app.get(IdService);
+		cacheManagementService = app.get(CacheManagementService);
+		userWebhookDeliverQueue = app.get<Queues['userWebhookDeliver']>('queue:userWebhookDeliver');
+
+		await userWebhookDeliverQueue.drain(true);
+	});
+
+	afterAll(async () => {
+		await app.close();
+	});
+
+	beforeEach(async () => {
+		root = await createUser({ username: 'root', usernameLower: 'root' });
+	});
+
+	afterEach(async () => {
+		await usersRepository.deleteAll();
+		await userWebhooksRepository.deleteAll();
+		await userWebhookDeliverQueue.drain(true);
+		await cacheManagementService.clear();
+	});
+
+	// --------------------------------------------------------------------------------------
+
+	describe('アプリを毎回作り直す必要のないグループ', () => {
+		describe('fetchSystemWebhooks', () => {
+			test('フィルタなし', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks();
+				expect(fetchedWebhooks).toEqual([webhook1, webhook2, webhook3, webhook4]);
+			});
+
+			test('activeのみ', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks({ isActive: true });
+				expect(fetchedWebhooks).toEqual([webhook1, webhook3]);
+			});
+
+			test('特定のイベントのみ', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks({ on: ['mention'] });
+				expect(fetchedWebhooks).toEqual([webhook1, webhook2]);
+			});
+
+			test('activeな特定のイベントのみ', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks({ on: ['mention'], isActive: true });
+				expect(fetchedWebhooks).toEqual([webhook1]);
+			});
+
+			test('ID指定', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks({ ids: [webhook1.id, webhook4.id] });
+				expect(fetchedWebhooks).toEqual([webhook1, webhook4]);
+			});
+
+			test('ID指定(他条件とANDになるか見たい)', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: ['mention'],
+				});
+				const webhook2 = await createWebhook({
+					active: false,
+					on: ['mention'],
+				});
+				const webhook3 = await createWebhook({
+					active: true,
+					on: ['reply'],
+				});
+				const webhook4 = await createWebhook({
+					active: false,
+					on: [],
+				});
+
+				const fetchedWebhooks = await service.fetchWebhooks({ ids: [webhook1.id, webhook4.id], isActive: false });
+				expect(fetchedWebhooks).toEqual([webhook4]);
+			});
+		});
+	});
+
+	describe('アプリを毎回作り直す必要があるグループ', () => {
+		describe('enqueueUserWebhook', () => {
+			test('キューに追加成功', async () => {
+				const webhook = await createWebhook({
+					active: true,
+					on: ['note'],
+				});
+				await service.enqueueUserWebhook(webhook.userId, 'note', { foo: 'bar' } as any);
+
+				const jobs = await userWebhookDeliverQueue.getJobs();
+				expect(jobs.length).toBe(1);
+				expect(jobs[0].data.webhookId).toBe(webhook.id);
+			});
+
+			test('非アクティブなWebhookはキューに追加されない', async () => {
+				const webhook = await createWebhook({
+					active: false,
+					on: ['note'],
+				});
+				await service.enqueueUserWebhook(webhook.userId, 'note', { foo: 'bar' } as any);
+
+				const jobs = await userWebhookDeliverQueue.getJobs();
+				expect(jobs.length).toBe(0);
+			});
+
+			test('未許可のイベント種別が渡された場合はWebhookはキューに追加されない', async () => {
+				const webhook1 = await createWebhook({
+					active: true,
+					on: [],
+				});
+				const webhook2 = await createWebhook({
+					active: true,
+					on: ['note'],
+				});
+				await service.enqueueUserWebhook(webhook1.userId, 'renote', { foo: 'bar' } as any);
+				await service.enqueueUserWebhook(webhook2.userId, 'renote', { foo: 'bar' } as any);
+
+				const jobs = await userWebhookDeliverQueue.getJobs();
+				expect(jobs.length).toBe(0);
+			});
+
+			test('ユーザIDが異なるWebhookはキューに追加されない', async () => {
+				const webhook = await createWebhook({
+					active: true,
+					on: ['note'],
+				});
+				await service.enqueueUserWebhook(idService.gen(), 'note', { foo: 'bar' } as any);
+
+				const jobs = await userWebhookDeliverQueue.getJobs();
+				expect(jobs.length).toBe(0);
+			});
+
+			test('混在した時、有効かつ許可されたイベント種別のみ', async () => {
+				const userId = root.id;
+				const webhook1 = await createWebhook({
+					userId,
+					active: true,
+					on: ['note'],
+				});
+				const webhook2 = await createWebhook({
+					userId,
+					active: true,
+					on: ['renote'],
+				});
+				const webhook3 = await createWebhook({
+					userId,
+					active: false,
+					on: ['note'],
+				});
+				const webhook4 = await createWebhook({
+					userId,
+					active: false,
+					on: ['renote'],
+				});
+				await service.enqueueUserWebhook(userId, 'note', { foo: 'bar' } as any);
+
+				const jobs = await userWebhookDeliverQueue.getJobs();
+				expect(jobs.length).toBe(1);
+				expect(jobs[0].data.webhookId).toBe(webhook1.id);
+			});
+		});
+	});
+});

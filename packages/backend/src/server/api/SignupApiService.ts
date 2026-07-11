@@ -1,0 +1,409 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { IsNull } from 'typeorm';
+import { DI } from '@/di-symbols.js';
+import type { RegistrationTicketsRepository, UsedUsernamesRepository, UserPendingsRepository, UserProfilesRepository, UsersRepository, MiRegistrationTicket, MiMeta, UserIpsRepository } from '@/models/_.js';
+import type { Config } from '@/config.js';
+import { CaptchaService } from '@/core/CaptchaService.js';
+import { IdService } from '@/core/IdService.js';
+import { SignupService } from '@/core/SignupService.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { EmailService } from '@/core/EmailService.js';
+import { MiLocalUser } from '@/models/User.js';
+import { FastifyReplyError } from '@/misc/fastify-reply-error.js';
+import { bindThis } from '@/decorators.js';
+import { L_CHARS, secureRndstr } from '@/misc/secure-rndstr.js';
+import { RoleService } from '@/core/RoleService.js';
+import Logger from '@/logger.js';
+import { LoggerService } from '@/core/LoggerService.js';
+import { InternalEventService } from '@/global/InternalEventService.js';
+import { UserAuthService } from '@/core/UserAuthService.js';
+import { TimeService } from '@/global/TimeService.js';
+import { EnvService } from '@/global/EnvService.js';
+import { SigninService } from './SigninService.js';
+import type { FastifyRequest, FastifyReply } from 'fastify';
+
+@Injectable()
+export class SignupApiService {
+	private logger: Logger;
+	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
+		@Inject(DI.meta)
+		private meta: MiMeta,
+
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		@Inject(DI.userProfilesRepository)
+		private userProfilesRepository: UserProfilesRepository,
+
+		@Inject(DI.userPendingsRepository)
+		private userPendingsRepository: UserPendingsRepository,
+
+		@Inject(DI.usedUsernamesRepository)
+		private usedUsernamesRepository: UsedUsernamesRepository,
+
+		@Inject(DI.registrationTicketsRepository)
+		private registrationTicketsRepository: RegistrationTicketsRepository,
+
+		@Inject(DI.userIpsRepository)
+		private userIpsRepository: UserIpsRepository,
+
+		private userEntityService: UserEntityService,
+		private idService: IdService,
+		private captchaService: CaptchaService,
+		private signupService: SignupService,
+		private signinService: SigninService,
+		private emailService: EmailService,
+		private roleService: RoleService,
+		private loggerService: LoggerService,
+		private readonly timeService: TimeService,
+		private readonly envService: EnvService,
+		private readonly internalEventService: InternalEventService,
+		private readonly userAuthService: UserAuthService,
+	) {
+		this.logger = this.loggerService.getLogger('Signup');
+	}
+
+	@bindThis
+	public async signup(
+		request: FastifyRequest<{
+			Body: {
+				username: string;
+				password: string;
+				host?: string;
+				invitationCode?: string;
+				emailAddress?: string;
+				reason?: string;
+				'hcaptcha-response'?: string;
+				'g-recaptcha-response'?: string;
+				'turnstile-response'?: string;
+				'm-captcha-response'?: string;
+				'frc-captcha-solution'?: string;
+				'testcaptcha-response'?: string;
+			}
+		}>,
+		reply: FastifyReply,
+	) {
+		const body = request.body;
+
+		// Verify *Captcha
+		// ただしテスト時はこの機構は障害となるため無効にする
+		if (this.envService.env.NODE_ENV !== 'test') {
+			if (this.meta.enableHcaptcha && this.meta.hcaptchaSecretKey) {
+				await this.captchaService.verifyHcaptcha(this.meta.hcaptchaSecretKey, body['hcaptcha-response']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+
+			if (this.meta.enableMcaptcha && this.meta.mcaptchaSecretKey && this.meta.mcaptchaSitekey && this.meta.mcaptchaInstanceUrl) {
+				await this.captchaService.verifyMcaptcha(this.meta.mcaptchaSecretKey, this.meta.mcaptchaSitekey, this.meta.mcaptchaInstanceUrl, body['m-captcha-response']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+
+			if (this.meta.enableRecaptcha && this.meta.recaptchaSecretKey) {
+				await this.captchaService.verifyRecaptcha(this.meta.recaptchaSecretKey, body['g-recaptcha-response']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+
+			if (this.meta.enableTurnstile && this.meta.turnstileSecretKey) {
+				await this.captchaService.verifyTurnstile(this.meta.turnstileSecretKey, body['turnstile-response']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+
+			if (this.meta.enableFC && this.meta.fcSecretKey) {
+				await this.captchaService.verifyFriendlyCaptcha(this.meta.fcSecretKey, body['frc-captcha-solution']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+
+			if (this.meta.enableTestcaptcha) {
+				await this.captchaService.verifyTestcaptcha(body['testcaptcha-response']).catch(err => {
+					throw new FastifyReplyError(400, String(err), err);
+				});
+			}
+		}
+
+		const username = body['username'];
+		const password = body['password'];
+		const host: string | null = this.envService.env.NODE_ENV === 'test' ? (body['host'] ?? null) : null;
+		const invitationCode = body['invitationCode'];
+		const reason = body['reason'];
+		const emailAddress = body['emailAddress'];
+
+		if (this.meta.emailRequiredForSignup) {
+			if (emailAddress == null || typeof emailAddress !== 'string') {
+				reply.code(400);
+				return;
+			}
+
+			const res = await this.emailService.validateEmailForAccount(emailAddress);
+			if (!res.available) {
+				reply.code(400);
+				return;
+			}
+		}
+
+		if (this.meta.approvalRequiredForSignup) {
+			if (reason == null || typeof reason !== 'string') {
+				reply.code(400);
+				return;
+			}
+		}
+
+		let ticket: MiRegistrationTicket | null = null;
+
+		if (this.meta.disableRegistration && this.envService.env.NODE_ENV !== 'test') {
+			if (invitationCode == null || typeof invitationCode !== 'string') {
+				reply.code(400);
+				return;
+			}
+
+			ticket = await this.registrationTicketsRepository.findOneBy({
+				code: invitationCode,
+			});
+
+			if (ticket == null || ticket.usedById != null) {
+				reply.code(400);
+				return;
+			}
+
+			if (ticket.expiresAt && ticket.expiresAt < this.timeService.date) {
+				reply.code(400);
+				return;
+			}
+
+			// メアド認証が有効の場合
+			if (this.meta.emailRequiredForSignup) {
+				// メアド認証済みならエラー
+				if (ticket.usedBy) {
+					reply.code(400);
+					return;
+				}
+
+				// 認証しておらず、メール送信から30分以内ならエラー
+				if (ticket.usedAt && ticket.usedAt.getTime() + (1000 * 60 * 30) > this.timeService.now) {
+					reply.code(400);
+					return;
+				}
+			} else if (ticket.usedAt) {
+				reply.code(400);
+				return;
+			}
+		}
+
+		if (this.meta.emailRequiredForSignup) {
+			if (await this.usersRepository.exists({ where: { usernameLower: username.toLowerCase(), host: IsNull() } })) {
+				throw new FastifyReplyError(400, 'DUPLICATED_USERNAME');
+			}
+
+			// Check deleted username duplication
+			if (await this.usedUsernamesRepository.exists({ where: { username: username.toLowerCase() } })) {
+				throw new FastifyReplyError(400, 'USED_USERNAME');
+			}
+
+			const isPreserved = this.meta.preservedUsernames.map(x => x.toLowerCase()).includes(username.toLowerCase());
+			if (isPreserved) {
+				throw new FastifyReplyError(400, 'DENIED_USERNAME');
+			}
+
+			const code = secureRndstr(16, { chars: L_CHARS });
+
+			// Generate hash of password
+			const hash = await this.userAuthService.hashPassword(password);
+
+			const pendingUser = await this.userPendingsRepository.insertOne({
+				id: this.idService.gen(),
+				code,
+				email: emailAddress!,
+				username: username,
+				password: hash,
+				reason: reason,
+				requestOriginIp: this.meta.enableIpLogging ? request.ip : null,
+			});
+
+			const link = `${this.config.url}/signup-complete/${code}`;
+
+			this.emailService.sendEmail(emailAddress!, 'Signup',
+				`To complete signup, please click this link:<br><a href="${link}">${link}</a>`,
+				`To complete signup, please click this link: ${link}`);
+
+			if (ticket) {
+				await this.registrationTicketsRepository.update(ticket.id, {
+					usedAt: this.timeService.date,
+					pendingUserId: pendingUser.id,
+				});
+			}
+
+			reply.code(204);
+			return;
+		} else if (this.meta.approvalRequiredForSignup) {
+			const { account } = await this.signupService.signup({
+				username, password, host, reason,
+			});
+
+			if (emailAddress) {
+				this.emailService.sendEmail(emailAddress, 'Approval pending',
+					'Congratulations! Your account is now pending approval. You will get notified when you have been accepted.',
+					'Congratulations! Your account is now pending approval. You will get notified when you have been accepted.');
+			}
+
+			if (ticket) {
+				await this.registrationTicketsRepository.update(ticket.id, {
+					usedAt: this.timeService.date,
+					usedBy: account,
+					usedById: account.id,
+				});
+			}
+
+			if (this.meta.enableIpLogging) {
+				this.logIp(request.ip, null, account.id);
+			}
+
+			const moderators = await this.roleService.getModerators();
+
+			for (const moderator of moderators) {
+				const profile = await this.userProfilesRepository.findOneBy({ userId: moderator.id });
+
+				if (profile?.email) {
+					this.emailService.sendEmail(profile.email, 'New user awaiting approval',
+						`A new user called ${account.username} is awaiting approval with the following reason: "${reason}"`,
+						`A new user called ${account.username} is awaiting approval with the following reason: "${reason}"`);
+				}
+			}
+
+			reply.code(204);
+			return;
+		} else {
+			try {
+				const { account, secret } = await this.signupService.signup({
+					username, password, host,
+				});
+
+				const res = await this.userEntityService.pack(account, account, {
+					schema: 'MeDetailed',
+					includeSecrets: true,
+				});
+
+				if (ticket) {
+					await this.registrationTicketsRepository.update(ticket.id, {
+						usedAt: this.timeService.date,
+						usedBy: account,
+						usedById: account.id,
+					});
+				}
+
+				if (this.meta.enableIpLogging) {
+					this.logIp(request.ip, null, account.id);
+				}
+
+				return {
+					...res,
+					token: secret,
+				};
+			} catch (err) {
+				throw new FastifyReplyError(400, String(err), err);
+			}
+		}
+	}
+
+	@bindThis
+	public async signupPending(request: FastifyRequest<{ Body: { code: string; } }>, reply: FastifyReply) {
+		const body = request.body;
+
+		const code = body['code'];
+
+		try {
+			const pendingUser = await this.userPendingsRepository.findOneByOrFail({ code });
+
+			if (this.idService.parse(pendingUser.id).date.getTime() + (1000 * 60 * 30) < this.timeService.now) {
+				throw new FastifyReplyError(400, 'EXPIRED');
+			}
+
+			const { account, secret } = await this.signupService.signup({
+				username: pendingUser.username,
+				passwordHash: pendingUser.password,
+				reason: pendingUser.reason,
+			});
+
+			this.userPendingsRepository.delete({
+				id: pendingUser.id,
+			});
+
+			const profile = await this.userProfilesRepository.findOneByOrFail({ userId: account.id });
+
+			await this.userProfilesRepository.update({ userId: profile.userId }, {
+				email: pendingUser.email,
+				emailVerified: true,
+				emailVerifyCode: null,
+			});
+			await this.internalEventService.emit('updateUserProfile', { userId: profile.userId, keys: ['email', 'emailVerified', 'emailVerifyCode'] });
+
+			const ticket = await this.registrationTicketsRepository.findOneBy({ pendingUserId: pendingUser.id });
+			if (ticket) {
+				await this.registrationTicketsRepository.update(ticket.id, {
+					usedBy: account,
+					usedById: account.id,
+					pendingUserId: null,
+				});
+			}
+
+			if (pendingUser.requestOriginIp) {
+				this.logIp(pendingUser.requestOriginIp, this.idService.parse(pendingUser.id).date, account.id);
+			}
+
+			// The sign-up request and the confirmation may've come from different addresses: log both
+			if (this.meta.enableIpLogging) {
+				this.logIp(request.ip, null, account.id);
+			}
+
+			if (this.meta.approvalRequiredForSignup) {
+				if (pendingUser.email) {
+					this.emailService.sendEmail(pendingUser.email, 'Approval pending',
+						'Congratulations! Your account is now pending approval. You will get notified when you have been accepted.',
+						'Congratulations! Your account is now pending approval. You will get notified when you have been accepted.');
+				}
+
+				const moderators = await this.roleService.getModerators();
+
+				for (const moderator of moderators) {
+					const profile = await this.userProfilesRepository.findOneBy({ userId: moderator.id });
+
+					if (profile?.email) {
+						this.emailService.sendEmail(profile.email, 'New user awaiting approval',
+							`A new user called ${pendingUser.username} is awaiting approval with the following reason: "${pendingUser.reason}"`,
+							`A new user called ${pendingUser.username} is awaiting approval with the following reason: "${pendingUser.reason}"`);
+					}
+				}
+
+				return { pendingApproval: true };
+			}
+
+			return this.signinService.signin(request, reply, account as MiLocalUser);
+		} catch (err) {
+			throw new FastifyReplyError(400, String(err), err);
+		}
+	}
+
+	@bindThis
+	private logIp(ip: string, ipDate: Date | null, userId: MiLocalUser['id']) {
+		try {
+			this.userIpsRepository.createQueryBuilder().insert().values({
+				createdAt: ipDate ?? this.timeService.date,
+				userId,
+				ip,
+			}).orIgnore(true).execute();
+		} catch (err) {
+			this.logger.error(err as Error);
+		}
+	}
+}

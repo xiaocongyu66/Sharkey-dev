@@ -1,0 +1,10 @@
+This repository contains files that are distributed under two
+different licenses.
+
+The files at the top level are distributed under the GNU GPL (version
+3), you can find a copy of the license in the `LICENSE.GPL-3` file.
+
+The files under the `dist/` directory come from the Tossface project
+https://github.com/toss/tossface/ and are distributed under their own
+license. You can find a copy of that license in the `LICENSE.Tossface`
+file.

@@ -1,0 +1,77 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import type { ChannelFollowingsRepository } from '@/models/_.js';
+import { QueryService } from '@/core/QueryService.js';
+import { ChannelEntityService } from '@/core/entities/ChannelEntityService.js';
+import { DI } from '@/di-symbols.js';
+
+export const meta = {
+	tags: ['channels', 'account'],
+
+	requireCredential: true,
+
+	kind: 'read:channels',
+
+	res: {
+		type: 'array',
+		optional: false, nullable: false,
+		items: {
+			type: 'object',
+			optional: false, nullable: false,
+			ref: 'Channel',
+		},
+	},
+
+	// 10 calls per 5 seconds
+	limit: {
+		duration: 1000 * 5,
+		max: 10,
+	},
+} as const;
+
+export const paramDef = {
+	type: 'object',
+	properties: {
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 5 },
+	},
+	required: [],
+} as const;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		@Inject(DI.channelFollowingsRepository)
+		private channelFollowingsRepository: ChannelFollowingsRepository,
+
+		private channelEntityService: ChannelEntityService,
+		private queryService: QueryService,
+	) {
+		super(meta, paramDef, async (ps, me) => {
+			const query = this.queryService
+				.makePaginationQuery(
+					this.channelFollowingsRepository.createQueryBuilder('following'),
+					ps.sinceId,
+					ps.untilId,
+					null,
+					null,
+					'followeeId',
+				)
+				.innerJoinAndSelect('following.followee', 'followee')
+				.andWhere({ followerId: me.id });
+
+			const followings = await query
+				.limit(ps.limit)
+				.getMany();
+
+			const channels = followings.map(f => f.followee ?? f.followeeId);
+			return await this.channelEntityService.packMany(channels, me);
+		});
+	}
+}

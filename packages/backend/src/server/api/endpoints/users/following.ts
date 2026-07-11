@@ -1,0 +1,161 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { IsNull } from 'typeorm';
+import { Inject, Injectable } from '@nestjs/common';
+import type { UsersRepository, FollowingsRepository, UserProfilesRepository } from '@/models/_.js';
+import { birthdaySchema } from '@/models/User.js';
+import { Endpoint } from '@/server/api/endpoint-base.js';
+import { QueryService } from '@/core/QueryService.js';
+import { FollowingEntityService } from '@/core/entities/FollowingEntityService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { DI } from '@/di-symbols.js';
+import { RoleService } from '@/core/RoleService.js';
+import { CacheService } from '@/core/CacheService.js';
+import { ApiError } from '../../error.js';
+
+export const meta = {
+	tags: ['users'],
+
+	requireCredential: false,
+
+	description: 'Show everyone that this user is following.',
+
+	res: {
+		type: 'array',
+		optional: false, nullable: false,
+		items: {
+			type: 'object',
+			optional: false, nullable: false,
+			ref: 'Following',
+		},
+	},
+
+	errors: {
+		noSuchUser: {
+			message: 'No such user.',
+			code: 'NO_SUCH_USER',
+			id: '63e4aba4-4156-4e53-be25-c9559e42d71b',
+		},
+
+		forbidden: {
+			message: 'Forbidden.',
+			code: 'FORBIDDEN',
+			id: 'f6cdb0df-c19f-ec5c-7dbb-0ba84a1f92ba',
+		},
+
+		birthdayInvalid: {
+			message: 'Birthday date format is invalid.',
+			code: 'BIRTHDAY_DATE_FORMAT_INVALID',
+			id: 'a2b007b9-4782-4eba-abd3-93b05ed4130d',
+		},
+	},
+
+	// 2 calls per second
+	limit: {
+		duration: 1000,
+		max: 2,
+	},
+} as const;
+
+export const paramDef = {
+	type: 'object',
+	properties: {
+		sinceId: { type: 'string', format: 'misskey:id' },
+		untilId: { type: 'string', format: 'misskey:id' },
+		limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
+
+		userId: { type: 'string', format: 'misskey:id' },
+		username: { type: 'string' },
+		host: {
+			type: 'string',
+			nullable: true,
+			description: 'The local host is represented with `null`.',
+		},
+
+		birthday: { ...birthdaySchema, nullable: true },
+	},
+	anyOf: [
+		{ required: ['userId'] },
+		{ required: ['username', 'host'] },
+	],
+} as const;
+
+@Injectable()
+export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
+	constructor(
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		@Inject(DI.userProfilesRepository)
+		private userProfilesRepository: UserProfilesRepository,
+
+		@Inject(DI.followingsRepository)
+		private followingsRepository: FollowingsRepository,
+
+		private utilityService: UtilityService,
+		private followingEntityService: FollowingEntityService,
+		private queryService: QueryService,
+		private roleService: RoleService,
+		private readonly cacheService: CacheService,
+	) {
+		super(meta, paramDef, async (ps, me) => {
+			const userId = ps.userId;
+			const username = ps.username?.toLowerCase();
+			const host = ps.host != null ? this.utilityService.toPunyNullable(ps.host) : null;
+
+			const user =
+				userId ? await this.cacheService.findUserById(userId) :
+				username ? await this.cacheService.findUserByAcct({ username, host }) :
+				null;
+
+			if (user == null) {
+				throw new ApiError(meta.errors.noSuchUser);
+			}
+
+			const profile = await this.cacheService.userProfileCache.fetch(user.id);
+
+			if (profile.followingVisibility !== 'public' && !await this.roleService.isModerator(me)) {
+				if (profile.followingVisibility === 'private') {
+					if (me == null || (me.id !== user.id)) {
+						throw new ApiError(meta.errors.forbidden);
+					}
+				} else if (profile.followingVisibility === 'followers') {
+					if (me == null) {
+						throw new ApiError(meta.errors.forbidden);
+					} else if (me.id !== user.id) {
+						const isFollowing = await this.cacheService.isFollowing(me, user);
+						if (!isFollowing) {
+							throw new ApiError(meta.errors.forbidden);
+						}
+					}
+				}
+			}
+
+			const query = this.queryService.makePaginationQuery(this.followingsRepository.createQueryBuilder('following'), ps.sinceId, ps.untilId)
+				.andWhere('following.followerId = :userId', { userId: user.id })
+				.innerJoinAndSelect('following.followee', 'followee');
+
+			if (ps.birthday) {
+				try {
+					const birthday = ps.birthday.substring(5, 10);
+					const birthdayUserQuery = this.userProfilesRepository.createQueryBuilder('user_profile');
+					birthdayUserQuery.select('user_profile.userId')
+						.where(`SUBSTR(user_profile.birthday, 6, 5) = '${birthday}'`);
+
+					query.andWhere(`following.followeeId IN (${ birthdayUserQuery.getQuery() })`);
+				} catch (err) {
+					throw new ApiError(meta.errors.birthdayInvalid);
+				}
+			}
+
+			const followings = await query
+				.limit(ps.limit)
+				.getMany();
+
+			return await this.followingEntityService.packMany(followings, me, { populateFollowee: true });
+		});
+	}
+}

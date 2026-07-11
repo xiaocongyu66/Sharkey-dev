@@ -1,0 +1,223 @@
+/*
+ * SPDX-FileCopyrightText: syuilo and misskey-project
+ * SPDX-License-Identifier: AGPL-3.0-only
+ */
+
+import { Inject, Injectable } from '@nestjs/common';
+import { IsNull } from 'typeorm';
+import vary from 'vary';
+import fastifyAccepts from '@fastify/accepts';
+import { DI } from '@/di-symbols.js';
+import type { MiMeta, UsersRepository } from '@/models/_.js';
+import type { Config } from '@/config.js';
+import { escapeAttribute, escapeValue } from '@/misc/prelude/xml.js';
+import type { MiUser, MiLocalUser } from '@/models/User.js';
+import { isLocalUser } from '@/models/User.js';
+import * as Acct from '@/misc/acct.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
+import { UtilityService } from '@/core/UtilityService.js';
+import { CacheService } from '@/core/CacheService.js';
+import { bindThis } from '@/decorators.js';
+import { NodeinfoServerService } from './NodeinfoServerService.js';
+import { OAuth2ProviderService } from './oauth/OAuth2ProviderService.js';
+import type { FindOptionsWhere } from 'typeorm';
+import type { FastifyInstance, FastifyPluginOptions } from 'fastify';
+
+@Injectable()
+export class WellKnownServerService {
+	constructor(
+		@Inject(DI.config)
+		private config: Config,
+
+		@Inject(DI.meta)
+		private meta: MiMeta,
+
+		@Inject(DI.usersRepository)
+		private usersRepository: UsersRepository,
+
+		private nodeinfoServerService: NodeinfoServerService,
+		private userEntityService: UserEntityService,
+		private oauth2ProviderService: OAuth2ProviderService,
+		private readonly cacheService: CacheService,
+		private readonly utilityService: UtilityService,
+	) {
+		//this.createServer = this.createServer.bind(this);
+	}
+
+	@bindThis
+	public createServer(fastify: FastifyInstance, options: FastifyPluginOptions, done: (err?: Error) => void) {
+		const XRD = (...x: { element: string, value?: string, attributes?: Record<string, string> }[]) =>
+			`<?xml version="1.0" encoding="UTF-8"?><XRD xmlns="http://docs.oasis-open.org/ns/xri/xrd-1.0">${x.map(({ element, value, attributes }) =>
+				`<${
+					Object.entries(typeof attributes === 'object' && attributes || {}).reduce((a, [k, v]) => `${a} ${k}="${escapeAttribute(v)}"`, element)
+				}${
+					typeof value === 'string' ? `>${escapeValue(value)}</${element}` : '/'
+				}>`).reduce((a, c) => a + c, '')}</XRD>`;
+
+		const allPath = '/.well-known/*';
+		const webFingerPath = '/.well-known/webfinger';
+		const jrd = 'application/jrd+json';
+		const xrd = 'application/xrd+xml';
+
+		fastify.register(fastifyAccepts);
+
+		fastify.addHook('onRequest', (request, reply, done) => {
+			reply.header('Access-Control-Allow-Headers', 'Accept');
+			reply.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+			reply.header('Access-Control-Allow-Origin', '*');
+			reply.header('Access-Control-Expose-Headers', 'Vary');
+			done();
+		});
+
+		fastify.options(allPath, async (request, reply) => {
+			reply.code(204);
+		});
+
+		fastify.get('/.well-known/host-meta', async (request, reply) => {
+			if (this.meta.federation === 'none') {
+				reply.code(403);
+				return;
+			}
+
+			reply.header('Content-Type', xrd);
+			return XRD({ element: 'Link', attributes: {
+				rel: 'lrdd',
+				type: xrd,
+				template: `${this.config.url}${webFingerPath}?resource={uri}`,
+			} });
+		});
+
+		fastify.get('/.well-known/host-meta.json', async (request, reply) => {
+			if (this.meta.federation === 'none') {
+				reply.code(403);
+				return;
+			}
+
+			reply.header('Content-Type', 'application/json');
+			return {
+				links: [{
+					rel: 'lrdd',
+					type: jrd,
+					template: `${this.config.url}${webFingerPath}?resource={uri}`,
+				}],
+			};
+		});
+
+		fastify.get('/.well-known/nodeinfo', async (request, reply) => {
+			if (this.meta.federation === 'none') {
+				reply.code(403);
+				return;
+			}
+
+			return { links: this.nodeinfoServerService.getLinks() };
+		});
+
+		fastify.get('/.well-known/oauth-authorization-server', async () => {
+			return this.oauth2ProviderService.generateRFC8414();
+		});
+
+		/* TODO
+fastify.get('/.well-known/change-password', async (request, reply) => {
+});
+*/
+
+		fastify.get<{ Querystring: { resource: string } }>(webFingerPath, async (request, reply) => {
+			if (this.meta.federation === 'none') {
+				reply.code(403);
+				return;
+			}
+
+			const fetchUserByHandle = async (handle: string): Promise<MiUser | undefined> => {
+				return await this.cacheService.findOptionalUserByAcct(handle);
+			};
+
+			const fetchUserById = async (id: string): Promise<MiUser | undefined> => {
+				return await this.cacheService.findOptionalUserById(id);
+			};
+
+			const fetchUser = async (resource: string): Promise<MiLocalUser | number> => {
+				// Normalize case to account for varying client implementations
+				resource = resource.toLowerCase();
+
+				let user: MiUser | undefined;
+				if (resource.startsWith(`${this.config.url.toLowerCase()}/users/`)) {
+					// Form 1: User URI
+					const userId = resource.substring(`${this.config.url.toLowerCase()}/users/`.length);
+					user = await fetchUserById(userId);
+				} else if (resource.startsWith(`${this.config.url.toLowerCase()}/@`)) {
+					// Form 2: Profile URL
+					const handle = resource.substring(`${this.config.url.toLowerCase()}/@`.length);
+					user = await fetchUserByHandle(handle);
+				} else if (resource.startsWith('acct:')) {
+					// Form 3: WebFinger Handle
+					const handle = resource.substring('acct:'.length);
+					user = await fetchUserByHandle(handle);
+				} else {
+					// Form 5: Fediverse Handle
+					user = await fetchUserByHandle(resource);
+				}
+
+				if (user == null || !this.utilityService.isActiveUser(user)) {
+					return 404;
+				}
+
+				if (!isLocalUser(user)) {
+					return 422;
+				}
+
+				return user;
+			};
+
+			if (typeof request.query.resource !== 'string') {
+				reply.code(400);
+				return;
+			}
+
+			const user = await fetchUser(request.query.resource);
+
+			if (typeof(user) === 'number') {
+				reply.code(user);
+				return;
+			}
+
+			const subject = `acct:${user.username}@${this.config.host}`;
+			const profileLink = `${this.config.url}/@${user.username}`;
+			const self = {
+				rel: 'self',
+				type: 'application/activity+json',
+				href: this.userEntityService.genLocalUserUri(user.id),
+			};
+			const profilePage = {
+				rel: 'http://webfinger.net/rel/profile-page',
+				type: 'text/html',
+				href: profileLink,
+			};
+			const subscribe = {
+				rel: 'http://ostatus.org/schema/1.0/subscribe',
+				template: `${this.config.url}/authorize-follow?acct={uri}`,
+			};
+
+			vary(reply.raw, 'Accept');
+			reply.header('Cache-Control', 'public, max-age=180');
+
+			if (request.accepts().type([jrd, xrd]) === xrd) {
+				reply.type(xrd);
+				return XRD(
+					{ element: 'Subject', value: subject },
+					{ element: 'Link', attributes: self },
+					{ element: 'Link', attributes: profilePage },
+					{ element: 'Link', attributes: subscribe },
+					{ element: 'Alias', value: profileLink });
+			} else {
+				reply.type(jrd);
+				return {
+					subject,
+					links: [self, profilePage, subscribe],
+					aliases: [profileLink],
+				};
+			}
+		});
+
+		done();
+	}
+}

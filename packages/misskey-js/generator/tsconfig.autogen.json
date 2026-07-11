@@ -1,0 +1,22 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../../shared/tsconfig.lib.jsonc",
+	"compilerOptions": {
+		"rootDirs": [
+			"built",
+			"../built"
+		]
+	},
+	"include": [
+		"built/autogen/**/*.ts"
+	],
+	"exclude": [
+		"**/node_modules",
+		"**/built-test",
+		"**/js-built",
+		"**/temp",
+		"**/coverage",
+		"**/*.min.js",
+		"**/built/**/*.js"
+	]
+}

@@ -1,0 +1,24 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "../shared/tsconfig.lib.jsonc",
+	"compilerOptions": {
+		"noImplicitAny": false,
+		"outDir": "./built/util",
+		"rootDir": "./util"
+	},
+	"include": [
+		"util/**/*.js",
+		"util/**/*.ts"
+	],
+	"exclude": [
+		"**/node_modules",
+		"**/built",
+		"**/built-test",
+		"**/js-built",
+		"**/temp",
+		"**/coverage",
+		"**/*.min.js",
+		"*.js",
+		"*.ts"
+	]
+}
