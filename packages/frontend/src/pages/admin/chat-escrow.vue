@@ -19,17 +19,33 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 
 			<template v-else>
+				<!-- Primary on/off switch (always visible) -->
+				<div class="_panel" style="padding: 16px;">
+					<div class="_gaps">
+						<MkSwitch v-model="enabledDraft" :disabled="busy" @update:modelValue="onToggleEnabled">
+							<template #label>{{ t.enable }}</template>
+							<template #caption>{{ t.enableCaption }}</template>
+						</MkSwitch>
+						<div style="font-size: 0.9em; opacity: 0.85;">
+							<span v-if="status.enabled && status.operational" style="color: var(--MI_THEME-accent);">
+								{{ t.statusOn }}
+							</span>
+							<span v-else-if="status.enabled && !status.operational">
+								{{ t.statusNeedKey }}
+							</span>
+							<span v-else>
+								{{ t.statusOff }}
+							</span>
+						</div>
+					</div>
+				</div>
+
 				<MkFolder :defaultOpen="true">
 					<template #icon><i class="ti ti-lock"></i></template>
 					<template #label>{{ t.title }}</template>
 					<template #suffix>{{ status.enabled ? i18n.ts.enabled : i18n.ts.disabled }}</template>
 
 					<div class="_gaps">
-						<MkSwitch v-model="enabledDraft" @update:modelValue="onToggleEnabled">
-							<template #label>{{ t.enable }}</template>
-							<template #caption>{{ t.enableCaption }}</template>
-						</MkSwitch>
-
 						<div v-if="status.hasConfigFallback" style="opacity: 0.85; font-size: 0.9em;">
 							{{ t.configFallback }}
 						</div>
@@ -119,7 +135,10 @@ const t = {
 	scope: '仅加密私信与群聊消息（落库 AES-GCM）。公开帖子/笔记不加密，搜索引擎仍可抓取。',
 	warn: '持有主密钥的运营方可解密全部托管聊天。轮换会生成新密钥用于新消息；旧密钥保留才能读历史。删除（退役）旧密钥后，对应历史将无法解密。',
 	enable: '启用聊天托管加密',
-	enableCaption: '开启且存在密钥时，新聊天消息以密文落库；授权用户经 API/WS 收到明文。',
+	enableCaption: '总开关：关闭后新消息不再加密落库（历史密文仍可解密）。开启后需有密钥才会真正加密。',
+	statusOn: '状态：已开启且正在加密新消息',
+	statusNeedKey: '状态：开关已开，但尚无可用密钥 — 请点击下方「随机生成并轮换密钥」',
+	statusOff: '状态：已关闭，新消息明文落库',
 	configFallback: '当前仍可使用配置文件/环境变量中的回退密钥（id: cfg）。建议在后台「轮换」生成独立密钥并妥善备份。',
 	rotate: '随机生成并轮换密钥',
 	keyRing: '密钥环',
@@ -140,6 +159,7 @@ type KeyInfo = {
 
 type Status = {
 	enabled: boolean;
+	operational?: boolean;
 	activeKeyId: string | null;
 	hasConfigFallback: boolean;
 	keys: KeyInfo[];
@@ -151,11 +171,12 @@ const loading = ref(true);
 const busy = ref(false);
 const status = ref<Status>({
 	enabled: false,
+	operational: false,
 	activeKeyId: null,
 	hasConfigFallback: false,
 	keys: [],
 });
-const enabledDraft = ref(true);
+const enabledDraft = ref(false);
 const lastGenerated = ref<{ secret: string; keyId: string } | null>(null);
 
 async function call(action: string, body: Record<string, unknown> = {}) {

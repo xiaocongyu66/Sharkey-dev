@@ -50,7 +50,10 @@ export const meta = {
 		type: 'object',
 		optional: false, nullable: false,
 		properties: {
+			/** Admin switch (preference) — can be on even before keys exist */
 			enabled: { type: 'boolean' },
+			/** Preference on AND keys present → new messages sealed */
+			operational: { type: 'boolean' },
 			activeKeyId: { type: 'string', nullable: true },
 			hasConfigFallback: { type: 'boolean' },
 			keys: {
@@ -167,8 +170,16 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 	private statusPayload() {
 		const keys = this.chatCryptoService.listPublicKeyInfo();
+		// Prefer explicit meta flag for the switch UI; default true when unset
+		const pref =
+			this.serverSettings.chatEscrowEnabled === false
+				? false
+				: this.serverSettings.chatEscrowEnabled === true
+					? true
+					: this.chatCryptoService.isPreferenceEnabled;
 		return {
-			enabled: this.chatCryptoService.isEnabled && this.serverSettings.chatEscrowEnabled !== false,
+			enabled: pref,
+			operational: this.chatCryptoService.isEnabled,
 			activeKeyId: this.chatCryptoService.activeKeyId,
 			hasConfigFallback: keys.some(k => k.id === CHAT_ESCROW_FALLBACK_KEY_ID),
 			keys,

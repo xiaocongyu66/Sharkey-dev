@@ -54,14 +54,22 @@ export class ChatCryptoService {
 		private meta: MiMeta,
 	) {}
 
-	/** Escrow on when enabled flag is true and at least one master secret exists. */
-	public get isEnabled(): boolean {
+	/**
+	 * Admin preference: whether new chat messages should be sealed when keys exist.
+	 * Independent of whether keys are present (toggle always works).
+	 */
+	public get isPreferenceEnabled(): boolean {
+		// Meta switch wins when set
 		if (this.meta.chatEscrowEnabled === false) return false;
-		if ((this.config as any).chatEscrowEnabled === false && this.meta.chatEscrowEnabled == null) {
-			// config explicitly off and meta not set
-			return false;
-		}
-		return this.listKeyMaterials().length > 0;
+		if (this.meta.chatEscrowEnabled === true) return true;
+		// Meta null/undefined → fall back to config (default on if secret available)
+		if ((this.config as any).chatEscrowEnabled === false) return false;
+		return true;
+	}
+
+	/** Actually encrypting new messages: preference on AND at least one master secret. */
+	public get isEnabled(): boolean {
+		return this.isPreferenceEnabled && this.listKeyMaterials().length > 0;
 	}
 
 	public get activeKeyId(): string | null {
