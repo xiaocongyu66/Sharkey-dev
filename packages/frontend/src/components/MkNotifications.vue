@@ -100,9 +100,37 @@ onMounted(() => {
 	connection = useStream().useChannel('main');
 	connection.on('notification', onNotification);
 	connection.on('notificationFlushed', reload);
+	// After reconnect, catch up recent notifications over WS (ungrouped only)
+	const stream = useStream();
+	const onConnected = () => {
+		if (prefer.s.useGroupedNotifications) return;
+		void (async () => {
+			try {
+				const { streamRequest } = await import('@/pages/chat/chat-ws.js');
+				const res = await streamRequest<{ notifications?: any[] }>(
+					connection as any,
+					'notifications',
+					{ limit: 10 },
+					'notifications',
+					'notificationsError',
+				);
+				const list = Array.isArray(res) ? res : (res as any)?.notifications;
+				if (Array.isArray(list)) {
+					for (const n of list.slice().reverse()) {
+						pagingComponent.value?.prepend(n);
+					}
+				}
+			} catch { /* REST pagination remains source of truth */ }
+		})();
+	};
+	stream.on('_connected_', onConnected);
+	(connection as any)._onConnectedCleanup = () => stream.off('_connected_', onConnected);
 });
 
 onUnmounted(() => {
+	try {
+		(connection as any)?._onConnectedCleanup?.();
+	} catch { /* ignore */ }
 	if (connection) connection.dispose();
 });
 

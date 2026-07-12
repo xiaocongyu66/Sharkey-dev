@@ -9,6 +9,7 @@ import { bindThis } from '@/decorators.js';
 import type { ChatEventPayload } from '@/core/GlobalEventService.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import { ChatService } from '@/core/ChatService.js';
+import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import type { ChatRoomsRepository, DriveFilesRepository, MiDriveFile } from '@/models/_.js';
 import type { Config } from '@/config.js';
 import { Channel, type MiChannelService } from '../channel.js';
@@ -28,6 +29,7 @@ class ChatRoomChannel extends Channel {
 		private chatRoomsRepository: ChatRoomsRepository,
 		private driveFilesRepository: DriveFilesRepository,
 		private chatService: ChatService,
+		private chatEntityService: ChatEntityService,
 		private config: Config,
 	) {
 		super(id, connection);
@@ -206,6 +208,90 @@ class ChatRoomChannel extends Channel {
 				}
 				break;
 			}
+
+			// Page load: room timeline over WS (prefer over REST when channel is open)
+			case 'history': {
+				try {
+					await this.chatService.checkChatAvailability(this.user.id, 'read');
+					const room = await this.chatService.findRoomById(this.roomId);
+					if (room == null) {
+						this.send('historyError', { code: 'NO_SUCH_ROOM' });
+						return;
+					}
+					if (!(await this.chatService.hasPermissionToViewRoomTimeline(this.user, room))) {
+						this.send('historyError', { code: 'ACCESS_DENIED' });
+						return;
+					}
+					const limit = Math.min(Math.max(1, Math.floor(Number(body?.limit) || 40)), 100);
+					const untilId = typeof body?.untilId === 'string' ? body.untilId : null;
+					const sinceId = typeof body?.sinceId === 'string' ? body.sinceId : null;
+					const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+					const messages = await this.chatService.roomTimeline(room.id, limit, sinceId, untilId);
+					const packed = await this.chatEntityService.packMessagesLiteForRoom(messages);
+					this.send('history', {
+						reqId,
+						messages: packed,
+						hasMore: messages.length === limit,
+						untilId: messages.length ? messages[messages.length - 1].id : untilId,
+					});
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : 'error';
+					this.send('historyError', { code: 'HISTORY_FAILED', message: msg, reqId: body?.reqId ?? null });
+				}
+				break;
+			}
+
+			// Page load: room metadata over WS
+			case 'roomShow': {
+				try {
+					await this.chatService.checkChatAvailability(this.user.id, 'read');
+					const room = await this.chatService.findRoomById(this.roomId);
+					if (room == null) {
+						this.send('roomError', { code: 'NO_SUCH_ROOM' });
+						return;
+					}
+					if (!(await this.chatService.hasPermissionToViewRoomTimeline(this.user, room)) && !(await this.chatService.isRoomMember(room, this.user.id))) {
+						// still allow show for join gate if public — packRoom handles membership flags
+					}
+					const packed = await this.chatEntityService.packRoom(room, this.user);
+					const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+					this.send('room', { reqId, room: packed });
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : 'error';
+					this.send('roomError', { code: 'ROOM_FAILED', message: msg, reqId: body?.reqId ?? null });
+				}
+				break;
+			}
+
+			// Members list over WS
+			case 'members': {
+				try {
+					await this.chatService.checkChatAvailability(this.user.id, 'read');
+					const room = await this.chatService.findRoomById(this.roomId);
+					if (room == null) {
+						this.send('membersError', { code: 'NO_SUCH_ROOM' });
+						return;
+					}
+					const isMember = await this.chatService.isRoomMember(room, this.user.id);
+					const canMod = await this.chatService.canModerateRoom(room, this.user.id);
+					if (!isMember && !canMod) {
+						this.send('membersError', { code: 'ACCESS_DENIED' });
+						return;
+					}
+					const limit = Math.min(Math.max(1, Math.floor(Number(body?.limit) || 100)), 100);
+					const memberships = await this.chatService.getRoomMembershipsWithPagination(room.id, limit);
+					const packed = await this.chatEntityService.packRoomMemberships(memberships, this.user, {
+						populateUser: true,
+						populateRoom: false,
+					});
+					const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+					this.send('members', { reqId, memberships: packed });
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : 'error';
+					this.send('membersError', { code: 'MEMBERS_FAILED', message: msg, reqId: body?.reqId ?? null });
+				}
+				break;
+			}
 		}
 	}
 
@@ -232,6 +318,7 @@ export class ChatRoomChannelService implements MiChannelService<true> {
 		private readonly config: Config,
 
 		private readonly chatService: ChatService,
+		private readonly chatEntityService: ChatEntityService,
 	) {
 	}
 
@@ -243,6 +330,7 @@ export class ChatRoomChannelService implements MiChannelService<true> {
 			this.chatRoomsRepository,
 			this.driveFilesRepository,
 			this.chatService,
+			this.chatEntityService,
 			this.config,
 		);
 	}

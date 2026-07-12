@@ -64,8 +64,33 @@ export type Channels = {
 			receiveFollowRequest: (payload: User) => void;
 			announcementCreated: (payload: AnnouncementCreated) => void;
 			edited: (payload: Note) => void;
+			/** Response to requestNotifications over main WS */
+			notifications: (payload: {
+				reqId?: string | null;
+				notifications: Notification[];
+				hasMore: boolean;
+			}) => void;
+			notificationsError: (payload: {
+				code?: string;
+				message?: string;
+				reqId?: string | null;
+			}) => void;
 		};
-		receives: null;
+		receives: {
+			/** Load / catch-up notifications without REST */
+			notifications: {
+				limit?: number;
+				untilId?: string;
+				sinceId?: string;
+				reqId?: string;
+			};
+			requestNotifications: {
+				limit?: number;
+				untilId?: string;
+				sinceId?: string;
+				reqId?: string;
+			};
+		};
 	};
 	homeTimeline: {
 		params: {
@@ -251,6 +276,13 @@ export type Channels = {
 			deleted: (payload: ChatMessageLite['id']) => void;
 			msgAck: (payload: { ok: boolean }) => void;
 			msgError: (payload: { code?: string; message?: string }) => void;
+			history: (payload: {
+				reqId?: string | null;
+				messages: ChatMessageLite[];
+				hasMore: boolean;
+				untilId?: string | null;
+			}) => void;
+			historyError: (payload: { code?: string; message?: string; reqId?: string | null }) => void;
 			react: (payload: {
 				reaction: string;
 				user?: UserLite;
@@ -284,6 +316,12 @@ export type Channels = {
 			delete: {
 				messageId: ChatMessageLite['id'];
 			};
+			history: {
+				limit?: number;
+				untilId?: string | null;
+				sinceId?: string | null;
+				reqId?: string;
+			};
 		};
 	};
 	chatRoom: {
@@ -297,6 +335,21 @@ export type Channels = {
 			msgAck: (payload: { ok: boolean }) => void;
 			msgError: (payload: { code?: string; message?: string }) => void;
 			clearAck: (payload: { ok: boolean; deleted?: number }) => void;
+			history: (payload: {
+				reqId?: string | null;
+				messages: ChatMessageLite[];
+				hasMore: boolean;
+				untilId?: string | null;
+			}) => void;
+			historyError: (payload: { code?: string; message?: string; reqId?: string | null }) => void;
+			room: (payload: { reqId?: string | null; room: Record<string, unknown> }) => void;
+			roomError: (payload: { code?: string; message?: string; reqId?: string | null }) => void;
+			members: (payload: { reqId?: string | null; memberships: unknown[] }) => void;
+			membersError: (payload: { code?: string; message?: string; reqId?: string | null }) => void;
+			memberMuted: (payload: { userId: string; mutedUntil: string | null; byUserId: string }) => void;
+			memberKicked: (payload: { userId: string; byUserId: string }) => void;
+			memberBanned: (payload: { userId: string; byUserId: string }) => void;
+			memberUnbanned: (payload: { userId: string; byUserId: string }) => void;
 			react: (payload: {
 				reaction: string;
 				user?: UserLite;
@@ -329,6 +382,19 @@ export type Channels = {
 				messageId: ChatMessageLite['id'];
 			};
 			clearMessages: Record<string, never>;
+			history: {
+				limit?: number;
+				untilId?: string | null;
+				sinceId?: string | null;
+				reqId?: string;
+			};
+			roomShow: {
+				reqId?: string;
+			};
+			members: {
+				limit?: number;
+				reqId?: string;
+			};
 		};
 	};
 };
@@ -351,7 +417,10 @@ export type NoteUpdatedEvent = { id: Note['id'] } & ({
 	};
 } | {
 	type: 'updated';
-	body: Record<string, never>;
+	body: {
+		/** Full packed note when available (avoids notes/show stampede) */
+		note?: Note;
+	};
 } | {
 	type: 'deleted';
 	body: {
@@ -368,6 +437,8 @@ export type NoteUpdatedEvent = { id: Note['id'] } & ({
 	body: {
 		id: Note['id'];
 		userId: User['id'];
+		/** Full packed reply note when available */
+		note?: Note;
 	};
 });
 

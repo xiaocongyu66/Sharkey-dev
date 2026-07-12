@@ -31,12 +31,12 @@ export function useNoteCapture(props: {
 			case 'replied': {
 				if (!props.onReplyCallback) break;
 
-				// notes/show may throw if the current user can't see the note
 				try {
-					const replyNote = await misskeyApi('notes/show', {
-						noteId: body.id,
-					});
-
+					// Prefer full note from stream (WS-first); REST only as fallback
+					const fromStream = (body as any)?.note as Misskey.entities.Note | undefined;
+					const replyNote = fromStream?.id
+						? fromStream
+						: await misskeyApi('notes/show', { noteId: body.id });
 					await props.onReplyCallback(replyNote);
 				} catch { /* empty */ }
 
@@ -103,10 +103,11 @@ export function useNoteCapture(props: {
 
 			case 'updated': {
 				try {
-					// TODO pass the note through the socket instead of blasting the backend with a call from every single client at once
-					const editedNote = await misskeyApi('notes/show', {
-						noteId: id,
-					});
+					// Prefer packed note on the stream (no REST stampede)
+					const fromStream = (body as any)?.note as Misskey.entities.Note | undefined;
+					const editedNote = fromStream?.id
+						? fromStream
+						: await misskeyApi('notes/show', { noteId: id });
 
 					const keys = new Set<string>();
 					Object.keys(editedNote)

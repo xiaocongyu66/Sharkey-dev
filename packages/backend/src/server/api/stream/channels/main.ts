@@ -6,9 +6,12 @@
 import { Injectable } from '@nestjs/common';
 import { isUserFromMutedInstance } from '@/misc/is-instance-muted.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
+import { NotificationService } from '@/core/NotificationService.js';
+import { NotificationEntityService } from '@/core/entities/NotificationEntityService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { bindThis } from '@/decorators.js';
 import type { MainEventPayload } from '@/core/GlobalEventService.js';
+import type { JsonObject } from '@/misc/json-value.js';
 import { type Channel, NoteChannel, type MiChannelService } from '../channel.js';
 
 class MainChannel extends NoteChannel {
@@ -22,6 +25,8 @@ class MainChannel extends NoteChannel {
 		connection: Channel['connection'],
 		noteEntityService: NoteEntityService,
 		private readonly cacheService: CacheService,
+		private readonly notificationService: NotificationService,
+		private readonly notificationEntityService: NotificationEntityService,
 	) {
 		super(id, connection, noteEntityService);
 	}
@@ -66,6 +71,43 @@ class MainChannel extends NoteChannel {
 		this.send(data.type, data.body);
 	}
 
+	/**
+	 * Request/response over main WS — prefer over REST when stream is connected.
+	 * - notifications: catch-up / page load
+	 * - (read all still uses connection-level readNotification)
+	 */
+	@bindThis
+	public async onMessage(type: string, body: any): Promise<void> {
+		if (!this.user) return;
+
+		if (type === 'notifications' || type === 'requestNotifications') {
+			try {
+				const limit = Math.min(Math.max(1, Math.floor(Number(body?.limit) || 20)), 100);
+				const untilId = typeof body?.untilId === 'string' ? body.untilId : undefined;
+				const sinceId = typeof body?.sinceId === 'string' ? body.sinceId : undefined;
+				const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+				const notifications = await this.notificationService.getNotifications(this.user.id, {
+					limit,
+					untilId,
+					sinceId,
+				});
+				const packed = await this.notificationEntityService.packMany(notifications, this.user);
+				this.send('notifications', {
+					reqId,
+					notifications: packed,
+					hasMore: notifications.length === limit,
+				});
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : 'error';
+				this.send('notificationsError', {
+					code: 'NOTIFICATIONS_FAILED',
+					message: msg,
+					reqId: typeof body?.reqId === 'string' ? body.reqId : null,
+				});
+			}
+		}
+	}
+
 	@bindThis
 	public dispose() {
 		this.subscriber.off(`mainStream:${this.user?.id}`, this.onEvent);
@@ -81,6 +123,8 @@ export class MainChannelService implements MiChannelService<true> {
 	constructor(
 		private noteEntityService: NoteEntityService,
 		private readonly cacheService: CacheService,
+		private readonly notificationService: NotificationService,
+		private readonly notificationEntityService: NotificationEntityService,
 	) {
 	}
 
@@ -91,6 +135,8 @@ export class MainChannelService implements MiChannelService<true> {
 			connection,
 			this.noteEntityService,
 			this.cacheService,
+			this.notificationService,
+			this.notificationEntityService,
 		);
 	}
 }

@@ -11,6 +11,7 @@ import type { ChatEventPayload } from '@/core/GlobalEventService.js';
 import type { JsonObject } from '@/misc/json-value.js';
 import type { Config } from '@/config.js';
 import { ChatService } from '@/core/ChatService.js';
+import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { Channel, type MiChannelService } from '../channel.js';
 
@@ -28,6 +29,7 @@ class ChatUserChannel extends Channel {
 		private chatMessagesRepository: ChatMessagesRepository,
 		private driveFilesRepository: DriveFilesRepository,
 		private chatService: ChatService,
+		private chatEntityService: ChatEntityService,
 		private cacheService: CacheService,
 		private config: Config,
 	) {
@@ -183,6 +185,29 @@ class ChatUserChannel extends Channel {
 				}
 				break;
 			}
+
+			// Page load: 1:1 timeline over WS
+			case 'history': {
+				try {
+					await this.chatService.checkChatAvailability(this.user.id, 'read');
+					const limit = Math.min(Math.max(1, Math.floor(Number(body?.limit) || 40)), 100);
+					const untilId = typeof body?.untilId === 'string' ? body.untilId : null;
+					const sinceId = typeof body?.sinceId === 'string' ? body.sinceId : null;
+					const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+					const messages = await this.chatService.userTimeline(this.user.id, this.otherId, limit, sinceId, untilId);
+					const packed = await this.chatEntityService.packMessagesLiteFor1on1(messages);
+					this.send('history', {
+						reqId,
+						messages: packed,
+						hasMore: messages.length === limit,
+						untilId: messages.length ? messages[messages.length - 1].id : untilId,
+					});
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : 'error';
+					this.send('historyError', { code: 'HISTORY_FAILED', message: msg, reqId: body?.reqId ?? null });
+				}
+				break;
+			}
 		}
 	}
 
@@ -211,6 +236,7 @@ export class ChatUserChannelService implements MiChannelService<true> {
 		private readonly config: Config,
 
 		private readonly chatService: ChatService,
+		private readonly chatEntityService: ChatEntityService,
 		private readonly cacheService: CacheService,
 	) {
 	}
@@ -223,6 +249,7 @@ export class ChatUserChannelService implements MiChannelService<true> {
 			this.chatMessagesRepository,
 			this.driveFilesRepository,
 			this.chatService,
+			this.chatEntityService,
 			this.cacheService,
 			this.config,
 		);

@@ -644,9 +644,14 @@ export class NoteEditService implements OnApplicationShutdown {
 		}
 
 		if (!silent) {
-			// Pack the note
+			// Pack the note — include full packed note on the stream so clients
+			// do not stampede notes/show over REST on every edit.
 			const noteObj = await this.noteEntityService.pack(note, null, { skipHide: true, withReactionAndUserPairCache: true });
-			await this.globalEventService.publishNoteStream(note.id, 'updated', { id: note.id, userId: note.userId, body: {} });
+			await this.globalEventService.publishNoteStream(note.id, 'updated', {
+				id: note.id,
+				userId: note.userId,
+				body: { note: noteObj },
+			});
 
 			await this.roleService.addNoteToRoleTimeline(noteObj);
 

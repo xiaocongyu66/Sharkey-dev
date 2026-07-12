@@ -728,12 +728,15 @@ export class NoteCreateService implements OnApplicationShutdown {
 
 			// If has in reply to note
 			if (data.reply) {
+				// Include packed reply note so subscribers need not call notes/show
+				const replyNotePacked = await this.noteEntityService.pack(note, null, { skipHide: true, withReactionAndUserPairCache: true });
 				await this.globalEventService.publishNoteStream(data.reply.id, 'replied', {
 					id: data.reply.id,
 					userId: data.reply.userId,
 					body: {
 						id: note.id,
 						userId: user.id,
+						note: replyNotePacked,
 					},
 				});
 				// 通知

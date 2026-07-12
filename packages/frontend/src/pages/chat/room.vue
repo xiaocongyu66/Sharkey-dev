@@ -404,26 +404,53 @@ function mergeOlderPage(page: NormalizedChatMessage[]) {
 	}
 }
 
+/** Prefer WS history when channel is open; REST fallback. */
+async function fetchTimelinePage(args: { limit: number; untilId: string | null }) {
+	const conn = connection.value;
+	if (conn && chatWs.ready()) {
+		try {
+			const res = await chatWs.request<{
+				messages?: any[];
+				hasMore?: boolean;
+			}>(
+				'history',
+				{ limit: args.limit, untilId: args.untilId },
+				'history',
+				'historyError',
+				props.userId
+					? 'chat/messages/user-timeline'
+					: 'chat/messages/room-timeline',
+				props.userId
+					? { userId: user.value!.id, limit: args.limit, ...(args.untilId ? { untilId: args.untilId } : {}) }
+					: { roomId: room.value!.id, limit: args.limit, ...(args.untilId ? { untilId: args.untilId } : {}) },
+			);
+			const list = (res as any)?.messages ?? (Array.isArray(res) ? res : []);
+			return (list as any[]).map(x => normalizeMessage(x));
+		} catch {
+			// fall through to REST
+		}
+	}
+	if (props.userId && user.value) {
+		const raw = await misskeyApi('chat/messages/user-timeline', {
+			userId: user.value.id,
+			limit: args.limit,
+			...(args.untilId ? { untilId: args.untilId } : {}),
+		});
+		return raw.map(x => normalizeMessage(x));
+	}
+	if (props.roomId && (room.value || props.roomId)) {
+		const raw = await misskeyApi('chat/messages/room-timeline', {
+			roomId: room.value?.id ?? props.roomId,
+			limit: args.limit,
+			...(args.untilId ? { untilId: args.untilId } : {}),
+		});
+		return (raw as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
+	}
+	return [];
+}
+
 function makeTimelineFetcher() {
-	return async (args: { limit: number; untilId: string | null }) => {
-		if (props.userId && user.value) {
-			const raw = await misskeyApi('chat/messages/user-timeline', {
-				userId: user.value.id,
-				limit: args.limit,
-				...(args.untilId ? { untilId: args.untilId } : {}),
-			});
-			return raw.map(x => normalizeMessage(x));
-		}
-		if (props.roomId && room.value) {
-			const raw = await misskeyApi('chat/messages/room-timeline', {
-				roomId: room.value.id,
-				limit: args.limit,
-				...(args.untilId ? { untilId: args.untilId } : {}),
-			});
-			return (raw as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
-		}
-		return [];
-	};
+	return (args: { limit: number; untilId: string | null }) => fetchTimelinePage(args);
 }
 
 /**
@@ -950,20 +977,53 @@ function normalizeMessage(message: Misskey.entities.ChatMessageLite | Misskey.en
 	};
 }
 
+function bindChatChannelEvents() {
+	const conn = connection.value as any;
+	if (!conn) return;
+	conn.on('message', onMessage);
+	conn.on('deleted', onDeleted);
+	conn.on('react', onReact);
+	conn.on('unreact', onUnreact);
+	conn.on?.('cleared', onRoomCleared);
+	conn.on?.('msgError', onMsgError);
+	// Moderation live events (already published by backend)
+	conn.on?.('memberKicked', onMemberKicked);
+	conn.on?.('memberBanned', onMemberBanned);
+	conn.on?.('memberMuted', onMemberMuted);
+}
+
+function onMemberKicked(body: { userId?: string }) {
+	if (body?.userId && $i && body.userId === $i.id) {
+		// Kicked self — leave chat UI
+		isMember.value = false;
+		needJoin.value = true;
+		messages.value = [];
+		knownMessageIds.clear();
+		os.alert({ type: 'info', text: tChat('notAMember') });
+	}
+}
+
+function onMemberBanned(body: { userId?: string }) {
+	if (body?.userId && $i && body.userId === $i.id) {
+		isMember.value = false;
+		needJoin.value = true;
+		messages.value = [];
+		knownMessageIds.clear();
+		os.alert({ type: 'error', text: tChat('bannedFromRoom') });
+	}
+}
+
+function onMemberMuted(_body: { userId?: string; mutedUntil?: string | null }) {
+	// Soft signal; send path already enforces mute. Could show banner later.
+}
+
 async function enterRoomChannel() {
-	// Members get live WS; staff-only viewers still open channel when backend allows
-	if (!room.value || !canViewTimeline.value) return;
+	// Open WS as soon as we have roomId (prefer stream for page content)
+	const roomId = room.value?.id ?? props.roomId;
+	if (!roomId || !canViewTimeline.value) return;
 	connection.value?.dispose();
-	connection.value = useStream().useChannel('chatRoom', {
-		roomId: room.value.id,
-	});
-	connection.value.on('message', onMessage);
-	connection.value.on('deleted', onDeleted);
-	connection.value.on('react', onReact);
-	connection.value.on('unreact', onUnreact);
-	// WS admin / clear broadcast
-	(connection.value as any).on('cleared', onRoomCleared);
-	(connection.value as any).on('msgError', onMsgError);
+	connection.value = useStream().useChannel('chatRoom', { roomId });
+	bindChatChannelEvents();
 }
 
 /** Deep-link ?msg= from abuse report / shared message URL */
@@ -992,15 +1052,40 @@ async function jumpToQueryMessage() {
 
 async function loadRoomTimeline() {
 	const LIMIT = PAGE_LIMIT;
-	const m = await misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT });
-	messages.value = (m as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
-	rebuildKnownIds();
-	canFetchMore.value = messages.value.length === LIMIT;
+	// WS channel first so history can load over stream
 	await enterRoomChannel();
-	// non-blocking: find who @mentioned you + async history pipeline
+	await nextTick();
+
+	let list: NormalizedChatMessage[] = [];
+	try {
+		if (chatWs.ready()) {
+			const res = await chatWs.request<{ messages?: any[]; hasMore?: boolean }>(
+				'history',
+				{ limit: LIMIT },
+				'history',
+				'historyError',
+				'chat/messages/room-timeline',
+				{ roomId: props.roomId, limit: LIMIT },
+			);
+			const raw = (res as any)?.messages ?? (Array.isArray(res) ? res : []);
+			list = raw.map((x: any) => normalizeMessage(x));
+			canFetchMore.value = (res as any)?.hasMore ?? list.length === LIMIT;
+		} else {
+			const m = await misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT });
+			list = (m as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
+			canFetchMore.value = list.length === LIMIT;
+		}
+	} catch {
+		const m = await misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT });
+		list = (m as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
+		canFetchMore.value = list.length === LIMIT;
+	}
+
+	messages.value = list;
+	rebuildKnownIds();
+	// non-blocking: mentions + async history pipeline
 	void loadMentionsForRoom();
 	if (canFetchMore.value) {
-		// Defer so first paint / stick-to-live settle first
 		void nextTick().then(() => startHistoryPrefetch());
 	}
 }
@@ -1061,28 +1146,28 @@ async function initialize() {
 		}
 
 		if (props.userId) {
-			const [u, m] = await Promise.all([
-				misskeyApi('users/show', { userId: props.userId }),
-				misskeyApi('chat/messages/user-timeline', { userId: props.userId, limit: LIMIT }),
-			]);
-
+			const u = await misskeyApi('users/show', { userId: props.userId });
 			user.value = u;
 			isMember.value = true;
-			messages.value = m.map(x => normalizeMessage(x));
-			rebuildKnownIds();
 
-			if (messages.value.length === LIMIT) {
-				canFetchMore.value = true;
-			}
-
+			// Open WS first — history prefers stream
 			connection.value?.dispose();
 			connection.value = useStream().useChannel('chatUser', {
 				otherId: user.value.id,
 			});
-			connection.value.on('message', onMessage);
-			connection.value.on('deleted', onDeleted);
-			connection.value.on('react', onReact);
-			connection.value.on('unreact', onUnreact);
+			bindChatChannelEvents();
+			await nextTick();
+
+			let list: NormalizedChatMessage[] = [];
+			try {
+				list = await fetchTimelinePage({ limit: LIMIT, untilId: null });
+			} catch {
+				const m = await misskeyApi('chat/messages/user-timeline', { userId: props.userId, limit: LIMIT });
+				list = m.map(x => normalizeMessage(x));
+			}
+			messages.value = list;
+			rebuildKnownIds();
+			canFetchMore.value = list.length === LIMIT;
 
 			if (canFetchMore.value) {
 				void nextTick().then(() => startHistoryPrefetch());
