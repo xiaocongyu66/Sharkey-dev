@@ -16,7 +16,7 @@ import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
-import type { ChatApprovalsRepository, ChatMessagesRepository, ChatRoomInvitationsRepository, ChatRoomMembershipsRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiChatRoomMembership, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
+import type { ChatApprovalsRepository, ChatMessagesRepository, ChatRoomBansRepository, ChatRoomInvitationsRepository, ChatRoomMembershipsRepository, ChatRoomsRepository, MiChatMessage, MiChatRoom, MiChatRoomBan, MiChatRoomMembership, MiDriveFile, MiUser, MutingsRepository, UsersRepository } from '@/models/_.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { QueryService } from '@/core/QueryService.js';
 import { RoleService } from '@/core/RoleService.js';
@@ -85,6 +85,9 @@ export class ChatService {
 
 		@Inject(DI.chatRoomMembershipsRepository)
 		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
+
+		@Inject(DI.chatRoomBansRepository)
+		private chatRoomBansRepository: ChatRoomBansRepository,
 
 		@Inject(DI.mutingsRepository)
 		private mutingsRepository: MutingsRepository,
@@ -162,12 +165,78 @@ export class ChatService {
 	@bindThis
 	public async canPostInRoom(room: MiChatRoom, userId: MiUser['id']): Promise<boolean> {
 		if (!(await this.isRoomMember(room, userId))) return false;
-		if (!room.isMutedAll) return true;
+
+		// Per-user timed mute (owner/admin/site mod never blocked by this)
 		const role = await this.getRoomRole(room, userId);
-		if (role === 'owner' || role === 'admin') return true;
 		const user = await this.usersRepository.findOneBy({ id: userId });
-		if (user && await this.roleService.isModerator(user)) return true;
+		const isStaff = role === 'owner' || role === 'admin' || (user != null && await this.roleService.isModerator(user));
+		if (!isStaff) {
+			const mutedUntil = await this.getMemberMutedUntil(room.id, userId);
+			if (mutedUntil != null && mutedUntil.getTime() > Date.now()) {
+				return false;
+			}
+		}
+
+		if (!room.isMutedAll) return true;
+		if (isStaff) return true;
 		return false;
+	}
+
+	/**
+	 * Hierarchy for acting on another member:
+	 * site mod > owner > room admin > member.
+	 * Room admins cannot act on owner/other admins; owner cannot act on site mods unless also staff.
+	 */
+	@bindThis
+	public async canActOnRoomMember(room: MiChatRoom, actorId: MiUser['id'], targetUserId: MiUser['id']): Promise<boolean> {
+		if (actorId === targetUserId) return false;
+		if (!(await this.canModerateRoom(room, actorId))) return false;
+
+		const actorRole = await this.getRoomRole(room, actorId);
+		const targetRole = await this.getRoomRole(room, targetUserId);
+		const actorUser = await this.usersRepository.findOneBy({ id: actorId });
+		const targetUser = await this.usersRepository.findOneBy({ id: targetUserId });
+		const actorIsSiteMod = actorUser != null && await this.roleService.isModerator(actorUser);
+		const targetIsSiteMod = targetUser != null && await this.roleService.isModerator(targetUser);
+
+		// Site moderators can manage anyone except other site mods (unless self — already false)
+		if (actorIsSiteMod) {
+			if (targetIsSiteMod && actorId !== targetUserId) return false;
+			return true;
+		}
+
+		// Non-staff cannot act on site mods
+		if (targetIsSiteMod) return false;
+
+		if (actorRole === 'owner') {
+			// Owner may act on admins and members
+			return targetRole === 'admin' || targetRole === 'member';
+		}
+
+		if (actorRole === 'admin') {
+			// Room admins only manage normal members
+			return targetRole === 'member';
+		}
+
+		return false;
+	}
+
+	@bindThis
+	public async getMemberMutedUntil(roomId: MiChatRoom['id'], userId: MiUser['id']): Promise<Date | null> {
+		const membership = await this.chatRoomMembershipsRepository.findOneBy({ roomId, userId });
+		if (membership == null || membership.mutedUntil == null) return null;
+		if (membership.mutedUntil.getTime() <= Date.now()) {
+			// Lazy clear expired mute
+			await this.chatRoomMembershipsRepository.update(membership.id, { mutedUntil: null });
+			return null;
+		}
+		return membership.mutedUntil;
+	}
+
+	@bindThis
+	public async isUserBannedFromRoom(roomId: MiChatRoom['id'], userId: MiUser['id']): Promise<boolean> {
+		const ban = await this.chatRoomBansRepository.findOneBy({ roomId, userId });
+		return ban != null;
 	}
 
 	/**
@@ -376,6 +445,14 @@ export class ChatService {
 		}
 
 		if (!(await this.canPostInRoom(toRoom, fromUser.id))) {
+			// Distinguish timed mute vs room-wide mute-all
+			const mutedUntil = await this.getMemberMutedUntil(toRoom.id, fromUser.id);
+			if (mutedUntil != null && mutedUntil.getTime() > Date.now()) {
+				const err = new Error('you are muted in this room') as Error & { code?: string; mutedUntil?: string };
+				err.code = 'ROOM_MEMBER_MUTED';
+				err.mutedUntil = mutedUntil.toISOString();
+				throw err;
+			}
 			throw new Error('room is muted for all');
 		}
 
@@ -891,6 +968,10 @@ export class ChatService {
 			return;
 		}
 
+		if (await this.isUserBannedFromRoom(roomId, userId)) {
+			throw new Error('banned from room');
+		}
+
 		if (room.joinPolicy === 'closed') {
 			throw new Error('joining closed');
 		}
@@ -941,16 +1022,181 @@ export class ChatService {
 	@bindThis
 	public async setMemberRole(actorId: MiUser['id'], roomId: MiChatRoom['id'], targetUserId: MiUser['id'], role: 'member' | 'admin') {
 		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId });
-		if (room.ownerId !== actorId) {
-			// only owner can promote/demote admins
-			throw new Error('no permission');
-		}
 		if (targetUserId === room.ownerId) {
 			throw new Error('cannot change owner role');
 		}
+
+		const actorUser = await this.usersRepository.findOneBy({ id: actorId });
+		const actorIsSiteMod = actorUser != null && await this.roleService.isModerator(actorUser);
+		// Room owner or instance admin/moderator can appoint room admins
+		if (room.ownerId !== actorId && !actorIsSiteMod) {
+			throw new Error('no permission');
+		}
+
 		const membership = await this.chatRoomMembershipsRepository.findOneByOrFail({ roomId, userId: targetUserId });
 		await this.chatRoomMembershipsRepository.update(membership.id, { role });
 		return await this.chatRoomMembershipsRepository.findOneByOrFail({ id: membership.id });
+	}
+
+	/**
+	 * Mute a room member for a duration (seconds). 0 or past = unmute.
+	 * Max: 365 days.
+	 */
+	@bindThis
+	public async muteRoomMember(
+		actor: MiUser,
+		roomId: MiChatRoom['id'],
+		targetUserId: MiUser['id'],
+		durationSeconds: number,
+	): Promise<MiChatRoomMembership> {
+		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId });
+		if (!(await this.canActOnRoomMember(room, actor.id, targetUserId))) {
+			throw new Error('no permission');
+		}
+		const membership = await this.chatRoomMembershipsRepository.findOneBy({ roomId, userId: targetUserId });
+		if (membership == null) {
+			throw new Error('not a member');
+		}
+
+		const sec = Math.floor(Number(durationSeconds));
+		let mutedUntil: Date | null = null;
+		if (Number.isFinite(sec) && sec > 0) {
+			const capped = Math.min(sec, 365 * 24 * 60 * 60);
+			mutedUntil = new Date(Date.now() + capped * 1000);
+		}
+
+		await this.chatRoomMembershipsRepository.update(membership.id, { mutedUntil });
+		const updated = await this.chatRoomMembershipsRepository.findOneByOrFail({ id: membership.id });
+
+		this.globalEventService.publishChatRoomStream(room.id, 'memberMuted', {
+			userId: targetUserId,
+			mutedUntil: mutedUntil ? mutedUntil.toISOString() : null,
+			byUserId: actor.id,
+		});
+
+		return updated;
+	}
+
+	/** Force-remove a member from the room (does not blacklist). */
+	@bindThis
+	public async kickRoomMember(actor: MiUser, roomId: MiChatRoom['id'], targetUserId: MiUser['id']): Promise<void> {
+		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId });
+		if (!(await this.canActOnRoomMember(room, actor.id, targetUserId))) {
+			throw new Error('no permission');
+		}
+		if (targetUserId === room.ownerId) {
+			throw new Error('cannot kick owner');
+		}
+		const membership = await this.chatRoomMembershipsRepository.findOneBy({ roomId, userId: targetUserId });
+		if (membership == null) {
+			throw new Error('not a member');
+		}
+
+		await this.chatRoomMembershipsRepository.delete(membership.id);
+
+		// Clear unread markers for kicked user
+		const redisPipeline = this.redisClient.pipeline();
+		redisPipeline.del(`newRoomChatMessageExists:${targetUserId}:${roomId}`);
+		redisPipeline.srem(`newChatMessagesExists:${targetUserId}`, `room:${roomId}`);
+		await redisPipeline.exec();
+
+		this.globalEventService.publishChatRoomStream(room.id, 'memberKicked', {
+			userId: targetUserId,
+			byUserId: actor.id,
+		});
+	}
+
+	/** Kick + add to room blacklist (cannot rejoin until unbanned). */
+	@bindThis
+	public async banRoomMember(
+		actor: MiUser,
+		roomId: MiChatRoom['id'],
+		targetUserId: MiUser['id'],
+		reason?: string | null,
+	): Promise<MiChatRoomBan> {
+		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId });
+		if (targetUserId === room.ownerId) {
+			throw new Error('cannot ban owner');
+		}
+		// If still a member: full hierarchy check. If already left: any room moderator may blacklist.
+		const stillMember = await this.isRoomMember(room, targetUserId);
+		if (stillMember) {
+			if (!(await this.canActOnRoomMember(room, actor.id, targetUserId))) {
+				throw new Error('no permission');
+			}
+		} else if (!(await this.canModerateRoom(room, actor.id))) {
+			throw new Error('no permission');
+		}
+
+		// Remove membership if present
+		const membership = await this.chatRoomMembershipsRepository.findOneBy({ roomId, userId: targetUserId });
+		if (membership != null) {
+			await this.chatRoomMembershipsRepository.delete(membership.id);
+			const redisPipeline = this.redisClient.pipeline();
+			redisPipeline.del(`newRoomChatMessageExists:${targetUserId}:${roomId}`);
+			redisPipeline.srem(`newChatMessagesExists:${targetUserId}`, `room:${roomId}`);
+			await redisPipeline.exec();
+		}
+
+		// Drop pending invitations
+		await this.chatRoomInvitationsRepository.delete({ roomId, userId: targetUserId });
+
+		let ban = await this.chatRoomBansRepository.findOneBy({ roomId, userId: targetUserId });
+		if (ban == null) {
+			ban = await this.chatRoomBansRepository.insertOne({
+				id: this.idService.gen(),
+				roomId,
+				userId: targetUserId,
+				bannedById: actor.id,
+				reason: reason?.trim() ? reason.trim().slice(0, 512) : null,
+			} satisfies Partial<MiChatRoomBan>);
+		} else if (reason !== undefined) {
+			await this.chatRoomBansRepository.update(ban.id, {
+				reason: reason?.trim() ? reason.trim().slice(0, 512) : null,
+				bannedById: actor.id,
+			});
+			ban = await this.chatRoomBansRepository.findOneByOrFail({ id: ban.id });
+		}
+
+		this.globalEventService.publishChatRoomStream(room.id, 'memberBanned', {
+			userId: targetUserId,
+			byUserId: actor.id,
+		});
+
+		return ban;
+	}
+
+	@bindThis
+	public async unbanRoomMember(actor: MiUser, roomId: MiChatRoom['id'], targetUserId: MiUser['id']): Promise<void> {
+		const room = await this.chatRoomsRepository.findOneByOrFail({ id: roomId });
+		if (!(await this.canModerateRoom(room, actor.id))) {
+			throw new Error('no permission');
+		}
+		await this.chatRoomBansRepository.delete({ roomId, userId: targetUserId });
+		this.globalEventService.publishChatRoomStream(room.id, 'memberUnbanned', {
+			userId: targetUserId,
+			byUserId: actor.id,
+		});
+	}
+
+	@bindThis
+	public async listRoomBans(roomId: MiChatRoom['id'], limit = 100): Promise<MiChatRoomBan[]> {
+		return await this.chatRoomBansRepository.find({
+			where: { roomId },
+			order: { id: 'DESC' },
+			take: Math.min(Math.max(limit, 1), 200),
+		});
+	}
+
+	/** Author or room moderators (owner/admin/site mod) may delete a room message. */
+	@bindThis
+	public async canDeleteMessage(message: MiChatMessage, actor: MiUser): Promise<boolean> {
+		if (message.fromUserId === actor.id) return true;
+		if (message.toRoomId) {
+			const room = await this.chatRoomsRepository.findOneBy({ id: message.toRoomId });
+			if (room && await this.canModerateRoom(room, actor.id)) return true;
+		}
+		return false;
 	}
 
 	@bindThis

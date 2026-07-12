@@ -61,7 +61,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.noSuchRoom);
 			}
 
-			if (!(await this.chatService.isRoomMember(room, me.id))) {
+			// Members or room moderators (incl. site staff) may list members
+			const isMember = await this.chatService.isRoomMember(room, me.id);
+			const canMod = await this.chatService.canModerateRoom(room, me.id);
+			if (!isMember && !canMod) {
 				throw new ApiError(meta.errors.noSuchRoom);
 			}
 

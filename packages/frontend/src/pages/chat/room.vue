@@ -4,7 +4,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<PageWithHeader v-model:tab="tab" :reversed="tab === 'chat'" :tabs="headerTabs" :actions="headerActions" :thin="true" :class="$style.chatPage">
+<!-- Chat uses normal (non-reversed) page scroll: oldest→newest DOM, stick to bottom.
+     column-reverse caused scrollTop sign flips and history jump (乱窜). -->
+<PageWithHeader v-model:tab="tab" :reversed="false" :tabs="headerTabs" :actions="headerActions" :thin="true" :class="$style.chatPage">
 	<div v-if="tab === 'chat'" class="_spacer" :class="$style.chatSpacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 4px; --MI_SPACER-max: 8px; --MI_SPACER-h: 4px;">
 		<div class="_gaps" :class="$style.chatGaps">
 			<!-- Not signed in: login gate for room invite links -->
@@ -114,7 +116,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</div>
 
 				<div v-else ref="timelineEl" class="_gaps" :class="$style.timeline">
-					<!-- TG-style: auto-load older messages when sentinel enters viewport (no layout thrash) -->
+					<!-- Top sentinel: load older while scrolling up (DOM is chronological) -->
 					<div
 						v-if="canFetchMore"
 						ref="loadMoreSentinel"
@@ -135,12 +137,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</button>
 					</div>
 
-					<!-- No TransitionGroup: move/enter animations cause history jump (乱窜) -->
+					<!-- Chronological list (oldest top → newest bottom). No TransitionGroup. -->
 					<div class="_gaps" :class="$style.msgList">
 						<div
-							v-for="item in timeline.toReversed()"
+							v-for="item in displayTimeline"
 							:key="item.id"
-							:class="$style.msgRow"
+							:class="[$style.msgRow, { [$style.msgRowLive]: item.type === 'item' && item.data.id === messages[0]?.id }]"
 						>
 							<XMessage
 								v-if="item.type === 'item'"
@@ -180,7 +182,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<XInfo v-if="room != null" :room="room"/>
 	</div>
 
-	<div v-else-if="tab === 'manage' && isMember && canModerate" class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div v-else-if="tab === 'manage' && canModerate" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XManage v-if="room != null" :room="room" @updated="refreshRoom" @cleared="onRoomCleared"/>
 	</div>
 
@@ -250,7 +252,7 @@ import MkInfo from '@/components/MkInfo.vue';
 import { makeDateSeparatedTimelineComputedRef } from '@/utility/timeline-date-separate.js';
 import { pleaseLogin } from '@/utility/please-login.js';
 import { chatT, chatFb, ensureChatLocaleFresh } from './chat-i18n.js';
-import { chatWsKey, createChatWsFromConnection } from './chat-ws.js';
+import { chatWsKey, chatRoomCanModerateKey, createChatWsFromConnection } from './chat-ws.js';
 import { formatApiError } from '@/utility/format-api-error.js';
 
 const router = useRouter();
@@ -446,6 +448,9 @@ const canModerate = computed(() => {
 	return role === 'owner' || role === 'admin' || $i.isAdmin || $i.isModerator;
 });
 
+// For XMessage mod-delete menu (owner/admin/site staff)
+provide(chatRoomCanModerateKey, canModerate);
+
 const canEditAnnouncement = canModerate;
 
 function openAnnouncementEdit() {
@@ -635,7 +640,9 @@ function onMsgError(err: { message?: string; code?: string; remainingSeconds?: n
 	const code = err?.code ?? '';
 	const map: Record<string, string> = {
 		ROOM_MUTED_ALL: tChat('mutedAllComposerDisabled'),
+		ROOM_MEMBER_MUTED: tChat('youAreMuted'),
 		NOT_A_MEMBER: tChat('notAMember'),
+		BANNED_FROM_ROOM: tChat('bannedFromRoom'),
 		ROOM_RATE_LIMITED: tChat('roomRateLimited'),
 		SEND_FAILED: tChat('wsSendFailed'),
 		REACT_FAILED: tChat('wsSendFailed'),
@@ -654,7 +661,14 @@ function onMsgError(err: { message?: string; code?: string; remainingSeconds?: n
 	os.alert({ type: 'error', text: String(text) });
 }
 const timelineEl = useTemplateRef('timelineEl');
-const timeline = makeDateSeparatedTimelineComputedRef(messages);
+/** API order: newest-first. Separators built on that order. */
+const timelineNewestFirst = makeDateSeparatedTimelineComputedRef(messages);
+/**
+ * Display order: oldest → newest (top → bottom).
+ * Normal page scroll + chronological DOM is the stable chat model
+ * (no column-reverse scrollTop sign flips).
+ */
+const displayTimeline = computed(() => timelineNewestFirst.value.toReversed());
 
 // read invite code from ?code= or ?inviteCode=
 try {
@@ -674,22 +688,63 @@ function doLogin() {
 	}
 }
 
-/** Only treat as "at newest" when very close — looser thresholds yank while scrolling */
-const SCROLL_HEAD_THRESHOLD = 24;
+function getChatScrollContainer(): HTMLElement | null {
+	return timelineEl.value ? getScrollContainer(timelineEl.value) : null;
+}
+
+/** Distance from bottom under which we treat as "at live edge" (newest) */
+const LIVE_EDGE_PX = 80;
+
+function distanceFromLiveEdge(container: HTMLElement): number {
+	// Normal scroll: bottom = live edge
+	return container.scrollHeight - container.scrollTop - container.clientHeight;
+}
 
 function isNearLiveEdge(container: HTMLElement | null): boolean {
-	// null → not "at live" (avoid false stick-to-bottom after search jump)
 	if (!container) return false;
-	// column-reverse: scrollTop is typically ≤ 0; near 0 = viewing newest
-	return Math.abs(container.scrollTop) < SCROLL_HEAD_THRESHOLD;
+	return distanceFromLiveEdge(container) <= LIVE_EDGE_PX;
 }
 
 /** User is reading history (search jump pin, or scrolled away from newest) */
 function isReadingHistory(container: HTMLElement | null = null): boolean {
 	if (pinnedViewMessageId.value) return true;
-	const sc = container ?? (timelineEl.value ? getScrollContainer(timelineEl.value) : null);
+	const sc = container ?? getChatScrollContainer();
 	if (!sc) return false;
 	return !isNearLiveEdge(sc);
+}
+
+function scrollToLiveEdge(behavior: ScrollBehavior | 'instant' = 'instant') {
+	const sc = getChatScrollContainer();
+	if (!sc) return;
+	// 'instant' is widely supported; fall back via cast for TS lib
+	sc.scrollTo({ top: sc.scrollHeight, behavior: behavior as ScrollBehavior });
+}
+
+/**
+ * After prepending older messages (top of chronological list), keep viewport
+ * fixed with height-delta. Works reliably with normal (non-reversed) scroll.
+ */
+function preserveScrollAfterPrepend(
+	scrollContainer: HTMLElement,
+	prevHeight: number,
+	prevTop: number,
+	anchorId: string | null,
+	anchorTopBefore: number | null,
+) {
+	const delta = scrollContainer.scrollHeight - prevHeight;
+	if (delta !== 0) {
+		scrollContainer.scrollTop = prevTop + delta;
+	}
+	// Fine-tune with element anchor if available
+	if (anchorId != null && anchorTopBefore != null) {
+		const el = window.document.getElementById(`chat-msg-${anchorId}`);
+		if (el) {
+			const drift = el.getBoundingClientRect().top - anchorTopBefore;
+			if (Math.abs(drift) > 0.5) {
+				scrollContainer.scrollTop += drift;
+			}
+		}
+	}
 }
 
 function markPinnedView(id: string) {
@@ -704,15 +759,16 @@ function markPinnedView(id: string) {
 }
 
 function clearPinnedViewIfAtLive() {
-	const sc = timelineEl.value ? getScrollContainer(timelineEl.value) : null;
+	const sc = getChatScrollContainer();
 	if (sc && isNearLiveEdge(sc)) {
 		pinnedViewMessageId.value = null;
+		showIndicator.value = false;
 	}
 }
 
 function bindScrollLiveClear() {
 	if (scrollListenCleanup) return;
-	const sc = timelineEl.value ? getScrollContainer(timelineEl.value) : null;
+	const sc = getChatScrollContainer();
 	if (!sc) return;
 	const onScroll = () => {
 		clearPinnedViewIfAtLive();
@@ -724,44 +780,8 @@ function bindScrollLiveClear() {
 	};
 }
 
-/**
- * Keep an anchored message at the same viewport Y after history insert.
- * column-reverse can invert scrollTop math — verify and flip if needed.
- */
-function restoreScrollAnchor(
-	scrollContainer: HTMLElement,
-	anchorId: string,
-	topBefore: number,
-) {
-	const el = window.document.getElementById(`chat-msg-${anchorId}`);
-	if (!el) return;
-	const topAfter = el.getBoundingClientRect().top;
-	const drift = topAfter - topBefore;
-	if (Math.abs(drift) < 0.5) return;
-
-	const s0 = scrollContainer.scrollTop;
-	scrollContainer.scrollTop = s0 + drift;
-	const top1 = el.getBoundingClientRect().top;
-	// Wrong direction for this scroll mode → undo and apply opposite
-	if (Math.abs(top1 - topBefore) > Math.abs(drift) * 0.5) {
-		scrollContainer.scrollTop = s0 - drift;
-	}
-	// Final snap to target Y
-	const top2 = el.getBoundingClientRect().top;
-	const remain = top2 - topBefore;
-	if (Math.abs(remain) > 0.5) {
-		const s1 = scrollContainer.scrollTop;
-		scrollContainer.scrollTop = s1 + remain;
-		const top3 = el.getBoundingClientRect().top;
-		if (Math.abs(top3 - topBefore) > Math.abs(remain)) {
-			scrollContainer.scrollTop = s1 - remain;
-		}
-	}
-}
-
-// Do NOT MutationObserver-stick to bottom: image/video layout and list updates
-// cause childList churn and yank the viewport while the user is scrolling.
-// Live edge stick happens only when a new WS message arrives (see onMessage).
+// No MutationObserver stick-to-bottom: media layout thrash yanks viewport.
+// Stick only on new WS messages when already near live edge (see onMessage).
 
 const loadMoreSentinel = useTemplateRef<HTMLElement>('loadMoreSentinel');
 let loadMoreIo: IntersectionObserver | null = null;
@@ -783,15 +803,15 @@ function setupLoadMoreIo() {
 			if (!e.isIntersecting) continue;
 			if (!canFetchMore.value || moreFetching.value || historyLoading.value) continue;
 			if (Date.now() < loadMoreCooldownUntil) continue;
-			// Only auto-load when user has actually scrolled away from live edge
+			// Don't auto-load while still parked at live edge (short chats)
 			const sc = root ?? getScrollContainer(sentinel);
 			if (sc && isNearLiveEdge(sc) && !pinnedViewMessageId.value) continue;
 			void fetchMore();
 		}
 	}, {
 		root: root ?? null,
-		// Small margin only — large rootMargin loads while mid-scroll and jumps
-		rootMargin: '48px 0px',
+		// Modest margin: load a bit before the top edge, not mid-list
+		rootMargin: '120px 0px 0px 0px',
 		threshold: 0,
 	});
 	loadMoreIo.observe(sentinel);
@@ -988,9 +1008,26 @@ async function initialize() {
 	window.document.addEventListener('visibilitychange', onVisibilitychange);
 	initializing.value = false;
 
-	// After first paint: deep-link jump (?msg=) without fighting initial stick-to-live
+	// First paint at live edge (bottom), then optional deep-link jump
 	if (!loadError.value && !needJoin.value && canViewTimeline.value) {
+		await nextTick();
+		await new Promise<void>(r => requestAnimationFrame(() => r()));
+		// Only stick if no ?msg= deep link (jumpToQueryMessage handles that)
+		const q = new URLSearchParams(window.location.search);
+		const hasMsgJump = !!(q.get('msg') || q.get('messageId'));
+		if (!hasMsgJump) {
+			scrollToLiveEdge('instant');
+			// Late media/layout may grow content; re-stick once more if still near bottom
+			requestAnimationFrame(() => {
+				const sc = getChatScrollContainer();
+				if (sc && isNearLiveEdge(sc) && !pinnedViewMessageId.value) {
+					scrollToLiveEdge('instant');
+				}
+			});
+		}
 		void jumpToQueryMessage();
+		// Bind scroll listener so pin auto-clears when user returns to live
+		bindScrollLiveClear();
 	}
 }
 
@@ -1003,10 +1040,10 @@ async function fetchMore() {
 	const LIMIT = PAGE_LIMIT;
 	moreFetching.value = true;
 	historyLoading.value = true;
-	loadMoreCooldownUntil = Date.now() + 600;
+	loadMoreCooldownUntil = Date.now() + 700;
 
-	const scrollContainer = timelineEl.value ? getScrollContainer(timelineEl.value) : null;
-	// Anchor to current oldest message so viewport doesn't jump after prepend
+	const scrollContainer = getChatScrollContainer();
+	// Oldest currently loaded (API array is newest-first)
 	const anchorId = messages.value[messages.value.length - 1].id;
 	const anchorElBefore = window.document.getElementById(`chat-msg-${anchorId}`);
 	const anchorTopBefore = anchorElBefore?.getBoundingClientRect().top ?? null;
@@ -1029,34 +1066,31 @@ async function fetchMore() {
 			return;
 		}
 
-		// Append older messages (array is newest-first)
+		// Append older messages (array remains newest-first)
 		messages.value.push(...newMessages.map(x => normalizeMessage(x)));
 		canFetchMore.value = newMessages.length === LIMIT;
 
 		await nextTick();
-		// Wait a paint so DOM/heights settle before correcting scroll
+		// One paint so DOM heights exist, then lock viewport with height delta
 		await new Promise<void>(r => requestAnimationFrame(() => r()));
 
 		if (scrollContainer) {
-			if (anchorTopBefore != null) {
-				restoreScrollAnchor(scrollContainer, anchorId, anchorTopBefore);
-			} else if (prevHeight > 0) {
-				// Fallback: height delta (try both signs for column-reverse)
-				const delta = scrollContainer.scrollHeight - prevHeight;
-				if (delta !== 0) {
-					const tryA = prevTop + delta;
-					scrollContainer.scrollTop = tryA;
-					// If still at same visual as prevTop would be wrong, try subtract
-					// (no anchor — best-effort only)
-					if (Math.abs(scrollContainer.scrollTop - tryA) > 1) {
-						scrollContainer.scrollTop = prevTop - delta;
-					}
-				}
-			}
-			// Second frame: media/fonts may still shift; re-anchor if possible
+			preserveScrollAfterPrepend(
+				scrollContainer,
+				prevHeight,
+				prevTop,
+				anchorId,
+				anchorTopBefore,
+			);
+			// Second frame: only re-tune element Y (do not re-apply height delta
+			// from the original snapshot — that can fight the first correction).
 			requestAnimationFrame(() => {
-				if (anchorTopBefore != null && scrollContainer) {
-					restoreScrollAnchor(scrollContainer, anchorId, anchorTopBefore);
+				if (!scrollContainer.isConnected || anchorTopBefore == null) return;
+				const el = window.document.getElementById(`chat-msg-${anchorId}`);
+				if (!el) return;
+				const drift = el.getBoundingClientRect().top - anchorTopBefore;
+				if (Math.abs(drift) > 0.5) {
+					scrollContainer.scrollTop += drift;
 				}
 			});
 		}
@@ -1064,8 +1098,8 @@ async function fetchMore() {
 		// keep canFetchMore; user can retry via sentinel / button
 	} finally {
 		moreFetching.value = false;
-		loadMoreCooldownUntil = Date.now() + 400;
-		// Hold historyLoading longer so IO / accidental stick cannot fire mid-layout
+		loadMoreCooldownUntil = Date.now() + 450;
+		// Hold historyLoading so stick-to-live cannot fire mid-layout
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => {
 				historyLoading.value = false;
@@ -1078,19 +1112,13 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 	if (!$i) return;
 	sound.playMisskeySfx('chatMessage');
 
-	const scrollContainer = timelineEl.value ? getScrollContainer(timelineEl.value) : null;
+	const scrollContainer = getChatScrollContainer();
 	const readingHistory = isReadingHistory(scrollContainer);
 	const nearLive = !readingHistory && isNearLiveEdge(scrollContainer);
 
-	// Preserve viewport while reading history / after search jump
+	// While reading history: new msgs append at bottom of DOM and do not
+	// change scrollTop — viewport stays put (normal scroll model). No restore needed.
 	const pinId = pinnedViewMessageId.value;
-	const anchorId = pinId
-		?? (messages.value[0]?.id ?? null); // newest currently loaded as weak anchor
-	const anchorTopBefore = (scrollContainer && anchorId && readingHistory)
-		? window.document.getElementById(`chat-msg-${anchorId}`)?.getBoundingClientRect().top ?? null
-		: null;
-	const prevHeight = scrollContainer?.scrollHeight ?? 0;
-	const prevTop = scrollContainer?.scrollTop ?? 0;
 
 	messages.value.unshift(normalizeMessage(message));
 
@@ -1098,69 +1126,43 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 	// (would drop the jumped-to message and "squeeze" the user away)
 	if (nearLive && !pinnedViewMessageId.value && messages.value.length > MAX_MESSAGES) {
 		const overflow = messages.value.length - MAX_MESSAGES;
+		// Drop oldest (end of newest-first array) — these sit above the viewport
+		// when at live edge; height shrinks above so re-stick to bottom after.
 		messages.value.splice(messages.value.length - overflow, overflow);
 		canFetchMore.value = true;
 	} else if (pinnedViewMessageId.value && messages.value.length > MAX_MESSAGES * 2) {
 		// Soft upper bound even when pinned: drop oldest only if pin is not among them
 		const pin = pinnedViewMessageId.value;
 		const pinIdx = messages.value.findIndex(m => m.id === pin);
-		if (pinIdx >= 0 && pinIdx < messages.value.length - 40) {
-			// drop from the oldest end, keep pin + context
-			const keepFrom = Math.max(pinIdx, messages.value.length - MAX_MESSAGES);
-			if (keepFrom > 0 && keepFrom < messages.value.length) {
-				// actually oldest is at the end of array (newest-first)
-				const overflow = messages.value.length - MAX_MESSAGES;
-				if (overflow > 0 && pinIdx < messages.value.length - overflow) {
-					messages.value.splice(messages.value.length - overflow, overflow);
-					canFetchMore.value = true;
-				}
+		if (pinIdx >= 0) {
+			const overflow = messages.value.length - MAX_MESSAGES;
+			// oldest end is high indices; only drop if pin survives
+			if (overflow > 0 && pinIdx < messages.value.length - overflow) {
+				messages.value.splice(messages.value.length - overflow, overflow);
+				canFetchMore.value = true;
 			}
 		}
 	}
 
-	if (readingHistory && scrollContainer) {
-		// Do NOT stick to live — keep reading position (search jump / scroll-up)
-		void nextTick().then(() => {
-			requestAnimationFrame(() => {
-				if (anchorTopBefore != null && anchorId) {
-					restoreScrollAnchor(scrollContainer, anchorId, anchorTopBefore);
-				} else if (prevHeight > 0) {
-					const delta = scrollContainer.scrollHeight - prevHeight;
-					if (delta !== 0) {
-						const tryA = prevTop - delta;
-						scrollContainer.scrollTop = tryA;
-						if (Math.abs(scrollContainer.scrollTop - tryA) > 1) {
-							scrollContainer.scrollTop = prevTop + delta;
-						}
-					}
-				}
-				// If pin left the loaded set somehow, try to bring it back
-				if (pinId && !messages.value.some(m => m.id === pinId)) {
-					void ensureMessageLoaded(pinId).then(ok => {
-						if (ok) scrollToMessage(pinId);
-					});
-				} else if (pinId) {
-					const pinEl = window.document.getElementById(`chat-msg-${pinId}`);
-					if (pinEl) {
-						const r = pinEl.getBoundingClientRect();
-						// Completely off-screen after layout thrash → re-center once
-						if (r.bottom < 0 || r.top > window.innerHeight) {
-							pinEl.scrollIntoView({ behavior: 'instant', block: 'center' });
-						}
-					}
-				}
-			});
-		});
-		// New message indicator while reading history
+	if (readingHistory) {
+		// Stay put. Show indicator for others' messages.
 		if (message.fromUserId !== $i.id) {
 			notifyNewMessage();
 		}
+		// If pin somehow left the loaded set, reload it
+		if (pinId && !messages.value.some(m => m.id === pinId)) {
+			void ensureMessageLoaded(pinId).then(ok => {
+				if (ok) scrollToMessage(pinId);
+			});
+		}
 	} else if (nearLive && scrollContainer && !historyLoading.value) {
-		// Explicit stick when already at newest
-		requestAnimationFrame(() => {
-			if (!historyLoading.value && !isReadingHistory(scrollContainer)) {
-				scrollContainer.scrollTo({ top: 0, behavior: 'instant' });
-			}
+		// Stick to bottom (live edge) after newest message paints
+		void nextTick().then(() => {
+			requestAnimationFrame(() => {
+				if (!historyLoading.value && !isReadingHistory(scrollContainer)) {
+					scrollToLiveEdge('instant');
+				}
+			});
 		});
 	}
 
@@ -1184,10 +1186,6 @@ function onMessage(message: Misskey.entities.ChatMessageLite) {
 		connection.value?.send('read', {
 			id: message.id,
 		});
-	}
-
-	if (message.fromUserId !== $i.id) {
-		//notifyNewMessage();
 	}
 }
 
@@ -1230,8 +1228,7 @@ function onIndicatorClick() {
 	showIndicator.value = false;
 	// Jump to live edge and release history pin
 	pinnedViewMessageId.value = null;
-	const sc = timelineEl.value ? getScrollContainer(timelineEl.value) : null;
-	sc?.scrollTo({ top: 0, behavior: 'smooth' });
+	scrollToLiveEdge('smooth');
 }
 
 function notifyNewMessage() {
@@ -1375,7 +1372,7 @@ const headerTabs = computed(() => {
 			icon: 'ti ti-info-circle',
 			iconOnly: narrow,
 		}];
-		if (canModerate.value && isMember.value) {
+		if (canModerate.value) {
 			tabs.push({
 				key: 'manage',
 				title: tChat('manage'),
@@ -1433,16 +1430,30 @@ definePage(computed(() => {
 
 <style lang="scss" module>
 .timeline {
-	/* Let browser scroll-anchoring work on media load; avoid layout contain thrash */
+	/*
+	 * Fill the viewport so short chats sit at the bottom (Telegram-like),
+	 * without using page-level column-reverse (which breaks scroll math).
+	 */
+	min-height: calc(100cqh - (var(--MI-stickyTop, 0px) + var(--MI-stickyBottom, 0px)) - 24px);
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	padding-bottom: 4px;
 }
 
 .msgList {
-	/* Browser scroll anchoring fights column-reverse history inserts — keep off on list */
+	/* Default: no browser anchoring on the whole list (we manage history loads) */
 	overflow-anchor: none;
+	width: 100%;
 }
 
 .msgRow {
 	overflow-anchor: none;
+}
+
+/* Allow browser to keep the newest bubble stable when its media loads while at live edge */
+.msgRowLive {
+	overflow-anchor: auto;
 }
 
 .loadMoreSentinel {
@@ -1451,7 +1462,7 @@ definePage(computed(() => {
 	justify-content: center;
 	min-height: 40px;
 	padding: 8px 0 12px;
-	/* Prefer anchoring away from the loader so it does not yank the list */
+	/* Never let the loader become the scroll-anchor target */
 	overflow-anchor: none;
 }
 

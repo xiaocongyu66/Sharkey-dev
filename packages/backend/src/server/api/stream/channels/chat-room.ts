@@ -113,13 +113,15 @@ class ChatRoomChannel extends Channel {
 					const msg = e instanceof Error ? e.message : 'error';
 					const errCode = (e as any)?.code;
 					const remainingSeconds = (e as any)?.remainingSeconds;
+					const mutedUntil = (e as any)?.mutedUntil;
 					const code =
 						msg === 'room is muted for all' ? 'ROOM_MUTED_ALL'
+						: (errCode === 'ROOM_MEMBER_MUTED' || msg === 'you are muted in this room') ? 'ROOM_MEMBER_MUTED'
 						: msg === 'no such reply target' ? 'NO_SUCH_REPLY'
 						: msg === 'you are not a member of the room' ? 'NOT_A_MEMBER'
 						: (errCode === 'ROOM_RATE_LIMITED' || msg.startsWith('rate limited')) ? 'ROOM_RATE_LIMITED'
 						: 'SEND_FAILED';
-					this.send('msgError', { code, message: msg, remainingSeconds });
+					this.send('msgError', { code, message: msg, remainingSeconds, mutedUntil });
 				}
 				break;
 			}
@@ -168,10 +170,14 @@ class ChatRoomChannel extends Channel {
 						this.send('msgError', { code: 'CONTENT_REQUIRED', message: 'messageId required.' });
 						return;
 					}
-					// Only own messages (same as REST chat/messages/delete)
-					const message = await this.chatService.findMyMessageById(this.user.id, messageId);
+					// Author or room moderators (owner/admin/site mod)
+					const message = await this.chatService.findMessageById(messageId);
 					if (message == null || message.toRoomId !== this.roomId) {
 						this.send('msgError', { code: 'NO_SUCH_MESSAGE', message: 'No such message.' });
+						return;
+					}
+					if (!(await this.chatService.canDeleteMessage(message, this.user))) {
+						this.send('msgError', { code: 'NO_PERMISSION', message: 'No permission.' });
 						return;
 					}
 					await this.chatService.deleteMessage(message);

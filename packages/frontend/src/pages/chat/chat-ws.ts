@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import type { InjectionKey } from 'vue';
+import type { InjectionKey, Ref } from 'vue';
 import * as Misskey from 'misskey-js';
 import { misskeyApi } from '@/utility/misskey-api.js';
 
@@ -15,6 +15,9 @@ export type ChatWsApi = {
 };
 
 export const chatWsKey: InjectionKey<ChatWsApi> = Symbol('chatWs');
+
+/** Whether the current viewer can moderate the open room (owner/admin/site staff). */
+export const chatRoomCanModerateKey: InjectionKey<Ref<boolean>> = Symbol('chatRoomCanModerate');
 
 /**
  * Prefer WebSocket channel action; fall back to REST endpoint.

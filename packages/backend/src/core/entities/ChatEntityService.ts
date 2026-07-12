@@ -444,6 +444,11 @@ export class ChatEntityService {
 			roomId: membership.roomId,
 			room: options?.populateRoom ? (options._hint_?.packedRooms.get(membership.roomId) ?? await this.packRoom(membership.room ?? membership.roomId, me)) : undefined,
 			role: membership.role ?? 'member',
+			mutedUntil: membership.mutedUntil
+				? (membership.mutedUntil instanceof Date
+					? membership.mutedUntil.toISOString()
+					: new Date(membership.mutedUntil).toISOString())
+				: null,
 		};
 	}
 

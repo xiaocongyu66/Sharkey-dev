@@ -6,7 +6,6 @@
 import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { ChatService } from '@/core/ChatService.js';
-import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
 import { ApiError } from '@/server/api/error.js';
 
 export const meta = {
@@ -16,22 +15,16 @@ export const meta = {
 
 	kind: 'write:chat',
 
-	res: {
-		type: 'object',
-		optional: false, nullable: false,
-		ref: 'ChatRoom',
-	},
-
 	errors: {
-		cannotJoin: {
-			message: 'Cannot join this room.',
-			code: 'CANNOT_JOIN',
-			id: 'e0f1a2b3-c4d5-6789-e0f1-a2b3c4d56789',
+		noSuchRoom: {
+			message: 'No such room.',
+			code: 'NO_SUCH_ROOM',
+			id: 'c1d2e3f4-a5b6-7890-c1d2-e3f4a5b67890',
 		},
-		banned: {
-			message: 'You are banned from this room.',
-			code: 'BANNED_FROM_ROOM',
-			id: 'd7e8f9a0-b1c2-3456-d7e8-f9a0b1c23456',
+		noPermission: {
+			message: 'No permission.',
+			code: 'NO_PERMISSION',
+			id: 'd2e3f4a5-b6c7-8901-d2e3-f4a5b6c78901',
 		},
 	},
 } as const;
@@ -39,29 +32,26 @@ export const meta = {
 export const paramDef = {
 	type: 'object',
 	properties: {
-		inviteCode: { type: 'string', minLength: 1, maxLength: 64 },
+		roomId: { type: 'string', format: 'misskey:id' },
+		userId: { type: 'string', format: 'misskey:id' },
 	},
-	required: ['inviteCode'],
+	required: ['roomId', 'userId'],
 } as const;
 
 @Injectable()
 export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-disable-line import/no-default-export
 	constructor(
 		private chatService: ChatService,
-		private chatEntityService: ChatEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
 			try {
-				const room = await this.chatService.joinByInviteCode(me.id, ps.inviteCode);
-				return await this.chatEntityService.packRoom(room, me);
+				await this.chatService.unbanRoomMember(me, ps.roomId, ps.userId);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : '';
-				if (msg === 'banned from room') {
-					throw new ApiError(meta.errors.banned);
-				}
-				throw new ApiError(meta.errors.cannotJoin);
+				if (msg === 'no permission') throw new ApiError(meta.errors.noPermission);
+				throw new ApiError(meta.errors.noSuchRoom);
 			}
 		});
 	}

@@ -66,6 +66,12 @@ export const meta = {
 			id: 'b7c8d9e0-f1a2-3456-b7c8-d9e0f1a23456',
 		},
 
+		memberMuted: {
+			message: 'You are muted in this room.',
+			code: 'ROOM_MEMBER_MUTED',
+			id: 'b5c6d7e8-f9a0-1234-b5c6-d7e8f9a01234',
+		},
+
 		noSuchReply: {
 			message: 'No such reply target.',
 			code: 'NO_SUCH_REPLY',
@@ -142,6 +148,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				const msg = e instanceof Error ? e.message : '';
 				const code = (e as any)?.code;
 				if (msg === 'room is muted for all') throw new ApiError(meta.errors.mutedAll);
+				if (code === 'ROOM_MEMBER_MUTED' || msg === 'you are muted in this room') {
+					throw new ApiError(meta.errors.memberMuted);
+				}
 				if (msg === 'no such reply target') throw new ApiError(meta.errors.noSuchReply);
 				if (code === 'ROOM_RATE_LIMITED' || msg.startsWith('rate limited')) {
 					throw new ApiError(meta.errors.rateLimited);

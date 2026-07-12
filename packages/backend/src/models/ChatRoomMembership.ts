@@ -43,6 +43,15 @@ export class MiChatRoomMembership {
 	})
 	public isMuted: boolean;
 
+	/**
+	 * Moderator-imposed mute deadline.
+	 * null = not muted; future date = cannot post until then.
+	 */
+	@Column('timestamptz', {
+		nullable: true,
+	})
+	public mutedUntil: Date | null;
+
 	/** member | admin (owner is always room.ownerId, not stored here) */
 	@Column('varchar', {
 		length: 16, default: 'member',

@@ -172,6 +172,24 @@ export interface ChatEventTypes {
 		user?: Packed<'UserLite'>;
 		messageId: MiChatMessage['id'];
 	};
+	/** Room mod: timed mute applied / cleared (mutedUntil null = unmuted) */
+	memberMuted: {
+		userId: MiUser['id'];
+		mutedUntil: string | null;
+		byUserId: MiUser['id'];
+	};
+	memberKicked: {
+		userId: MiUser['id'];
+		byUserId: MiUser['id'];
+	};
+	memberBanned: {
+		userId: MiUser['id'];
+		byUserId: MiUser['id'];
+	};
+	memberUnbanned: {
+		userId: MiUser['id'];
+		byUserId: MiUser['id'];
+	};
 }
 
 export interface ReversiEventTypes {

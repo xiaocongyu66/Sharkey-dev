@@ -115,7 +115,7 @@ import { i18n } from '@/i18n.js';
 import MkFukidashi from '@/components/MkFukidashi.vue';
 import { decryptChatText } from './chat-e2ee.js';
 import { chatT, chatFb } from './chat-i18n.js';
-import { chatWsKey, chatWsOrApi } from './chat-ws.js';
+import { chatWsKey, chatWsOrApi, chatRoomCanModerateKey } from './chat-ws.js';
 import * as os from '@/os.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import ChatAttachment from './ChatAttachment.vue';
@@ -130,6 +130,7 @@ import SkUrlPreviewGroup from '@/components/SkUrlPreviewGroup.vue';
 
 const $i = ensureSignin();
 const chatWs = inject(chatWsKey, null);
+const roomCanMod = inject(chatRoomCanModerateKey, null);
 
 const props = defineProps<{
 	message: NormalizedChatMessage | Misskey.entities.ChatMessage;
@@ -334,12 +335,26 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 		type: 'divider',
 	});
 
-	if (isMe.value && $i.policies.chatAvailability === 'available') {
+	const roomId = (props.message as any).toRoomId as string | null | undefined;
+	// Room owner / room admin / site staff (provided by room.vue) can delete others' room messages
+	const allowModDelete = !isMe.value && !!roomId && (
+		$i.isAdmin || $i.isModerator || roomCanMod?.value === true
+	);
+	const canDeleteOwn = isMe.value && $i.policies.chatAvailability === 'available';
+
+	if ((canDeleteOwn || allowModDelete) && $i.policies.chatAvailability === 'available') {
 		menu.push({
-			text: i18n.ts.delete,
+			text: allowModDelete ? tChat('modDeleteMessage', chatFb.modDeleteMessage) : i18n.ts.delete,
 			icon: 'ti ti-trash',
 			danger: true,
-			action: () => {
+			action: async () => {
+				if (allowModDelete) {
+					const { canceled } = await os.confirm({
+						type: 'warning',
+						text: tChat('modDeleteMessageConfirm', chatFb.modDeleteMessageConfirm),
+					});
+					if (canceled) return;
+				}
 				void sendDelete();
 			},
 		});

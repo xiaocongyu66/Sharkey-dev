@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
 import { ChatService } from '@/core/ChatService.js';
 import { ApiError } from '@/server/api/error.js';
 
@@ -20,17 +19,22 @@ export const meta = {
 		noSuchRoom: {
 			message: 'No such room.',
 			code: 'NO_SUCH_ROOM',
-			id: '84416476-5ce8-4a2c-b568-9569f1b10733',
+			id: 'b4c5d6e7-f8a9-0123-b4c5-d6e7f8a90123',
 		},
-		cannotJoin: {
-			message: 'Cannot join this room.',
-			code: 'CANNOT_JOIN',
-			id: 'a1c2d3e4-f5a6-7890-b1c2-d3e4f5a67890',
+		noPermission: {
+			message: 'No permission.',
+			code: 'NO_PERMISSION',
+			id: 'c5d6e7f8-a9b0-1234-c5d6-e7f8a9b01234',
 		},
-		banned: {
-			message: 'You are banned from this room.',
-			code: 'BANNED_FROM_ROOM',
-			id: 'c6d7e8f9-a0b1-2345-c6d7-e8f9a0b12345',
+		notAMember: {
+			message: 'User is not a member of the room.',
+			code: 'NOT_A_MEMBER',
+			id: 'd6e7f8a9-b0c1-2345-d6e7-f8a9b0c12345',
+		},
+		cannotKickOwner: {
+			message: 'Cannot kick the room owner.',
+			code: 'CANNOT_KICK_OWNER',
+			id: 'e7f8a9b0-c1d2-3456-e7f8-a9b0c1d23456',
 		},
 	},
 } as const;
@@ -39,9 +43,9 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		roomId: { type: 'string', format: 'misskey:id' },
-		inviteCode: { type: 'string', minLength: 1, maxLength: 64, nullable: true },
+		userId: { type: 'string', format: 'misskey:id' },
 	},
-	required: ['roomId'],
+	required: ['roomId', 'userId'],
 } as const;
 
 @Injectable()
@@ -53,16 +57,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
 			try {
-				await this.chatService.joinToRoom(me.id, ps.roomId, { inviteCode: ps.inviteCode });
+				await this.chatService.kickRoomMember(me, ps.roomId, ps.userId);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : '';
-				if (msg === 'banned from room') {
-					throw new ApiError(meta.errors.banned);
-				}
-				if (msg === 'no invitation' || msg === 'invalid invite code' || msg === 'joining closed' || msg === 'room is full') {
-					throw new ApiError(meta.errors.cannotJoin);
-				}
-				throw e;
+				if (msg === 'no permission') throw new ApiError(meta.errors.noPermission);
+				if (msg === 'not a member') throw new ApiError(meta.errors.notAMember);
+				if (msg === 'cannot kick owner') throw new ApiError(meta.errors.cannotKickOwner);
+				throw new ApiError(meta.errors.noSuchRoom);
 			}
 		});
 	}

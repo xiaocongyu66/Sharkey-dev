@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { DI } from '@/di-symbols.js';
 import { ChatService } from '@/core/ChatService.js';
 import { ApiError } from '@/server/api/error.js';
 
@@ -21,6 +20,11 @@ export const meta = {
 			message: 'No such message.',
 			code: 'NO_SUCH_MESSAGE',
 			id: '36b67f0e-66a6-414b-83df-992a55294f17',
+		},
+		noPermission: {
+			message: 'No permission to delete this message.',
+			code: 'NO_PERMISSION',
+			id: 'a5b6c7d8-e9f0-1234-a5b6-c7d8e9f01234',
 		},
 	},
 } as const;
@@ -41,10 +45,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
-			const message = await this.chatService.findMyMessageById(me.id, ps.messageId);
+			const message = await this.chatService.findMessageById(ps.messageId);
 			if (message == null) {
 				throw new ApiError(meta.errors.noSuchMessage);
 			}
+
+			if (!(await this.chatService.canDeleteMessage(message, me))) {
+				throw new ApiError(meta.errors.noPermission);
+			}
+
 			await this.chatService.deleteMessage(message);
 		});
 	}

@@ -23,6 +23,7 @@ import { MiChatMessage } from '@/models/ChatMessage.js';
 import { MiChatRoom } from '@/models/ChatRoom.js';
 import { MiChatRoomInvitation } from '@/models/ChatRoomInvitation.js';
 import { MiChatRoomMembership } from '@/models/ChatRoomMembership.js';
+import { MiChatRoomBan } from '@/models/ChatRoomBan.js';
 import { MiChatSticker } from '@/models/ChatSticker.js';
 import { MiChatStickerPack } from '@/models/ChatStickerPack.js';
 import { MiChatE2eeKey } from '@/models/ChatE2eeKey.js';
@@ -225,6 +226,7 @@ export {
 	MiChatMessage,
 	MiChatRoom,
 	MiChatRoomMembership,
+	MiChatRoomBan,
 	MiChatRoomInvitation,
 	MiChatApproval,
 	MiChatStickerPack,
@@ -313,6 +315,7 @@ export type UserMemoRepository = UserMemosRepository;
 export type ChatMessagesRepository = Repository<MiChatMessage> & MiRepository<MiChatMessage>;
 export type ChatRoomsRepository = Repository<MiChatRoom> & MiRepository<MiChatRoom>;
 export type ChatRoomMembershipsRepository = Repository<MiChatRoomMembership> & MiRepository<MiChatRoomMembership>;
+export type ChatRoomBansRepository = Repository<MiChatRoomBan> & MiRepository<MiChatRoomBan>;
 export type ChatRoomInvitationsRepository = Repository<MiChatRoomInvitation> & MiRepository<MiChatRoomInvitation>;
 export type ChatApprovalsRepository = Repository<MiChatApproval> & MiRepository<MiChatApproval>;
 export type ChatStickerPacksRepository = Repository<MiChatStickerPack> & MiRepository<MiChatStickerPack>;
