@@ -1574,8 +1574,8 @@ definePage(computed(() => {
 	:global([class*='titleAvatarContainer']) {
 		padding: 2px !important;
 	}
-	/* Only the underline bar — not .tab / .tabs / .tabIcon */
-	:global([class*='tabHighlight']) {
+	/* Underline bar only (class name is selectionBar, not *tab*) */
+	:global([class*='selectionBar']) {
 		height: 3px !important;
 		min-height: 0 !important;
 		max-height: 3px !important;

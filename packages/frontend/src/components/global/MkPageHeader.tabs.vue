@@ -31,9 +31,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</button>
 	</div>
+	<!-- Class name must NOT contain "tab" — page CSS [class*='tab'] would match and inflate height -->
 	<div
-		ref="tabHighlightEl"
-		:class="[$style.tabHighlight, { [$style.animate]: prefer.s.animation }]"
+		ref="selectionBarEl"
+		:class="[$style.selectionBar, { [$style.animate]: prefer.s.animation }]"
 	></div>
 </div>
 </template>
@@ -67,7 +68,7 @@ const emit = defineEmits<{
 }>();
 
 const el = useTemplateRef('el');
-const tabHighlightEl = useTemplateRef('tabHighlightEl');
+const selectionBarEl = useTemplateRef('selectionBarEl');
 const tabRefs: Record<string, HTMLElement | null> = {};
 
 function onTabMousedown(tab: Tab, ev: MouseEvent): void {
@@ -93,13 +94,17 @@ function onTabClick(t: Tab, ev: MouseEvent): void {
 
 function renderTab() {
 	const tabEl = props.tab ? tabRefs[props.tab] : undefined;
-	if (tabEl && tabHighlightEl.value && tabHighlightEl.value.parentElement) {
+	if (tabEl && selectionBarEl.value && selectionBarEl.value.parentElement) {
 		// offsetWidth や offsetLeft は少数を丸めてしまうため getBoundingClientRect を使う必要がある
 		// https://developer.mozilla.org/ja/docs/Web/API/HTMLElement/offsetWidth#%E5%80%A4
-		const parentRect = tabHighlightEl.value.parentElement.getBoundingClientRect();
+		const parentRect = selectionBarEl.value.parentElement.getBoundingClientRect();
 		const rect = tabEl.getBoundingClientRect();
-		tabHighlightEl.value.style.width = rect.width + 'px';
-		tabHighlightEl.value.style.left = (rect.left - parentRect.left + tabHighlightEl.value.parentElement.scrollLeft) + 'px';
+		// Always keep a thin underline; never let page CSS stretch this bar
+		selectionBarEl.value.style.height = '3px';
+		selectionBarEl.value.style.minHeight = '0';
+		selectionBarEl.value.style.maxHeight = '3px';
+		selectionBarEl.value.style.width = rect.width + 'px';
+		selectionBarEl.value.style.left = (rect.left - parentRect.left + selectionBarEl.value.parentElement.scrollLeft) + 'px';
 	}
 }
 
@@ -260,11 +265,10 @@ onUnmounted(() => {
 }
 
 /*
- * Active indicator must stay a thin underline only.
- * Never inherit min-height from page-level [class*='tab'] overrides
- * (that matched tabHighlight and painted a full green slab over icons).
+ * Active indicator: thin underline only.
+ * Named selectionBar (not *tab*) so [class*='tab'] page overrides cannot match.
  */
-.tabHighlight {
+.selectionBar {
 	position: absolute;
 	bottom: 0;
 	left: 0;
@@ -276,7 +280,6 @@ onUnmounted(() => {
 	border-radius: var(--MI-radius-ellipse);
 	transition: none;
 	pointer-events: none;
-	/* Avoid any accidental fill of the tab row */
 	box-sizing: border-box;
 	overflow: hidden;
 
