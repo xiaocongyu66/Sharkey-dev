@@ -115,15 +115,16 @@ function activateVideo() {
 	activated.value = true;
 }
 
-function unloadVideo() {
+function unloadVideo(force = false) {
 	if (!activated.value) return;
-	// Keep player if actively playing (user scrolled slightly)
-	if (playing.value) return;
+	// Keep player if actively playing unless forced (tab hidden / unmount)
+	if (playing.value && !force) return;
 	const v = videoEl.value;
 	if (v) {
 		try {
 			v.pause();
 			v.removeAttribute('src');
+			v.removeAttribute('poster');
 			v.load();
 		} catch { /* ignore */ }
 	}
@@ -138,11 +139,7 @@ function openImage() {
 function onDocVisibility() {
 	// Background tab: free decoder even if still "near" in layout
 	if (window.document.hidden) {
-		if (playing.value && videoEl.value) {
-			try { videoEl.value.pause(); } catch { /* ignore */ }
-			playing.value = false;
-		}
-		unloadVideo();
+		unloadVideo(true);
 	}
 }
 
@@ -162,11 +159,11 @@ onMounted(() => {
 			// Far off-screen: free decoder / main-thread cost
 			const r = e.boundingClientRect;
 			const far =
-				r.bottom < -window.innerHeight * 0.5 ||
-				r.top > window.innerHeight * 1.5;
-			if (far) unloadVideo();
+				r.bottom < -window.innerHeight * 0.35 ||
+				r.top > window.innerHeight * 1.35;
+			if (far) unloadVideo(true);
 		}
-	}, { rootMargin: '160px 0px', threshold: [0, 0.01] });
+	}, { rootMargin: '80px 0px', threshold: [0, 0.01] });
 	io.observe(rootEl.value);
 });
 

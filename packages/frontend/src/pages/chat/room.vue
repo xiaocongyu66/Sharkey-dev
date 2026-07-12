@@ -279,8 +279,10 @@ const historyLoading = ref(false);
 const messages = ref<NormalizedChatMessage[]>([]);
 const canFetchMore = ref(false);
 /** Soft cap at live edge: drop oldest when new msgs arrive (only when viewing newest). */
-const MAX_MESSAGES = 320;
+const MAX_MESSAGES = 240;
 const PAGE_LIMIT = 30;
+/** Soft trim when tab is backgrounded (keep-alive / hidden) */
+const BACKGROUND_MESSAGE_CAP = 60;
 const user = ref<Misskey.entities.UserDetailed | null>(null);
 const room = ref<Misskey.entities.ChatRoom | null>(null);
 const replyTo = ref<NormalizedChatMessage | null>(null);
@@ -1165,8 +1167,28 @@ function notifyNewMessage() {
 }
 
 function onVisibilitychange() {
-	if (window.document.hidden) return;
-	// TODO
+	// Background tab: drop live WS + free decoder-heavy work (media unloads via ChatAttachment)
+	if (window.document.hidden) {
+		connection.value?.dispose();
+		connection.value = null;
+		teardownLoadMoreIo();
+		return;
+	}
+	// Foreground again: re-subscribe if still on chat timeline
+	if (!isActivated) return;
+	if (canViewTimeline.value && room.value) {
+		void enterRoomChannel();
+	} else if (canViewTimeline.value && user.value) {
+		connection.value?.dispose();
+		connection.value = useStream().useChannel('chatUser', {
+			otherId: user.value.id,
+		});
+		connection.value.on('message', onMessage);
+		connection.value.on('deleted', onDeleted);
+		connection.value.on('react', onReact);
+		connection.value.on('unreact', onUnreact);
+	}
+	void nextTick(() => setupLoadMoreIo());
 }
 
 function releaseChatResources(opts?: { clearMessages?: boolean }) {
@@ -1211,11 +1233,20 @@ onDeactivated(() => {
 	connection.value = null;
 	teardownLoadMoreIo();
 	// Soft-trim: drop oldest beyond a small window to free DOM/media
-	if (messages.value.length > 80) {
+	if (messages.value.length > BACKGROUND_MESSAGE_CAP) {
 		const pin = pinnedViewMessageId.value;
 		const pinIdx = pin ? messages.value.findIndex(m => m.id === pin) : -1;
-		if (pinIdx < 0 || pinIdx < 60) {
-			messages.value = messages.value.slice(0, 80);
+		// Keep pin in window if present
+		if (pinIdx < 0) {
+			messages.value = messages.value.slice(0, BACKGROUND_MESSAGE_CAP);
+			canFetchMore.value = true;
+		} else if (pinIdx >= BACKGROUND_MESSAGE_CAP) {
+			// pin is old: keep a slice around pin
+			const from = Math.max(0, pinIdx - 20);
+			messages.value = messages.value.slice(from, from + BACKGROUND_MESSAGE_CAP);
+			canFetchMore.value = true;
+		} else {
+			messages.value = messages.value.slice(0, BACKGROUND_MESSAGE_CAP);
 			canFetchMore.value = true;
 		}
 	}

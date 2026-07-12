@@ -66,15 +66,30 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div v-if="chatTarget" class="_panel" style="padding: 12px;">
 					<div style="font-weight: bold; margin-bottom: 6px;">
 						<i class="ti ti-messages"></i>
-						{{ chatTarget.kind === 'room' ? '群聊消息举报' : '私聊消息举报' }}
+						{{ chatTarget.kind === 'room' ? '群聊消息举报' : chatTarget.kind === 'user' ? '私聊消息举报' : '聊天消息举报' }}
 					</div>
 					<div style="opacity: 0.85; font-size: 0.9em; margin-bottom: 10px; word-break: break-all;">
 						{{ chatTarget.url }}
 					</div>
+					<div v-if="chatPreviewLoading" style="opacity: 0.7; margin-bottom: 8px; font-size: 0.9em;">
+						<i class="ti ti-loader-2"></i> 加载消息预览…
+					</div>
+					<div v-else-if="chatPreview" class="_panel" style="padding: 10px; margin-bottom: 10px; background: color-mix(in srgb, var(--MI_THEME-fg) 6%, transparent);">
+						<div style="font-size: 0.85em; opacity: 0.75; margin-bottom: 4px;">
+							@{{ chatPreview.fromUser?.username ?? chatPreview.fromUserId }}
+							· <MkTime :time="chatPreview.createdAt"/>
+						</div>
+						<div style="white-space: pre-wrap; word-break: break-word;">
+							{{ chatPreviewText }}
+						</div>
+						<div v-if="chatPreview.file" style="margin-top: 6px; opacity: 0.8; font-size: 0.9em;">
+							<i class="ti ti-paperclip"></i> {{ chatPreview.file.name || chatPreview.file.type }}
+						</div>
+					</div>
 					<div class="_buttons">
 						<MkButton primary @click="openChatTarget">
 							<i class="ti ti-arrow-right"></i>
-							{{ chatTarget.kind === 'room' ? '打开群聊消息' : '打开聊天消息' }}
+							{{ chatTarget.kind === 'room' ? '跳转到群聊消息' : '跳转到聊天消息' }}
 						</MkButton>
 						<MkButton @click="copyChatUrl">
 							<i class="ti ti-copy"></i>
@@ -139,6 +154,7 @@ import { iAmAdmin } from '@/i';
 import { misskeyApi } from '@/utility/misskey-api';
 import AdminUser from '@/pages/admin-user.vue';
 import SkUrlPreviewGroup from '@/components/SkUrlPreviewGroup.vue';
+import { useRouter } from '@/router.js';
 
 const props = withDefaults(defineProps<{
 	report: Misskey.entities.AdminAbuseUserReportsResponse[number];
@@ -158,63 +174,118 @@ const reporterRouter = createRouter(`/admin/user/${props.report.reporterId}`);
 reporterRouter.init();
 */
 
+const router = useRouter();
 const parsedComment = computed(() => mfm.parse(props.report.comment));
+
+type ChatTarget = {
+	kind: 'message' | 'room' | 'user';
+	messageId?: string | null;
+	roomId?: string | null;
+	userId?: string | null;
+	path: string;
+	url: string;
+};
 
 /**
  * Parse chat deep links embedded in report comments by XMessage:
  *   {origin}/chat/messages/{messageId}
  *   {origin}/chat/room/{roomId}?msg={messageId}
  *   {origin}/chat/user/{userId}?msg={messageId}
+ * Also tolerates bare paths and multiline comments.
  */
-const chatTarget = computed(() => {
-	const comment = props.report.comment ?? '';
-	// Prefer explicit message id path (always used by chat report menu)
-	const msgPath = comment.match(/(?:https?:\/\/[^\s]+)?\/chat\/messages\/([a-zA-Z0-9]+)/);
-	if (msgPath) {
-		const messageId = msgPath[1];
-		const full = comment.match(/https?:\/\/[^\s]*\/chat\/messages\/[a-zA-Z0-9]+/);
-		return {
-			kind: 'message' as const,
-			messageId,
-			// Landing page redirects into room/user with ?msg=
-			path: `/chat/messages/${messageId}`,
-			url: full?.[0] ?? `/chat/messages/${messageId}`,
-		};
-	}
-	const roomMsg = comment.match(/(?:https?:\/\/[^\s]+)?\/chat\/room\/([a-zA-Z0-9]+)(?:\?[^\s#]*\bmsg=([a-zA-Z0-9]+))?/);
+function parseChatTarget(comment: string): ChatTarget | null {
+	if (!comment) return null;
+	// Prefer room deep-link with msg= (opens group context for staff)
+	const roomMsg = comment.match(/(?:https?:\/\/[^\s<>"']+)?\/chat\/room\/([a-zA-Z0-9]+)[^\s<>"']*\bmsg=([a-zA-Z0-9]+)/i)
+		?? comment.match(/(?:https?:\/\/[^\s<>"']+)?\/chat\/room\/([a-zA-Z0-9]+)/i);
 	if (roomMsg) {
 		const roomId = roomMsg[1];
 		const messageId = roomMsg[2] ?? null;
 		const path = messageId
 			? `/chat/room/${roomId}?msg=${encodeURIComponent(messageId)}`
 			: `/chat/room/${roomId}`;
-		const full = comment.match(/https?:\/\/[^\s]*\/chat\/room\/[a-zA-Z0-9]+[^\s]*/);
+		const full = comment.match(/https?:\/\/[^\s<>"']*\/chat\/room\/[a-zA-Z0-9]+[^\s<>"']*/i);
 		return {
-			kind: 'room' as const,
+			kind: 'room',
 			roomId,
 			messageId,
 			path,
 			url: full?.[0] ?? path,
 		};
 	}
-	const userMsg = comment.match(/(?:https?:\/\/[^\s]+)?\/chat\/user\/([a-zA-Z0-9]+)(?:\?[^\s#]*\bmsg=([a-zA-Z0-9]+))?/);
+	const userMsg = comment.match(/(?:https?:\/\/[^\s<>"']+)?\/chat\/user\/([a-zA-Z0-9]+)[^\s<>"']*\bmsg=([a-zA-Z0-9]+)/i)
+		?? comment.match(/(?:https?:\/\/[^\s<>"']+)?\/chat\/user\/([a-zA-Z0-9]+)/i);
 	if (userMsg) {
 		const userId = userMsg[1];
 		const messageId = userMsg[2] ?? null;
 		const path = messageId
 			? `/chat/user/${userId}?msg=${encodeURIComponent(messageId)}`
 			: `/chat/user/${userId}`;
-		const full = comment.match(/https?:\/\/[^\s]*\/chat\/user\/[a-zA-Z0-9]+[^\s]*/);
+		const full = comment.match(/https?:\/\/[^\s<>"']*\/chat\/user\/[a-zA-Z0-9]+[^\s<>"']*/i);
 		return {
-			kind: 'user' as const,
+			kind: 'user',
 			userId,
 			messageId,
 			path,
 			url: full?.[0] ?? path,
 		};
 	}
+	// Canonical message landing (redirects into room/user)
+	const msgPath = comment.match(/(?:https?:\/\/[^\s<>"']+)?\/chat\/messages\/([a-zA-Z0-9]+)/i);
+	if (msgPath) {
+		const messageId = msgPath[1];
+		const full = comment.match(/https?:\/\/[^\s<>"']*\/chat\/messages\/[a-zA-Z0-9]+/i);
+		return {
+			kind: 'message',
+			messageId,
+			path: `/chat/messages/${messageId}`,
+			url: full?.[0] ?? `/chat/messages/${messageId}`,
+		};
+	}
 	return null;
+}
+
+const chatTarget = computed(() => parseChatTarget(props.report.comment ?? ''));
+
+const chatPreview = ref<Misskey.entities.ChatMessage | null>(null);
+const chatPreviewLoading = ref(false);
+const chatPreviewText = computed(() => {
+	const m = chatPreview.value;
+	if (!m) return '';
+	if (m.text && m.text.trim()) return m.text;
+	if ((m as any).isE2ee) return '[加密消息]';
+	if (m.file?.type?.startsWith('video/')) return '[视频]';
+	if (m.file?.type?.startsWith('image/')) return '[图片]';
+	if (m.file) return `[文件] ${m.file.name || ''}`;
+	return '…';
 });
+
+async function loadChatPreview() {
+	chatPreview.value = null;
+	const t = chatTarget.value;
+	const messageId = t?.messageId;
+	if (!messageId) return;
+	chatPreviewLoading.value = true;
+	try {
+		const message = await misskeyApi('chat/messages/show', { messageId });
+		chatPreview.value = message;
+		// Upgrade bare /chat/messages/:id to room path when possible (staff)
+		if (t && t.kind === 'message' && message.toRoomId) {
+			// rewrite path for open button (computed is readonly — store upgrade separately via preview)
+			(t as ChatTarget).kind = 'room';
+			(t as ChatTarget).roomId = message.toRoomId;
+			(t as ChatTarget).path = `/chat/room/${message.toRoomId}?msg=${encodeURIComponent(message.id)}`;
+		}
+	} catch {
+		chatPreview.value = null;
+	} finally {
+		chatPreviewLoading.value = false;
+	}
+}
+
+watch(chatTarget, () => {
+	void loadChatPreview();
+}, { immediate: true });
 
 const targetInstanceIcon = computed(() => props.report.targetInstance?.faviconUrl
 	? getProxiedImageUrlNullable(props.report.targetInstance.faviconUrl, 'preview')
@@ -249,10 +320,31 @@ function forward() {
 	});
 }
 
+function resolveOpenPath(): string {
+	const t = chatTarget.value;
+	if (!t) return '/chat';
+	// Prefer resolved room path from preview when comment only had /chat/messages/:id
+	const preview = chatPreview.value;
+	if (preview?.toRoomId && (t.kind === 'message' || t.messageId === preview.id)) {
+		return `/chat/room/${preview.toRoomId}?msg=${encodeURIComponent(preview.id)}`;
+	}
+	if (preview && !preview.toRoomId && preview.toUserId && t.kind === 'message') {
+		const peer = preview.fromUserId === props.report.reporterId
+			? preview.toUserId
+			: (preview.fromUserId === props.report.targetUserId ? preview.fromUserId : preview.fromUserId);
+		return `/chat/user/${peer}?msg=${encodeURIComponent(preview.id)}`;
+	}
+	return t.path;
+}
+
 function openChatTarget() {
-	if (!chatTarget.value) return;
+	const path = resolveOpenPath();
 	// New window so admin keeps the report list open
-	os.pageWindow(chatTarget.value.path);
+	try {
+		os.pageWindow(path);
+	} catch {
+		router.push(path);
+	}
 }
 
 function copyChatUrl() {
@@ -277,7 +369,7 @@ function showMenu(ev: MouseEvent) {
 	if (chatTarget.value) {
 		items.unshift({
 			icon: 'ti ti-messages',
-			text: chatTarget.value.kind === 'room' ? '打开群聊消息' : '打开聊天消息',
+			text: chatTarget.value.kind === 'room' ? '跳转到群聊消息' : '跳转到聊天消息',
 			action: () => openChatTarget(),
 		});
 	}

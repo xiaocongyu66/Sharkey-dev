@@ -71,7 +71,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<ChatAttachment v-if="message.file" :file="message.file" :class="$style.file"/>
 			</div>
 		</MkFukidashi>
-		<div class="_gaps_s" style="margin: 8px 0;" @click.stop>
+		<div v-if="hasUrlPreview" class="_gaps_s" style="margin: 8px 0;" @click.stop>
 			<SkUrlPreviewGroup :sourceNodes="parsed" :showAsQuote="!message.fromUser.rejectQuotes"/>
 		</div>
 		<!-- reactions back under the message -->
@@ -165,6 +165,18 @@ watch(
 const parsed = computed(() => {
 	const t = (props.message as any).isE2ee ? decryptedText.value : props.message.text;
 	return t ? mfm.parse(t) : [];
+});
+/** Skip URL preview work when message has no links (saves network + DOM) */
+const hasUrlPreview = computed(() => {
+	if (parsed.value.length === 0) return false;
+	const walk = (nodes: any[]): boolean => {
+		for (const n of nodes) {
+			if (n?.type === 'url' || n?.type === 'link') return true;
+			if (Array.isArray(n?.children) && walk(n.children)) return true;
+		}
+		return false;
+	};
+	return walk(parsed.value as any[]);
 });
 const replyPreview = computed(() => {
 	const m = props.message as any;
@@ -338,16 +350,23 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 			text: i18n.ts.reportAbuse,
 			icon: 'ti ti-exclamation-circle',
 			action: () => {
-				// Prefer room deep-link so admin opens group context; also keep
-				// /chat/messages/:id which redirects into room/user with ?msg=
+				// Structured deep links for admin abuse UI → jump into room/DM at this message
 				const roomId = (props.message as any).toRoomId as string | null | undefined;
-				const msgPath = `${url}/chat/messages/${props.message.id}`;
-				const localUrl = roomId
-					? `${url}/chat/room/${roomId}?msg=${encodeURIComponent(props.message.id)}\n${msgPath}`
-					: msgPath;
+				const toUserId = (props.message as any).toUserId as string | null | undefined;
+				const msgId = props.message.id;
+				const lines: string[] = [];
+				if (roomId) {
+					lines.push(`${url}/chat/room/${roomId}?msg=${encodeURIComponent(msgId)}`);
+				} else if (toUserId) {
+					// 1:1: open conversation with the peer from reporter's perspective
+					const peerId = props.message.fromUserId === $i.id ? toUserId : props.message.fromUserId;
+					lines.push(`${url}/chat/user/${peerId}?msg=${encodeURIComponent(msgId)}`);
+				}
+				// Canonical landing (staff-capable redirect)
+				lines.push(`${url}/chat/messages/${msgId}`);
 				const { dispose } = os.popup(defineAsyncComponent(() => import('@/components/MkAbuseReportWindow.vue')), {
 					user: props.message.fromUser!,
-					initialComment: `${localUrl}\n-----\n`,
+					initialComment: `${lines.join('\n')}\n-----\n`,
 				}, {
 					closed: () => dispose(),
 				});
