@@ -560,4 +560,18 @@ export const chatFb = {
 		ja: 'モデレーションのためルームを閲覧できます。送信には参加が必要です。',
 		ko: '신고 처리를 위해 이 방을 읽을 수 있습니다. 전송하려면 가입이 필요합니다.',
 	},
+	sending: {
+		en: 'Sending…',
+		zh: '发送中…',
+		'zh-TW': '傳送中…',
+		ja: '送信中…',
+		ko: '전송 중…',
+	},
+	sendingHint: {
+		en: 'Message is being sent. Please wait…',
+		zh: '消息发送中，请稍候…',
+		'zh-TW': '訊息傳送中，請稍候…',
+		ja: 'メッセージを送信しています。しばらくお待ちください…',
+		ko: '메시지를 보내는 중입니다. 잠시만 기다려 주세요…',
+	},
 } as const satisfies Record<string, FallbackTable>;

@@ -47,32 +47,42 @@ SPDX-License-Identifier: AGPL-3.0-only
 		:class="$style.textarea"
 		class="_acrylic"
 		:placeholder="canCompose ? (e2eeEnabled ? tChat('e2eePlaceholder') : i18n.ts.inputMessageHere) : mutedAllBody"
-		:readonly="textareaReadOnly || !canCompose"
-		:disabled="!canCompose"
+		:readonly="textareaReadOnly || !canCompose || sending"
+		:disabled="!canCompose || sending"
 		@keydown="onKeydown"
 		@paste="onPaste"
 	></textarea>
-	<div v-if="showStickers" :class="$style.stickerPanel">
+	<div v-if="showStickers && !sending" :class="$style.stickerPanel">
 		<StickerPicker @pick="onStickerPick" @close="showStickers = false"/>
 	</div>
 	<footer :class="$style.footer">
-		<div v-if="file && canCompose" :class="$style.file" @click="file = null">{{ file.name }}</div>
+		<div v-if="file && canCompose" :class="[$style.file, { [$style.fileDisabled]: sending }]" @click="!sending && (file = null)">{{ file.name }}</div>
 		<div :class="$style.buttons">
-			<button class="_button" :class="$style.button" :disabled="!canCompose" :title="i18n.ts.attachFile" @click="chooseFile">
+			<button class="_button" :class="$style.button" :disabled="!canCompose || sending" :title="i18n.ts.attachFile" @click="chooseFile">
 				<i class="ti ti-photo-plus"></i>
 				<span :class="$style.btnLabel">{{ i18n.ts.attachFile }}</span>
 			</button>
-			<button class="_button" :class="$style.button" :title="i18n.ts.emoji" @click="insertEmoji">
+			<button class="_button" :class="$style.button" :disabled="!canCompose || sending" :title="i18n.ts.emoji" @click="insertEmoji">
 				<i class="ti ti-mood-happy"></i>
 				<span :class="$style.btnLabel">{{ i18n.ts.emoji }}</span>
 			</button>
-			<button class="_button" :class="[$style.button, showStickers ? $style.active : null]" :title="stickersLabel" @click="showStickers = !showStickers">
+			<button class="_button" :class="[$style.button, showStickers ? $style.active : null]" :disabled="!canCompose || sending" :title="stickersLabel" @click="showStickers = !showStickers">
 				<i class="ti ti-sticker"></i>
 				<span :class="$style.btnLabel">{{ stickersLabel }}</span>
 			</button>
-			<button class="_button" :class="[$style.button, $style.send]" :disabled="!canCompose || !canSend || sending" :title="i18n.ts.send" @click="send">
-				<template v-if="!sending"><i class="ti ti-send"></i></template><template v-if="sending"><MkLoading :em="true"/></template>
-				<span :class="$style.btnLabel">{{ i18n.ts.send }}</span>
+			<button
+				class="_button"
+				:class="[$style.button, $style.send, { [$style.sending]: sending }]"
+				:disabled="!canCompose || !canSend || sending"
+				:title="sending ? sendBusyTitle : i18n.ts.send"
+				:aria-busy="sending"
+				@click="send"
+			>
+				<span :class="$style.sendIconWrap">
+					<span v-if="sending" :class="$style.sendSpinner" aria-hidden="true"></span>
+					<i v-else class="ti ti-send"></i>
+				</span>
+				<span :class="$style.btnLabel">{{ sending ? sendBusyLabel : i18n.ts.send }}</span>
 			</button>
 		</div>
 	</footer>
@@ -147,7 +157,9 @@ const mutedAllTitle = computed(() => chatT('mutedAll', chatFb.mutedAll));
 const mutedAllBody = computed(() => chatT('mutedAllComposerDisabled', chatFb.mutedAllComposerDisabled));
 const stickersLabel = computed(() => chatT('stickers', chatFb.stickers));
 
-const canSend = computed(() => canCompose.value && ((text.value != null && text.value !== '') || file.value != null));
+const canSend = computed(() => canCompose.value && !sending.value && ((text.value != null && text.value !== '') || file.value != null));
+const sendBusyLabel = computed(() => chatT('sending', chatFb.sending));
+const sendBusyTitle = computed(() => chatT('sendingHint', chatFb.sendingHint));
 
 const replyAuthorLabel = computed(() => {
 	const r = props.replyTo as any;
@@ -275,17 +287,20 @@ function onDrop(ev: DragEvent): void {
 }
 
 function onKeydown(ev: KeyboardEvent) {
-	if (!canCompose.value) {
-		ev.preventDefault();
+	if (!canCompose.value || sending.value) {
+		if (sending.value && ev.key === 'Enter') ev.preventDefault();
+		if (!canCompose.value) ev.preventDefault();
 		return;
 	}
 	if (ev.key === 'Enter') {
 		if (prefer.s['chat.sendOnEnter']) {
 			if (!(ev.ctrlKey || ev.metaKey || ev.shiftKey)) {
+				ev.preventDefault();
 				send();
 			}
 		} else {
 			if ((ev.ctrlKey || ev.metaKey)) {
+				ev.preventDefault();
 				send();
 			}
 		}
@@ -312,7 +327,10 @@ function upload(fileToUpload: File, name?: string) {
 }
 
 async function sendPayload(payload: { text?: string; fileId?: string }) {
-	if (!canCompose.value) return;
+	if (!canCompose.value || sending.value) return;
+	// Guard empty payload (race with double-tap)
+	if (!payload.text && !payload.fileId) return;
+
 	sending.value = true;
 	const replyId = props.replyTo?.id;
 
@@ -320,74 +338,72 @@ async function sendPayload(payload: { text?: string; fileId?: string }) {
 	let ciphertext: string | undefined;
 	let textOut = payload.text;
 
-	// 1:1 E2EE: encrypt client-side; server only stores ciphertext
-	if (props.user && e2eeEnabled.value && payload.text) {
-		const ct = await encryptChatText(props.user.id, payload.text);
-		if (!ct) {
-			sending.value = false;
-			os.alert({ type: 'error', text: tChat('e2eeEncryptFailed') });
-			return;
+	try {
+		// 1:1 E2EE: encrypt client-side; server only stores ciphertext
+		if (props.user && e2eeEnabled.value && payload.text) {
+			const ct = await encryptChatText(props.user.id, payload.text);
+			if (!ct) {
+				os.alert({ type: 'error', text: tChat('e2eeEncryptFailed') });
+				return;
+			}
+			isE2ee = true;
+			ciphertext = ct;
+			textOut = undefined;
 		}
-		isE2ee = true;
-		ciphertext = ct;
-		textOut = undefined;
-	}
 
-	const wsPayload = {
-		text: textOut,
-		fileId: payload.fileId,
-		replyId,
-		isE2ee,
-		ciphertext,
-	};
-
-	// Prefer WebSocket (room + 1:1)
-	if (props.wsSend) {
-		const ok = props.wsSend(wsPayload);
-		if (ok) {
-			clear();
-			showStickers.value = false;
-			sending.value = false;
-			return;
-		}
-	}
-
-	const req = props.user
-		? misskeyApi('chat/messages/create-to-user', {
-			toUserId: props.user.id,
+		const wsPayload = {
 			text: textOut,
 			fileId: payload.fileId,
-			replyId: replyId,
+			replyId,
 			isE2ee,
 			ciphertext,
-		} as any)
-		: props.room
-			? misskeyApi('chat/messages/create-to-room', {
-				toRoomId: props.room.id,
-				text: payload.text,
+		};
+
+		// Prefer WebSocket (room + 1:1)
+		if (props.wsSend) {
+			const ok = props.wsSend(wsPayload);
+			if (ok) {
+				clear();
+				showStickers.value = false;
+				// Brief busy state so rapid re-taps cannot double-send over WS
+				await new Promise<void>(r => window.setTimeout(() => r(), 280));
+				return;
+			}
+		}
+
+		const req = props.user
+			? misskeyApi('chat/messages/create-to-user', {
+				toUserId: props.user.id,
+				text: textOut,
 				fileId: payload.fileId,
 				replyId: replyId,
+				isE2ee,
+				ciphertext,
 			} as any)
-			: null;
+			: props.room
+				? misskeyApi('chat/messages/create-to-room', {
+					toRoomId: props.room.id,
+					text: payload.text,
+					fileId: payload.fileId,
+					replyId: replyId,
+				} as any)
+				: null;
 
-	if (!req) {
-		sending.value = false;
-		return;
-	}
+		if (!req) return;
 
-	req.then(() => {
+		await req;
 		clear();
 		showStickers.value = false;
-	}).catch(err => {
+	} catch (err) {
 		console.error('Error in chat:', err);
-		return os.alert({
+		await os.alert({
 			type: 'error',
 			title: i18n.ts.error,
 			text: printError(err),
 		});
-	}).finally(() => {
+	} finally {
 		sending.value = false;
-	});
+	}
 }
 
 async function toggleE2ee() {
@@ -407,7 +423,7 @@ async function toggleE2ee() {
 }
 
 function send() {
-	if (!canCompose.value || !canSend.value) return;
+	if (!canCompose.value || sending.value || !canSend.value) return;
 	void sendPayload({
 		text: text.value ? text.value : undefined,
 		fileId: file.value ? file.value.id : undefined,
@@ -415,14 +431,16 @@ function send() {
 }
 
 function onStickerPick(sticker: { fileId: string }) {
-	if (!canCompose.value) {
-		os.alert({
-			type: 'warning',
-			text: mutedAllBody.value,
-		});
+	if (!canCompose.value || sending.value) {
+		if (!canCompose.value) {
+			os.alert({
+				type: 'warning',
+				text: mutedAllBody.value,
+			});
+		}
 		return;
 	}
-	sendPayload({ fileId: sticker.fileId });
+	void sendPayload({ fileId: sticker.fileId });
 }
 
 function clear() {
@@ -745,5 +763,43 @@ onBeforeUnmount(() => {
 .send {
 	margin-left: auto;
 	color: var(--MI_THEME-accent);
+	min-width: 40px;
+
+	&:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	&.sending {
+		cursor: wait;
+		opacity: 0.9;
+	}
+}
+
+.sendIconWrap {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25em;
+	height: 1.25em;
+}
+
+.sendSpinner {
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	border: 2px solid color-mix(in srgb, var(--MI_THEME-accent) 28%, transparent);
+	border-top-color: var(--MI_THEME-accent);
+	border-radius: 50%;
+	animation: chatSendSpin 0.7s linear infinite;
+}
+
+@keyframes chatSendSpin {
+	to { transform: rotate(360deg); }
+}
+
+.fileDisabled {
+	opacity: 0.55;
+	pointer-events: none;
 }
 </style>
