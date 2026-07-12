@@ -237,7 +237,7 @@ import ChatAnnouncementBar from './ChatAnnouncementBar.vue';
 import { ChatHistoryPrefetcher, loadUntilMessageFound } from './chat-history-loader.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import * as os from '@/os.js';
-import { useStream } from '@/stream.js';
+import { useStream, wakeStream } from '@/stream.js';
 import * as sound from '@/utility/sound.js';
 import { i18n } from '@/i18n.js';
 import { $i, iAmModerator } from '@/i.js';
@@ -405,7 +405,13 @@ function mergeOlderPage(page: NormalizedChatMessage[]) {
 }
 
 /** Prefer WS history when channel is open; REST fallback. */
-async function fetchTimelinePage(args: { limit: number; untilId: string | null }) {
+async function fetchTimelinePage(args: {
+	limit: number;
+	untilId?: string | null;
+	sinceId?: string | null;
+}) {
+	const untilId = args.untilId ?? null;
+	const sinceId = args.sinceId ?? null;
 	const conn = connection.value;
 	if (conn && chatWs.ready()) {
 		try {
@@ -414,15 +420,25 @@ async function fetchTimelinePage(args: { limit: number; untilId: string | null }
 				hasMore?: boolean;
 			}>(
 				'history',
-				{ limit: args.limit, untilId: args.untilId },
+				{ limit: args.limit, untilId, sinceId },
 				'history',
 				'historyError',
 				props.userId
 					? 'chat/messages/user-timeline'
 					: 'chat/messages/room-timeline',
 				props.userId
-					? { userId: user.value!.id, limit: args.limit, ...(args.untilId ? { untilId: args.untilId } : {}) }
-					: { roomId: room.value!.id, limit: args.limit, ...(args.untilId ? { untilId: args.untilId } : {}) },
+					? {
+						userId: user.value!.id,
+						limit: args.limit,
+						...(untilId ? { untilId } : {}),
+						...(sinceId ? { sinceId } : {}),
+					}
+					: {
+						roomId: room.value?.id ?? props.roomId,
+						limit: args.limit,
+						...(untilId ? { untilId } : {}),
+						...(sinceId ? { sinceId } : {}),
+					},
 			);
 			const list = (res as any)?.messages ?? (Array.isArray(res) ? res : []);
 			return (list as any[]).map(x => normalizeMessage(x));
@@ -434,7 +450,8 @@ async function fetchTimelinePage(args: { limit: number; untilId: string | null }
 		const raw = await misskeyApi('chat/messages/user-timeline', {
 			userId: user.value.id,
 			limit: args.limit,
-			...(args.untilId ? { untilId: args.untilId } : {}),
+			...(untilId ? { untilId } : {}),
+			...(sinceId ? { sinceId } : {}),
 		});
 		return raw.map(x => normalizeMessage(x));
 	}
@@ -442,7 +459,8 @@ async function fetchTimelinePage(args: { limit: number; untilId: string | null }
 		const raw = await misskeyApi('chat/messages/room-timeline', {
 			roomId: room.value?.id ?? props.roomId,
 			limit: args.limit,
-			...(args.untilId ? { untilId: args.untilId } : {}),
+			...(untilId ? { untilId } : {}),
+			...(sinceId ? { sinceId } : {}),
 		});
 		return (raw as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
 	}
@@ -450,7 +468,10 @@ async function fetchTimelinePage(args: { limit: number; untilId: string | null }
 }
 
 function makeTimelineFetcher() {
-	return (args: { limit: number; untilId: string | null }) => fetchTimelinePage(args);
+	return (args: { limit: number; untilId: string | null }) => fetchTimelinePage({
+		limit: args.limit,
+		untilId: args.untilId,
+	});
 }
 
 /**
@@ -779,21 +800,85 @@ provide(chatWsKey, chatWs);
 const showIndicator = ref(false);
 const stream = useStream();
 const streamState = ref(stream.state);
+/** Avoid stacking catch-up requests on flaky reconnects */
+let catchUpInFlight = false;
+let lastCatchUpAt = 0;
+
+function resubscribeChatChannel() {
+	if (!canViewTimeline.value) return;
+	if (props.roomId && (room.value || props.roomId)) {
+		void enterRoomChannel();
+	} else if (props.userId && user.value) {
+		connection.value?.dispose();
+		connection.value = stream.useChannel('chatUser', { otherId: user.value.id });
+		bindChatChannelEvents();
+	}
+}
+
+/**
+ * After WS reconnect / tab wake: re-subscribe channel and pull messages
+ * newer than the newest we already have (sinceId).
+ */
+async function catchUpChatMessages() {
+	if (!canViewTimeline.value || !isActivated) return;
+	if (catchUpInFlight) return;
+	if (Date.now() - lastCatchUpAt < 800) return;
+	catchUpInFlight = true;
+	lastCatchUpAt = Date.now();
+	try {
+		// Re-open channel only if missing; Stream.onOpen already re-connects live ones
+		if (!connection.value || !chatWs.ready()) {
+			resubscribeChatChannel();
+			await nextTick();
+			// Wait a beat for connect frame after force reconnect
+			await new Promise<void>(r => window.setTimeout(() => r(), 120));
+		}
+
+		const newestId = messages.value[0]?.id ?? null;
+		// Pull a page of newer messages (or latest page if empty)
+		const page = await fetchTimelinePage({
+			limit: PAGE_LIMIT,
+			untilId: null,
+			sinceId: newestId,
+		});
+		if (page.length) {
+			// page is newest-first from API; merge without dupes
+			const fresh = page.filter(m => !knownMessageIds.has(m.id));
+			if (fresh.length) {
+				for (const m of fresh) knownMessageIds.add(m.id);
+				// Keep newest-first order
+				const byId = new Map<string, NormalizedChatMessage>();
+				for (const m of [...fresh, ...messages.value]) {
+					if (!byId.has(m.id)) byId.set(m.id, m);
+				}
+				messages.value = Array.from(byId.values()).sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+
+				const sc = getChatScrollContainer();
+				const nearLive = isNearLiveEdge(sc);
+				if (nearLive || !newestId) {
+					await nextTick();
+					scrollToLiveEdge('instant');
+				} else if (fresh.some(m => m.fromUserId !== $i?.id)) {
+					notifyNewMessage();
+				}
+			}
+		}
+		// Resume background older-history prefetch if needed
+		if (canFetchMore.value && !historyPrefetching.value) {
+			startHistoryPrefetch();
+		}
+	} catch {
+		// REST/WS may fail briefly; next wake will retry
+	} finally {
+		catchUpInFlight = false;
+	}
+}
+
 function onStreamState() {
 	streamState.value = stream.state;
-	// Re-subscribe chat channel after reconnect so WS stays live
-	if (stream.state === 'connected' && canViewTimeline.value) {
-		if (props.roomId && room.value) {
-			void enterRoomChannel();
-		} else if (props.userId && user.value) {
-			connection.value?.dispose();
-			connection.value = stream.useChannel('chatUser', { otherId: user.value.id });
-			connection.value.on('message', onMessage);
-			connection.value.on('deleted', onDeleted);
-			connection.value.on('react', onReact);
-			connection.value.on('unreact', onUnreact);
-			(connection.value as any).on('msgError', onMsgError);
-		}
+	// Re-subscribe + refresh messages when socket is back
+	if (stream.state === 'connected' && canViewTimeline.value && isActivated) {
+		void catchUpChatMessages();
 	}
 }
 function onMsgError(err: { message?: string; code?: string; remainingSeconds?: number }) {
@@ -1432,29 +1517,22 @@ function notifyNewMessage() {
 }
 
 function onVisibilitychange() {
-	// Background tab: drop live WS + free decoder-heavy work (media unloads via ChatAttachment)
+	// Keep the chat channel while backgrounded so RWS can still reconnect;
+	// only pause heavy background history prefetch to save battery/data.
 	if (window.document.hidden) {
-		connection.value?.dispose();
-		connection.value = null;
-		// Prefetcher pauses itself while hidden; leave it stopped to save network
 		stopHistoryPrefetch();
 		return;
 	}
-	// Foreground again: re-subscribe if still on chat timeline
+	// Foreground: force stream wake + resubscribe + catch up missed messages
 	if (!isActivated) return;
-	if (canViewTimeline.value && room.value) {
-		void enterRoomChannel();
-	} else if (canViewTimeline.value && user.value) {
-		connection.value?.dispose();
-		connection.value = useStream().useChannel('chatUser', {
-			otherId: user.value.id,
-		});
-		connection.value.on('message', onMessage);
-		connection.value.on('deleted', onDeleted);
-		connection.value.on('react', onReact);
-		connection.value.on('unreact', onUnreact);
-	}
-	if (canFetchMore.value) startHistoryPrefetch();
+	wakeStream({ force: true });
+	void catchUpChatMessages();
+	// Second catch-up after socket settles (mobile half-open sockets)
+	window.setTimeout(() => {
+		if (window.document.visibilityState === 'visible' && isActivated) {
+			void catchUpChatMessages();
+		}
+	}, 600);
 }
 
 function releaseChatResources(opts?: { clearMessages?: boolean }) {
@@ -1492,12 +1570,10 @@ onBeforeUnmount(() => {
 	releaseChatResources({ clearMessages: true });
 });
 
-// Keep-alive: free heavy media/WS when room is backgrounded in stacking router
+// Keep-alive: soft-trim DOM when room is backgrounded in stacking router
 onDeactivated(() => {
 	isActivated = false;
-	// Pause live channel while backgrounded (re-enter on activate)
-	connection.value?.dispose();
-	connection.value = null;
+	// Keep channel for faster resume; stop heavy history prefetch only
 	stopHistoryPrefetch();
 	// Soft-trim: drop oldest beyond a small window to free DOM/media
 	if (messages.value.length > BACKGROUND_MESSAGE_CAP) {
@@ -1520,22 +1596,11 @@ onDeactivated(() => {
 
 onActivated(() => {
 	isActivated = true;
-	if (canViewTimeline.value && room.value) {
-		void enterRoomChannel();
-	} else if (canViewTimeline.value && user.value) {
-		// 1:1 re-subscribe
-		connection.value?.dispose();
-		connection.value = useStream().useChannel('chatUser', {
-			otherId: user.value.id,
-		});
-		connection.value.on('message', onMessage);
-		connection.value.on('deleted', onDeleted);
-		connection.value.on('react', onReact);
-		connection.value.on('unreact', onUnreact);
-	}
-	if (canFetchMore.value) {
-		void nextTick(() => startHistoryPrefetch());
-	}
+	wakeStream({ force: true });
+	void catchUpChatMessages();
+	window.setTimeout(() => {
+		if (isActivated) void catchUpChatMessages();
+	}, 500);
 });
 
 async function inviteUser() {

@@ -41,6 +41,8 @@ export interface IStream extends EventEmitter<StreamEvents> {
 	ping(): void;
 	heartbeat(): void;
 	pong(): void;
+	/** Force underlying socket reconnect (tab wake / network recovery). */
+	reconnect(): void;
 	close(): void;
 }
 
@@ -73,6 +75,7 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		this.onClose = this.onClose.bind(this);
 		this.onMessage = this.onMessage.bind(this);
 		this.send = this.send.bind(this);
+		this.reconnect = this.reconnect.bind(this);
 		this.close = this.close.bind(this);
 
 		// eslint-disable-next-line no-param-reassign
@@ -88,7 +91,13 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		const wsOrigin = origin.replace('http://', 'ws://').replace('https://', 'wss://');
 
 		this.stream = new ReconnectingWebSocketConstructor(`${wsOrigin}/streaming?${query}`, '', {
-			minReconnectionDelay: 1, // https://github.com/pladaria/reconnecting-websocket/issues/91
+			// Aggressive reconnect for mobile background / flaky networks
+			minReconnectionDelay: 200,
+			maxReconnectionDelay: 8000,
+			reconnectionDelayGrowFactor: 1.4,
+			maxRetries: Infinity,
+			connectionTimeout: 8000,
+			// https://github.com/pladaria/reconnecting-websocket/issues/91
 			WebSocket: options.WebSocket,
 		});
 		if (options.binaryType) {
@@ -231,6 +240,34 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 
 	public pong(): void {
 		this.send('pong');
+	}
+
+	/**
+	 * Force reconnect the underlying WebSocket.
+	 * Use when the tab returns from background / network comes back —
+	 * RWS may still think the socket is open while the server dropped it.
+	 */
+	public reconnect(): void {
+		try {
+			// Mark as reconnecting so onOpen re-subscribes channels
+			if (this.state === 'connected') {
+				this.state = 'reconnecting';
+				this.emit('_disconnected_');
+			} else if (this.state === 'initializing') {
+				this.state = 'reconnecting';
+			}
+			// reconnecting-websocket API
+			const rws = this.stream as unknown as { reconnect: (code?: number, reason?: string) => void };
+			if (typeof rws.reconnect === 'function') {
+				rws.reconnect(1000, 'client-wake');
+			} else {
+				this.stream.close();
+			}
+		} catch {
+			try {
+				this.stream.close();
+			} catch { /* ignore */ }
+		}
 	}
 
 	/**

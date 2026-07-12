@@ -438,6 +438,12 @@ export const chatFb = {
 		'zh-TW': '即時連線重連中…',
 		ja: '再接続中…',
 	},
+	wsCatchingUp: {
+		en: 'Refreshing messages…',
+		zh: '正在同步消息…',
+		'zh-TW': '正在同步訊息…',
+		ja: 'メッセージを同期中…',
+	},
 	searchPlaceholder: {
 		en: 'Search messages…',
 		zh: '搜索消息…',
