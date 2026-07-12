@@ -28,16 +28,18 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<button class="_button" :class="$style.replyBarClose" @click="$emit('clearReply')"><i class="ti ti-x"></i></button>
 	</div>
-	<!-- 1:1: E2EE is always on (system-managed). No user toggle. -->
-	<div v-if="user && canCompose" :class="$style.e2eeRow">
-		<span :class="[$style.e2eeBadge, peerHasKey ? $style.e2eeOn : $style.e2eePending]">
-			<i :class="peerHasKey ? 'ti ti-lock' : 'ti ti-lock-open'"></i>
-			<span>{{ peerHasKey ? tChat('e2eeAlwaysOn') : tChat('e2eeWaitingPeer') }}</span>
-		</span>
-		<span v-if="peerHasKey && peerFingerprint" :class="$style.e2eeFp" :title="tChat('e2eeFingerprint')">
-			{{ peerFingerprint }}
-		</span>
-		<span v-if="!peerHasKey" :class="$style.e2eeWarn">{{ tChat('e2eePeerNoKey') }}</span>
+	<!-- 1:1: always-on E2EE — info only, no controls -->
+	<div v-if="user && canCompose" :class="$style.e2eeNotice" role="note">
+		<i class="ti ti-lock" aria-hidden="true"></i>
+		<div :class="$style.e2eeNoticeBody">
+			<div :class="$style.e2eeNoticeTitle">{{ tChat('e2eeAlwaysOn') }}</div>
+			<div :class="$style.e2eeNoticeHint">
+				{{ peerHasKey ? tChat('e2eeAlwaysOnHint') : tChat('e2eePeerNoKey') }}
+			</div>
+			<div v-if="peerHasKey && peerFingerprint" :class="$style.e2eeFp">
+				{{ tChat('e2eeFingerprint') }}: {{ peerFingerprint }}
+			</div>
+		</div>
 	</div>
 	<textarea
 		ref="textareaEl"
@@ -666,49 +668,55 @@ watch(() => props.user?.id, () => {
 	align-self: center;
 }
 
-.e2eeRow {
+.e2eeNotice {
 	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 4px 10px 0;
-	flex-wrap: wrap;
-}
-
-.e2eeBadge {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	padding: 2px 8px;
-	border-radius: 999px;
-	font-size: 11px;
-	font-weight: 600;
-	opacity: 0.9;
+	align-items: flex-start;
+	gap: 8px;
+	margin: 6px 10px 0;
+	padding: 8px 10px;
+	border-radius: 8px;
+	font-size: 12px;
+	line-height: 1.35;
+	color: var(--MI_THEME-fg);
+	background: color-mix(in srgb, var(--MI_THEME-accent) 10%, var(--MI_THEME-panel));
+	border: 1px solid color-mix(in srgb, var(--MI_THEME-accent) 22%, var(--MI_THEME-divider));
 	pointer-events: none;
-	user-select: none;
+	user-select: text;
+
+	> i {
+		flex-shrink: 0;
+		margin-top: 1px;
+		color: var(--MI_THEME-accent);
+		font-size: 1.1em;
+	}
 }
 
-.e2eeOn {
+.e2eeNoticeBody {
+	min-width: 0;
+	flex: 1;
+}
+
+.e2eeNoticeTitle {
+	font-weight: 700;
+	font-size: 12px;
 	color: var(--MI_THEME-accent);
-	background: color-mix(in srgb, var(--MI_THEME-accent) 14%, transparent);
 }
 
-.e2eePending {
-	color: var(--MI_THEME-warn);
-	background: color-mix(in srgb, var(--MI_THEME-warn) 12%, transparent);
-}
-
-.e2eeWarn {
+.e2eeNoticeHint {
+	margin-top: 2px;
+	opacity: 0.88;
 	font-size: 11px;
-	opacity: 0.75;
-	color: var(--MI_THEME-warn);
 }
 
 .e2eeFp {
+	margin-top: 4px;
 	font-size: 10px;
-	font-family: ui-monospace, monospace;
-	opacity: 0.7;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	opacity: 0.75;
 	letter-spacing: 0.02em;
+	word-break: break-all;
 	user-select: all;
+	pointer-events: auto;
 }
 
 .stickerPanel {
