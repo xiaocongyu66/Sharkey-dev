@@ -28,27 +28,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<button class="_button" :class="$style.replyBarClose" @click="$emit('clearReply')"><i class="ti ti-x"></i></button>
 	</div>
-	<!-- 1:1: always-on E2EE — info only, no controls -->
-	<div v-if="user && canCompose" :class="$style.e2eeNotice" role="note">
-		<i class="ti ti-lock" aria-hidden="true"></i>
-		<div :class="$style.e2eeNoticeBody">
-			<div :class="$style.e2eeNoticeTitle">{{ tChat('e2eeAlwaysOn') }}</div>
-			<div :class="$style.e2eeNoticeHint">
-				{{ peerHasKey ? tChat('e2eeAlwaysOnHint') : tChat('e2eePeerNoKey') }}
-			</div>
-			<div v-if="peerHasKey && peerFingerprint" :class="$style.e2eeFp">
-				{{ tChat('e2eeFingerprint') }}: {{ peerFingerprint }}
-			</div>
-		</div>
-	</div>
 	<textarea
 		ref="textareaEl"
 		v-model="text"
 		:class="$style.textarea"
 		class="_acrylic"
-		:placeholder="canCompose ? (user ? tChat('e2eePlaceholder') : i18n.ts.inputMessageHere) : mutedAllBody"
-		:readonly="textareaReadOnly || !canCompose || sending || e2eeBlocked"
-		:disabled="!canCompose || sending || e2eeBlocked"
+		:placeholder="canCompose ? i18n.ts.inputMessageHere : mutedAllBody"
+		:readonly="textareaReadOnly || !canCompose || sending"
+		:disabled="!canCompose || sending"
 		@keydown="onKeydown"
 		@paste="onPaste"
 	></textarea>
@@ -91,7 +78,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, ref, shallowRef, computed, nextTick, readonly, onBeforeUnmount, inject } from 'vue';
+import { onMounted, watch, ref, shallowRef, computed, nextTick, readonly, onBeforeUnmount } from 'vue';
 import * as Misskey from 'misskey-js';
 //import insertTextAtCursor from 'insert-text-at-cursor';
 import { formatTimeString } from '@@/js/format-time-string.js';
@@ -107,10 +94,6 @@ import { emojiPicker } from '@/utility/emoji-picker.js';
 import { $i } from '@/i.js';
 import StickerPicker from './StickerPicker.vue';
 import { chatT, chatFb, ensureChatLocaleFresh } from './chat-i18n.js';
-import { encryptChatText, fetchPeerPublicKey, publishE2eePublicKey, invalidatePeerKey, peerKeyFingerprintLabel } from './chat-e2ee.js';
-import { chatWsKey } from './chat-ws.js';
-
-const chatWs = inject(chatWsKey, null);
 
 const props = defineProps<{
 	user?: Misskey.entities.UserDetailed | null;
@@ -143,53 +126,7 @@ const file = ref<Misskey.entities.DriveFile | null>(null);
 const sending = ref(false);
 const textareaReadOnly = ref(false);
 const showStickers = ref(false);
-/**
- * 1:1 E2EE is always required (no user option).
- * Keys are generated/published automatically; private key never leaves the client.
- */
-const peerHasKey = ref(false);
-const peerFingerprint = ref('');
-const e2eeReady = ref(false);
 let autocompleteInstance: Autocomplete | null = null;
-let peerKeyPollTimer: ReturnType<typeof setInterval> | null = null;
-
-/** Block text input for 1:1 until both sides have published E2EE keys */
-const e2eeBlocked = computed(() => !!props.user && !peerHasKey.value);
-
-async function refreshPeerKeyState() {
-	if (!props.user) {
-		peerHasKey.value = false;
-		peerFingerprint.value = '';
-		e2eeReady.value = true;
-		return;
-	}
-	// Always ensure our key is published (system-managed)
-	await publishE2eePublicKey(chatWs);
-	const pk = await fetchPeerPublicKey(props.user.id, { force: true, ws: chatWs });
-	peerHasKey.value = !!pk;
-	peerFingerprint.value = pk ? (await peerKeyFingerprintLabel(props.user.id) ?? '') : '';
-	e2eeReady.value = true;
-}
-
-function startPeerKeyPoll() {
-	stopPeerKeyPoll();
-	if (!props.user || peerHasKey.value) return;
-	// Peer may open chat and publish shortly — poll a few times
-	let n = 0;
-	peerKeyPollTimer = setInterval(() => {
-		n++;
-		void refreshPeerKeyState().then(() => {
-			if (peerHasKey.value || n >= 20) stopPeerKeyPoll();
-		});
-	}, 3000);
-}
-
-function stopPeerKeyPoll() {
-	if (peerKeyPollTimer) {
-		clearInterval(peerKeyPollTimer);
-		peerKeyPollTimer = null;
-	}
-}
 
 /** false when room is muted-all and current user is not owner/admin/instance mod */
 const canCompose = computed(() => {
@@ -208,14 +145,7 @@ const mutedAllTitle = computed(() => chatT('mutedAll', chatFb.mutedAll));
 const mutedAllBody = computed(() => chatT('mutedAllComposerDisabled', chatFb.mutedAllComposerDisabled));
 const stickersLabel = computed(() => chatT('stickers', chatFb.stickers));
 
-const canSend = computed(() => {
-	if (!canCompose.value || sending.value) return false;
-	const hasContent = (text.value != null && text.value !== '') || file.value != null;
-	if (!hasContent) return false;
-	// 1:1 text always needs E2EE readiness; file-only may send without text encrypt
-	if (props.user && text.value && !peerHasKey.value) return false;
-	return true;
-});
+const canSend = computed(() => canCompose.value && !sending.value && ((text.value != null && text.value !== '') || file.value != null));
 const sendBusyLabel = computed(() => chatT('sending', chatFb.sending));
 const sendBusyTitle = computed(() => chatT('sendingHint', chatFb.sendingHint));
 
@@ -392,36 +322,11 @@ async function sendPayload(payload: { text?: string; fileId?: string }) {
 	sending.value = true;
 	const replyId = props.replyTo?.id;
 
-	let isE2ee = false;
-	let ciphertext: string | undefined;
-	let textOut = payload.text;
-
 	try {
-		// 1:1: always encrypt text (no user option). Server stores ciphertext only.
-		if (props.user && payload.text) {
-			if (!peerHasKey.value) {
-				await refreshPeerKeyState();
-			}
-			if (!peerHasKey.value) {
-				os.alert({ type: 'warning', text: tChat('e2eePeerNoKey') });
-				return;
-			}
-			const ct = await encryptChatText(props.user.id, payload.text, chatWs);
-			if (!ct) {
-				os.alert({ type: 'error', text: tChat('e2eeEncryptFailed') });
-				return;
-			}
-			isE2ee = true;
-			ciphertext = ct;
-			textOut = undefined;
-		}
-
 		const wsPayload = {
-			text: textOut,
+			text: payload.text,
 			fileId: payload.fileId,
 			replyId,
-			isE2ee,
-			ciphertext,
 		};
 
 		// Prefer WebSocket (room + 1:1) — keep spinner until msgAck + bubble visible
@@ -442,11 +347,9 @@ async function sendPayload(payload: { text?: string; fileId?: string }) {
 		const req = props.user
 			? misskeyApi('chat/messages/create-to-user', {
 				toUserId: props.user.id,
-				text: textOut,
+				text: payload.text,
 				fileId: payload.fileId,
 				replyId: replyId,
-				isE2ee,
-				ciphertext,
 			} as any)
 			: props.room
 				? misskeyApi('chat/messages/create-to-room', {
@@ -569,28 +472,12 @@ onMounted(async () => {
 		file.value = draft.data.file;
 	}
 
-	// 1:1: system always publishes our key and waits for peer (no toggle)
-	if (props.user) {
-		await refreshPeerKeyState();
-		if (!peerHasKey.value) startPeerKeyPoll();
-	}
 });
 
 onBeforeUnmount(() => {
-	stopPeerKeyPoll();
 	if (autocompleteInstance) {
 		autocompleteInstance.detach();
 		autocompleteInstance = null;
-	}
-});
-
-// Peer changed / rotated while this chat is open
-watch(() => props.user?.id, () => {
-	stopPeerKeyPoll();
-	if (props.user) {
-		void refreshPeerKeyState().then(() => {
-			if (!peerHasKey.value) startPeerKeyPoll();
-		});
 	}
 });
 </script>
@@ -666,57 +553,6 @@ watch(() => props.user?.id, () => {
 	padding: 6px 10px;
 	font-size: 1em;
 	align-self: center;
-}
-
-.e2eeNotice {
-	display: flex;
-	align-items: flex-start;
-	gap: 8px;
-	margin: 6px 10px 0;
-	padding: 8px 10px;
-	border-radius: 8px;
-	font-size: 12px;
-	line-height: 1.35;
-	color: var(--MI_THEME-fg);
-	background: color-mix(in srgb, var(--MI_THEME-accent) 10%, var(--MI_THEME-panel));
-	border: 1px solid color-mix(in srgb, var(--MI_THEME-accent) 22%, var(--MI_THEME-divider));
-	pointer-events: none;
-	user-select: text;
-
-	> i {
-		flex-shrink: 0;
-		margin-top: 1px;
-		color: var(--MI_THEME-accent);
-		font-size: 1.1em;
-	}
-}
-
-.e2eeNoticeBody {
-	min-width: 0;
-	flex: 1;
-}
-
-.e2eeNoticeTitle {
-	font-weight: 700;
-	font-size: 12px;
-	color: var(--MI_THEME-accent);
-}
-
-.e2eeNoticeHint {
-	margin-top: 2px;
-	opacity: 0.88;
-	font-size: 11px;
-}
-
-.e2eeFp {
-	margin-top: 4px;
-	font-size: 10px;
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	opacity: 0.75;
-	letter-spacing: 0.02em;
-	word-break: break-all;
-	user-select: all;
-	pointer-events: auto;
 }
 
 .stickerPanel {

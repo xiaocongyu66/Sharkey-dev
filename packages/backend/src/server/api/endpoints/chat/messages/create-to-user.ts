@@ -77,12 +77,6 @@ export const meta = {
 			code: 'NO_SUCH_REPLY',
 			id: 'd9e0f1a2-b3c4-5678-d9e0-f1a2b3c45678',
 		},
-
-		e2eeRequired: {
-			message: 'Direct messages must be end-to-end encrypted. Send ciphertext with isE2ee=true.',
-			code: 'E2EE_REQUIRED',
-			id: 'e0f1a2b3-c4d5-6789-e0f1-a2b3c4d56789',
-		},
 	},
 } as const;
 
@@ -131,10 +125,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			}
 
 			const isE2ee = ps.isE2ee === true;
-			// 1:1 text is always E2EE — reject plaintext body (file-only is allowed)
-			if (!isE2ee && ps.text != null && ps.text !== '') {
-				throw new ApiError(meta.errors.e2eeRequired);
-			}
 			// テキストが無いかつ添付ファイルも無かったらエラー（E2EE 時は ciphertext）
 			if (!isE2ee && ps.text == null && file == null) {
 				throw new ApiError(meta.errors.contentRequired);

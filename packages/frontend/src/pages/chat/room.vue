@@ -905,7 +905,6 @@ function onMsgError(err: { message?: string; code?: string; remainingSeconds?: n
 		NOT_A_MEMBER: tChat('notAMember'),
 		BANNED_FROM_ROOM: tChat('bannedFromRoom'),
 		ROOM_RATE_LIMITED: tChat('roomRateLimited'),
-		E2EE_REQUIRED: tChat('e2eePlaintextRejected'),
 		SEND_FAILED: tChat('wsSendFailed'),
 		REACT_FAILED: tChat('wsSendFailed'),
 		DELETE_FAILED: tChat('wsSendFailed'),
@@ -1267,9 +1266,6 @@ async function initialize() {
 			});
 			bindChatChannelEvents();
 			await nextTick();
-
-			// System-managed E2EE: always publish our public key when opening 1:1
-			void import('./chat-e2ee.js').then(({ publishE2eePublicKey }) => publishE2eePublicKey(chatWs));
 
 			let list: NormalizedChatMessage[] = [];
 			try {

@@ -83,12 +83,6 @@ class ChatUserChannel extends Channel {
 					const isE2ee = body?.isE2ee === true;
 					const ciphertext = typeof body?.ciphertext === 'string' ? body.ciphertext : null;
 
-					// Force E2EE for any 1:1 text (no client opt-out)
-					if (!isE2ee && text != null && text !== '') {
-						this.send('msgError', { code: 'E2EE_REQUIRED', message: 'Direct messages must be end-to-end encrypted.' });
-						return;
-					}
-
 					if (text && text.length > this.config.maxNoteLength && !isE2ee) {
 						this.send('msgError', { code: 'MAX_LENGTH', message: 'Message too long.' });
 						return;
