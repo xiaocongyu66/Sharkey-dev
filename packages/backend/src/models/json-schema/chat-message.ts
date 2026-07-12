@@ -49,10 +49,16 @@ export const packedChatMessageSchema = {
 		isE2ee: {
 			type: 'boolean',
 			optional: true, nullable: false,
+			description: 'Chat body encrypted at rest (escrow or legacy client E2EE). Notes/posts are never encrypted this way.',
 		},
 		ciphertext: {
 			type: 'string',
 			optional: true, nullable: true,
+		},
+		encryptedAtRest: {
+			type: 'boolean',
+			optional: true, nullable: false,
+			description: 'True when ciphertext is stored; authorized clients may receive plaintext over TLS for escrow messages.',
 		},
 		fileId: {
 			type: 'string',
@@ -139,6 +145,10 @@ export const packedChatMessageLiteSchema = {
 			type: 'string',
 			optional: true, nullable: true,
 		},
+		encryptedAtRest: {
+			type: 'boolean',
+			optional: true, nullable: false,
+		},
 		fileId: {
 			type: 'string',
 			optional: true, nullable: true,
@@ -218,6 +228,10 @@ export const packedChatMessageLiteFor1on1Schema = {
 			type: 'string',
 			optional: true, nullable: true,
 		},
+		encryptedAtRest: {
+			type: 'boolean',
+			optional: true, nullable: false,
+		},
 		fileId: {
 			type: 'string',
 			optional: true, nullable: true,
@@ -296,6 +310,10 @@ export const packedChatMessageLiteForRoomSchema = {
 		ciphertext: {
 			type: 'string',
 			optional: true, nullable: true,
+		},
+		encryptedAtRest: {
+			type: 'boolean',
+			optional: true, nullable: false,
 		},
 		fileId: {
 			type: 'string',

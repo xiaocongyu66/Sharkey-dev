@@ -86,6 +86,7 @@ import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { XAlgorithmService } from './XAlgorithmService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
 import { ChatService } from './ChatService.js';
+import { ChatCryptoService } from './ChatCryptoService.js';
 import { ChatStickerService } from './ChatStickerService.js';
 import { RegistryApiService } from './RegistryApiService.js';
 import { ReversiService } from './ReversiService.js';
@@ -238,6 +239,7 @@ const $FanoutTimelineService: Provider = { provide: 'FanoutTimelineService', use
 const $FanoutTimelineEndpointService: Provider = { provide: 'FanoutTimelineEndpointService', useExisting: FanoutTimelineEndpointService };
 const $ChannelFollowingService: Provider = { provide: 'ChannelFollowingService', useExisting: ChannelFollowingService };
 const $ChatService: Provider = { provide: 'ChatService', useExisting: ChatService };
+const $ChatCryptoService: Provider = { provide: 'ChatCryptoService', useExisting: ChatCryptoService };
 const $ChatStickerService: Provider = { provide: 'ChatStickerService', useExisting: ChatStickerService };
 const $RegistryApiService: Provider = { provide: 'RegistryApiService', useExisting: RegistryApiService };
 const $ReversiService: Provider = { provide: 'ReversiService', useExisting: ReversiService };
@@ -401,6 +403,7 @@ const $Imports = [
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
 		ChatService,
+		ChatCryptoService,
 		ChatStickerService,
 		RegistryApiService,
 		ReversiService,
@@ -560,6 +563,7 @@ const $Imports = [
 		$FanoutTimelineEndpointService,
 		$ChannelFollowingService,
 		$ChatService,
+		$ChatCryptoService,
 		$ChatStickerService,
 		$RegistryApiService,
 		$ReversiService,
@@ -719,6 +723,7 @@ const $Imports = [
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
 		ChatService,
+		ChatCryptoService,
 		ChatStickerService,
 		RegistryApiService,
 		ReversiService,
@@ -876,6 +881,7 @@ const $Imports = [
 		$FanoutTimelineEndpointService,
 		$ChannelFollowingService,
 		$ChatService,
+		$ChatCryptoService,
 		$ChatStickerService,
 		$RegistryApiService,
 		$ReversiService,

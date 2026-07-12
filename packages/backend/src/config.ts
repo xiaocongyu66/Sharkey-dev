@@ -101,6 +101,16 @@ type Source = Partial<QueueConfig> & {
 
 	setupPassword?: string;
 
+	/**
+	 * Chat-only escrow master secret (AES-GCM at rest for DMs + rooms).
+	 * Does NOT affect notes/posts (search engines still crawl public notes).
+	 * Who can read: conversation participants (server decrypts for them) +
+	 * the operator holding this secret. Falls back to setupPassword if unset.
+	 */
+	chatEscrowSecret?: string;
+	/** Default true when a secret is available; set false to store chat plaintext. */
+	chatEscrowEnabled?: boolean;
+
 	proxy?: string;
 	proxySmtp?: string;
 	proxyBypassHosts?: string[];
@@ -299,6 +309,9 @@ export type Config = QueueConfig & {
 	version: string;
 	publishTarballInsteadOfProvideRepositoryUrl: boolean;
 	setupPassword: string | undefined;
+	/** Chat escrow master (chat messages only; never notes). */
+	chatEscrowSecret: string | undefined;
+	chatEscrowEnabled: boolean | undefined;
 	host: string;
 	hostname: string;
 	scheme: string;
@@ -437,6 +450,8 @@ export function loadConfig(logger?: Logger): Config {
 		version,
 		publishTarballInsteadOfProvideRepositoryUrl: !!config.publishTarballInsteadOfProvideRepositoryUrl,
 		setupPassword: config.setupPassword,
+		chatEscrowSecret: config.chatEscrowSecret ?? process.env.CHAT_ESCROW_SECRET,
+		chatEscrowEnabled: config.chatEscrowEnabled,
 		url: url.origin,
 		port: config.port ?? parseInt(process.env.PORT ?? '3000', 10),
 		address: config.address ?? '0.0.0.0',

@@ -359,10 +359,16 @@ export const chatFb = {
 		ja: 'エンドツーエンド暗号化',
 	},
 	e2eeAlwaysOnHint: {
-		en: 'Messages in this chat are always encrypted. Encryption cannot be turned off. Only you and the other person can read them.',
-		zh: '此私聊的消息始终加密，无法关闭。仅你与对方可读，服务器无法查看明文。',
-		'zh-TW': '此私聊的訊息始終加密，無法關閉。僅你與對方可讀，伺服器無法查看明文。',
-		ja: 'このチャットのメッセージは常に暗号化され、オフにできません。あなたと相手だけが読めます。',
+		en: 'Chat messages are encrypted at rest (AES-GCM). Participants and the server operator can read them; others cannot. Public notes are never encrypted this way.',
+		zh: '聊天消息落库加密（AES-GCM）。会话双方与持有服务端密钥的运营方可读；他人不可。公开帖子不加密，搜索引擎仍可抓取。',
+		'zh-TW': '聊天訊息落庫加密（AES-GCM）。會話雙方與持有服務端金鑰的營運方可讀；他人不可。公開貼文不加密，搜尋引擎仍可抓取。',
+		ja: 'チャットは保存時に暗号化（AES-GCM）。参加者およびサーバー運用者のみ読めます。公開ノートは暗号化されません。',
+	},
+	chatEscrowHint: {
+		en: 'Encrypted chat (escrow): you, the peer/room members, and the server operator.',
+		zh: '托管加密聊天：你、对方/群成员、以及服务端运营方可读。',
+		'zh-TW': '託管加密聊天：你、對方/群成員、以及服務端營運方可讀。',
+		ja: 'エスクロー暗号化：あなた・相手/部屋のメンバー・サーバー運用者のみ。',
 	},
 	e2eeWaitingPeer: {
 		en: 'Waiting for peer key…',

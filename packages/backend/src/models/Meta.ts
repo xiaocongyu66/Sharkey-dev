@@ -829,6 +829,35 @@ export class MiMeta {
 	})
 	public xAlgorithmConfig: XAlgorithmConfig;
 
+	/**
+	 * Chat escrow (DM + rooms only; never notes/posts).
+	 * When true and at least one key exists, new chat messages are sealed at rest.
+	 */
+	@Column('boolean', {
+		default: true,
+	})
+	public chatEscrowEnabled: boolean;
+
+	/** Active key id used for new messages (must exist in chatEscrowKeys or fallback cfg). */
+	@Column('varchar', {
+		length: 32,
+		nullable: true,
+	})
+	public chatEscrowActiveKeyId: string | null;
+
+	/**
+	 * Escrow key ring: [{ id, secret, createdAt }].
+	 * Secrets never returned by admin/meta (use dedicated chat-escrow endpoints).
+	 */
+	@Column('jsonb', {
+		default: [],
+	})
+	public chatEscrowKeys: {
+		id: string;
+		secret: string;
+		createdAt: string;
+	}[];
+
 	constructor(data?: Partial<MiMeta>) {
 		if (data) {
 			Object.assign(this, data);

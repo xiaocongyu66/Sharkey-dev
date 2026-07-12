@@ -81,8 +81,10 @@ class ChatRoomChannel extends Channel {
 					const text = typeof body?.text === 'string' ? body.text : null;
 					const fileId = typeof body?.fileId === 'string' ? body.fileId : null;
 					const replyId = typeof body?.replyId === 'string' ? body.replyId : null;
+					const isE2ee = body?.isE2ee === true;
+					const ciphertext = typeof body?.ciphertext === 'string' ? body.ciphertext : null;
 
-					if (text && text.length > this.config.maxNoteLength) {
+					if (text && text.length > this.config.maxNoteLength && !isE2ee) {
 						this.send('msgError', { code: 'MAX_LENGTH', message: 'Message too long.' });
 						return;
 					}
@@ -99,16 +101,22 @@ class ChatRoomChannel extends Channel {
 						}
 					}
 
-					if (text == null && file == null) {
+					if (!isE2ee && text == null && file == null) {
 						this.send('msgError', { code: 'CONTENT_REQUIRED', message: 'Content required.' });
 						return;
 					}
+					if (isE2ee && !ciphertext && file == null) {
+						this.send('msgError', { code: 'CONTENT_REQUIRED', message: 'Ciphertext required.' });
+						return;
+					}
 
-					// createMessageToRoom already publishes to chatRoomStream
+					// createMessageToRoom seals with chat escrow (chat only; not notes)
 					await this.chatService.createMessageToRoom(this.user, room, {
-						text,
+						text: isE2ee ? null : text,
 						file,
 						replyId,
+						isE2ee,
+						ciphertext,
 					});
 					this.send('msgAck', { ok: true });
 				} catch (e) {

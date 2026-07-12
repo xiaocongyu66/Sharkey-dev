@@ -13,6 +13,7 @@ import type { JsonObject } from '@/misc/json-value.js';
 import type { Config } from '@/config.js';
 import { ChatService } from '@/core/ChatService.js';
 import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
+import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { Channel, type MiChannelService } from '../channel.js';
@@ -33,6 +34,7 @@ class ChatUserChannel extends Channel {
 		private chatE2eeKeysRepository: ChatE2eeKeysRepository,
 		private chatService: ChatService,
 		private chatEntityService: ChatEntityService,
+		private userEntityService: UserEntityService,
 		private cacheService: CacheService,
 		private globalEventService: GlobalEventService,
 		private config: Config,
@@ -213,6 +215,26 @@ class ChatUserChannel extends Channel {
 				break;
 			}
 
+			// Page load: peer profile for DM header (avoid REST users/show spinner)
+			case 'userShow': {
+				try {
+					await this.chatService.checkChatAvailability(this.user.id, 'read');
+					const reqId = typeof body?.reqId === 'string' ? body.reqId : null;
+					const targetId = typeof body?.userId === 'string' ? body.userId : this.otherId;
+					const u = await this.cacheService.findUserById(targetId);
+					if (u == null) {
+						this.send('userError', { code: 'NO_SUCH_USER', message: 'No such user.', reqId });
+						return;
+					}
+					const packed = await this.userEntityService.pack(u, this.user, { schema: 'UserDetailed' });
+					this.send('user', { reqId, user: packed });
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : 'error';
+					this.send('userError', { code: 'USER_FAILED', message: msg, reqId: body?.reqId ?? null });
+				}
+				break;
+			}
+
 			// E2EE: fetch peer public key over open chat channel (no extra REST)
 			case 'e2eeKeyGet': {
 				try {
@@ -318,6 +340,7 @@ export class ChatUserChannelService implements MiChannelService<true> {
 
 		private readonly chatService: ChatService,
 		private readonly chatEntityService: ChatEntityService,
+		private readonly userEntityService: UserEntityService,
 		private readonly cacheService: CacheService,
 		private readonly globalEventService: GlobalEventService,
 	) {
@@ -333,6 +356,7 @@ export class ChatUserChannelService implements MiChannelService<true> {
 			this.chatE2eeKeysRepository,
 			this.chatService,
 			this.chatEntityService,
+			this.userEntityService,
 			this.cacheService,
 			this.globalEventService,
 			this.config,

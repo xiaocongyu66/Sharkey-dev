@@ -268,6 +268,11 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		text: (i18n.ts as any)._xAlgorithm?.title ?? 'Algorithm',
 		to: '/admin/algorithm',
 		active: currentPage.value?.route.name === 'algorithm',
+	}, {
+		icon: 'ti ti-message-2-lock',
+		text: '聊天托管加密',
+		to: '/admin/chat-escrow',
+		active: currentPage.value?.route.name === 'chat-escrow',
 	}],
 }, {
 	title: i18n.ts.info,

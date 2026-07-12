@@ -15,7 +15,14 @@ export const meta = {
 
 	requireCredential: true,
 
+	// App tokens must include read:chat (anti-scrape: no anonymous / wrong-scope crawl)
 	kind: 'read:chat',
+
+	// Throttle bulk history pulls (bots / scrapers)
+	limit: {
+		duration: 1000 * 60,
+		max: 60,
+	},
 
 	res: {
 		type: 'array',

@@ -237,7 +237,7 @@ import ChatAnnouncementBar from './ChatAnnouncementBar.vue';
 import { ChatHistoryPrefetcher, loadUntilMessageFound } from './chat-history-loader.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import * as os from '@/os.js';
-import { useStream, wakeStream } from '@/stream.js';
+import { useStream, wakeStream, waitForStreamConnected } from '@/stream.js';
 import * as sound from '@/utility/sound.js';
 import { i18n } from '@/i18n.js';
 import { $i, iAmModerator } from '@/i.js';
@@ -497,10 +497,14 @@ function startHistoryPrefetch() {
 				historyPrefetchLabel.value = '';
 				return;
 			}
-			// Preserve scroll when user is reading history and DOM grows above
+			// Preserve scroll when user is reading history and older msgs append
+			// (array is newest-first → older pages grow scrollHeight from the top
+			// of chronological DOM). Anchor the currently visible oldest loaded
+			// message (end of newest-first array), not messages[0] (newest).
 			const sc = getChatScrollContainer();
 			const reading = isReadingHistory(sc);
-			const anchorId = reading ? (messages.value[0]?.id ?? oldestId) : null;
+			const nearLive = !reading && isNearLiveEdge(sc);
+			const anchorId = messages.value[messages.value.length - 1]?.id ?? oldestId;
 			const anchorEl = anchorId ? window.document.getElementById(`chat-msg-${anchorId}`) : null;
 			const anchorTop = anchorEl?.getBoundingClientRect().top ?? null;
 			const prevH = sc?.scrollHeight ?? 0;
@@ -518,9 +522,15 @@ function startHistoryPrefetch() {
 					if (reading && prevH > 0) {
 						// Keep viewport while reading older messages
 						preserveScrollAfterPrepend(sc, prevH, prevTop, anchorId, anchorTop);
-					} else if (!reading && isNearLiveEdge(sc) && Date.now() >= userScrollUntil) {
+					} else if (nearLive && Date.now() >= userScrollUntil) {
 						// Stay at live edge when background prefetch grows the top
 						scrollToLiveEdge('instant');
+					}
+					// Mid-scroll (not reading history, not live): leave scrollTop
+					// alone after height-delta only when height changed at top —
+					// still apply delta so content doesn't jump under the finger.
+					else if (prevH > 0 && sc.scrollHeight !== prevH) {
+						preserveScrollAfterPrepend(sc, prevH, prevTop, anchorId, anchorTop);
 					}
 				});
 			});
@@ -823,11 +833,9 @@ let lastCatchUpAt = 0;
 function resubscribeChatChannel() {
 	if (!canViewTimeline.value) return;
 	if (props.roomId && (room.value || props.roomId)) {
-		void enterRoomChannel();
+		void openRoomChannel(room.value?.id ?? props.roomId!);
 	} else if (props.userId && user.value) {
-		connection.value?.dispose();
-		connection.value = stream.useChannel('chatUser', { otherId: user.value.id });
-		bindChatChannelEvents();
+		void openUserChannel(user.value.id);
 	}
 }
 
@@ -1054,6 +1062,15 @@ function bindScrollLiveClear() {
 	const onScroll = () => {
 		markUserScrolling(sc);
 		clearPinnedViewIfAtLive();
+		// Start background history only when user is actually reading upward
+		if (
+			canFetchMore.value &&
+			!historyPrefetching.value &&
+			!moreFetching.value &&
+			isNearHistoryTop(sc)
+		) {
+			startHistoryPrefetch();
+		}
 	};
 	sc.addEventListener('scroll', onScroll, { passive: true });
 	scrollListenCleanup = () => {
@@ -1126,13 +1143,126 @@ function onMemberMuted(_body: { userId?: string; mutedUntil?: string | null }) {
 	// Soft signal; send path already enforces mute. Could show banner later.
 }
 
+/** Ensure shared stream socket is up before channel history (avoids 15s REST spin). */
+async function ensureStreamReady(timeoutMs = 5000): Promise<boolean> {
+	try {
+		return await waitForStreamConnected(stream, timeoutMs);
+	} catch {
+		return stream.state === 'connected';
+	}
+}
+
+/**
+ * Open chatRoom channel as soon as we have a roomId (even before membership is known).
+ * Server allows connect when room exists; history/roomShow enforce access.
+ */
+async function openRoomChannel(roomId: string) {
+	if (!roomId) return;
+	connection.value?.dispose();
+	// Prefer connected socket so the first connect+history frames aren't dropped
+	await ensureStreamReady(4500);
+	connection.value = stream.useChannel('chatRoom', { roomId });
+	bindChatChannelEvents();
+	// Give server a tick to finish channel init before first request
+	await nextTick();
+	await new Promise<void>(r => window.setTimeout(() => r(), 40));
+}
+
+async function openUserChannel(otherId: string) {
+	if (!otherId) return;
+	connection.value?.dispose();
+	await ensureStreamReady(4500);
+	connection.value = stream.useChannel('chatUser', { otherId });
+	bindChatChannelEvents();
+	await nextTick();
+	await new Promise<void>(r => window.setTimeout(() => r(), 40));
+}
+
 async function enterRoomChannel() {
-	// Open WS as soon as we have roomId (prefer stream for page content)
 	const roomId = room.value?.id ?? props.roomId;
 	if (!roomId || !canViewTimeline.value) return;
-	connection.value?.dispose();
-	connection.value = useStream().useChannel('chatRoom', { roomId });
-	bindChatChannelEvents();
+	await openRoomChannel(roomId);
+}
+
+/** Load room meta over WS (roomShow); REST fallback. */
+async function loadRoomMeta(roomId: string): Promise<any> {
+	if (chatWs.ready()) {
+		try {
+			const res = await chatWs.request<{ room?: any }>(
+				'roomShow',
+				{},
+				'room',
+				'roomError',
+				'chat/rooms/show',
+				{ roomId },
+				6000,
+			);
+			// WS shape: { reqId, room }  | REST shape: room object
+			return (res as any)?.room ?? res;
+		} catch {
+			// fall through
+		}
+	}
+	return await misskeyApi('chat/rooms/show', { roomId }) as any;
+}
+
+/** Load peer profile over WS (userShow); REST fallback. */
+async function loadUserMeta(userId: string): Promise<Misskey.entities.UserDetailed> {
+	if (chatWs.ready()) {
+		try {
+			const res = await chatWs.request<{ user?: any }>(
+				'userShow',
+				{ userId },
+				'user',
+				'userError',
+				'users/show',
+				{ userId },
+				6000,
+			);
+			return ((res as any)?.user ?? res) as Misskey.entities.UserDetailed;
+		} catch {
+			// fall through
+		}
+	}
+	return await misskeyApi('users/show', { userId });
+}
+
+/** Initial timeline page — WS history first, short REST fallback. */
+async function loadInitialTimeline(kind: 'room' | 'user', id: string): Promise<NormalizedChatMessage[]> {
+	const LIMIT = PAGE_LIMIT;
+	const api = kind === 'room' ? 'chat/messages/room-timeline' : 'chat/messages/user-timeline';
+	const apiBody = kind === 'room' ? { roomId: id, limit: LIMIT } : { userId: id, limit: LIMIT };
+
+	if (chatWs.ready()) {
+		try {
+			const res = await chatWs.request<{ messages?: any[]; hasMore?: boolean }>(
+				'history',
+				{ limit: LIMIT },
+				'history',
+				'historyError',
+				api,
+				apiBody,
+				7000,
+			);
+			// REST fallback returns raw array; WS returns { messages, hasMore }
+			if (Array.isArray(res)) {
+				const list = (res as any[]).map(x => normalizeMessage(x));
+				canFetchMore.value = list.length === LIMIT;
+				return list;
+			}
+			const raw = (res as any)?.messages ?? [];
+			const list = (raw as any[]).map(x => normalizeMessage(x));
+			canFetchMore.value = (res as any)?.hasMore ?? list.length === LIMIT;
+			return list;
+		} catch {
+			// fall through to REST
+		}
+	}
+
+	const raw = await misskeyApi(api as any, apiBody as any);
+	const list = (raw as any[]).map(x => normalizeMessage(x));
+	canFetchMore.value = list.length === LIMIT;
+	return list;
 }
 
 /** Deep-link ?msg= from abuse report / shared message URL */
@@ -1160,43 +1290,18 @@ async function jumpToQueryMessage() {
 }
 
 async function loadRoomTimeline() {
-	const LIMIT = PAGE_LIMIT;
-	// WS channel first so history can load over stream
-	await enterRoomChannel();
-	await nextTick();
-
-	let list: NormalizedChatMessage[] = [];
-	try {
-		if (chatWs.ready()) {
-			const res = await chatWs.request<{ messages?: any[]; hasMore?: boolean }>(
-				'history',
-				{ limit: LIMIT },
-				'history',
-				'historyError',
-				'chat/messages/room-timeline',
-				{ roomId: props.roomId, limit: LIMIT },
-			);
-			const raw = (res as any)?.messages ?? (Array.isArray(res) ? res : []);
-			list = raw.map((x: any) => normalizeMessage(x));
-			canFetchMore.value = (res as any)?.hasMore ?? list.length === LIMIT;
-		} else {
-			const m = await misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT });
-			list = (m as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
-			canFetchMore.value = list.length === LIMIT;
-		}
-	} catch {
-		const m = await misskeyApi('chat/messages/room-timeline', { roomId: props.roomId, limit: LIMIT });
-		list = (m as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
-		canFetchMore.value = list.length === LIMIT;
+	if (!props.roomId) return;
+	// Channel already opened in initialize when possible
+	if (!connection.value) {
+		await openRoomChannel(props.roomId);
 	}
 
+	const list = await loadInitialTimeline('room', props.roomId);
 	messages.value = list;
 	rebuildKnownIds();
-	// non-blocking: mentions + async history pipeline
+	// non-blocking mentions. Do NOT auto-prefetch all history on open —
+	// background growth while at live edge was a major cause of 乱跳.
 	void loadMentionsForRoom();
-	if (canFetchMore.value) {
-		void nextTick().then(() => startHistoryPrefetch());
-	}
 }
 
 async function doJoin() {
@@ -1231,8 +1336,6 @@ async function doJoin() {
 }
 
 async function initialize() {
-	const LIMIT = PAGE_LIMIT;
-
 	initializing.value = true;
 	loadError.value = '';
 	needJoin.value = false;
@@ -1254,35 +1357,27 @@ async function initialize() {
 			return;
 		}
 
+		// Warm the shared stream ASAP (often already open from home timeline)
+		void ensureStreamReady(4000);
+
 		if (props.userId) {
-			const u = await misskeyApi('users/show', { userId: props.userId });
+			// 1) Open chatUser channel first (WS)
+			await openUserChannel(props.userId);
+			// 2) Peer meta + history in parallel over the same channel
+			const [u, list] = await Promise.all([
+				loadUserMeta(props.userId),
+				loadInitialTimeline('user', props.userId),
+			]);
 			user.value = u;
 			isMember.value = true;
-
-			// Open WS first — history prefers stream
-			connection.value?.dispose();
-			connection.value = useStream().useChannel('chatUser', {
-				otherId: user.value.id,
-			});
-			bindChatChannelEvents();
-			await nextTick();
-
-			let list: NormalizedChatMessage[] = [];
-			try {
-				list = await fetchTimelinePage({ limit: LIMIT, untilId: null });
-			} catch {
-				const m = await misskeyApi('chat/messages/user-timeline', { userId: props.userId, limit: LIMIT });
-				list = m.map(x => normalizeMessage(x));
-			}
 			messages.value = list;
 			rebuildKnownIds();
-			canFetchMore.value = list.length === LIMIT;
-
-			if (canFetchMore.value) {
-				void nextTick().then(() => startHistoryPrefetch());
-			}
+			// History prefetch deferred until user scrolls up / load more
 		} else if (props.roomId) {
-			const r = await misskeyApi('chat/rooms/show', { roomId: props.roomId }) as any;
+			// 1) Open chatRoom channel immediately (before rooms/show REST)
+			await openRoomChannel(props.roomId);
+			// 2) Room meta over WS roomShow (REST fallback)
+			const r = await loadRoomMeta(props.roomId);
 			room.value = r as Misskey.entities.ChatRoom;
 			roomPreviewName.value = r.name ?? '';
 			joinPolicy.value = r.joinPolicy ?? 'invite';
@@ -1291,17 +1386,14 @@ async function initialize() {
 
 			if (!member && !isStaffViewer.value) {
 				needJoin.value = true;
-				// auto-join public rooms when opened via link
-				if (r.joinPolicy === 'public') {
-					// keep join button, don't auto-join without consent
-				} else if ((r.joinPolicy === 'link') && joinCode.value) {
-					// prefilled code ready
-				}
+				// Keep channel disposed for non-members (join gate)
+				connection.value?.dispose();
+				connection.value = null;
 				initializing.value = false;
 				return;
 			}
 
-			// Staff non-member: still load timeline (backend allows moderators)
+			// 3) History over same WS channel
 			await loadRoomTimeline();
 		}
 	} catch (e: any) {

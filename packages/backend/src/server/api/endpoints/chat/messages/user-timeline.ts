@@ -16,7 +16,13 @@ export const meta = {
 
 	requireCredential: true,
 
+	// App tokens must include read:chat (anti-scrape)
 	kind: 'read:chat',
+
+	limit: {
+		duration: 1000 * 60,
+		max: 60,
+	},
 
 	res: {
 		type: 'array',

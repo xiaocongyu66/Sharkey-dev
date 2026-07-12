@@ -4,8 +4,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <!--
-  Lazy mount for chat rows: keep a light placeholder until near viewport,
-  then async-mount XMessage (reduces DOM/media cost for long histories).
+  Lazy mount for chat rows: light placeholder until near viewport, then mount
+  XMessage. Once mounted we keep it mounted — remount thrash was a major
+  cause of timeline 乱跳 (height estimate ≠ real media rows).
 -->
 <template>
 <div
@@ -31,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import type { NormalizedChatMessage } from './room.vue';
 import XMessage from './XMessage.vue';
 
@@ -51,21 +52,19 @@ const emit = defineEmits<{
 
 const rootEl = useTemplateRef<HTMLElement>('rootEl');
 const mounted = ref(!!props.forceMount);
-const measuredH = shallowRef(0);
 
 const placeholderStyle = computed(() => {
-	if (mounted.value && measuredH.value > 0) return undefined;
-	const h = measuredH.value || props.estimateHeight || 72;
-	return mounted.value ? undefined : { minHeight: `${h}px` };
+	if (mounted.value) return undefined;
+	const h = props.estimateHeight || 72;
+	return { minHeight: `${h}px` };
 });
 
 let io: IntersectionObserver | null = null;
-let unmountTimer: ReturnType<typeof setTimeout> | null = null;
 
 function setupIo() {
 	io?.disconnect();
 	io = null;
-	if (props.forceMount) {
+	if (props.forceMount || mounted.value) {
 		mounted.value = true;
 		return;
 	}
@@ -90,29 +89,16 @@ function setupIo() {
 	io = new IntersectionObserver((entries) => {
 		for (const e of entries) {
 			if (e.isIntersecting) {
-				if (unmountTimer) {
-					clearTimeout(unmountTimer);
-					unmountTimer = null;
-				}
 				mounted.value = true;
-			} else if (mounted.value && !props.forceMount && !props.highlighted) {
-				// Far off-screen: free heavy VNodes/media after a delay
-				if (unmountTimer) clearTimeout(unmountTimer);
-				unmountTimer = setTimeout(() => {
-					const r = el.getBoundingClientRect();
-					const margin = 800;
-					if (r.bottom < -margin || r.top > window.innerHeight + margin) {
-						// Remember height so scroll doesn't collapse
-						measuredH.value = Math.max(el.offsetHeight, measuredH.value || 0);
-						mounted.value = false;
-					}
-				}, 1200);
+				// Stay mounted forever once shown — unmounting caused 乱跳
+				io?.disconnect();
+				io = null;
 			}
 		}
 	}, {
 		root: root ?? null,
 		// Prefetch a screen above/below
-		rootMargin: '200% 0px',
+		rootMargin: '150% 0px',
 		threshold: 0,
 	});
 	io.observe(el);
@@ -133,7 +119,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	io?.disconnect();
 	io = null;
-	if (unmountTimer) clearTimeout(unmountTimer);
 });
 </script>
 

@@ -11,22 +11,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 >
 	<MkAvatar :class="$style.avatar" :user="message.fromUser!" :link="!isMe" :preview="false"/>
 	<div :class="$style.body" @contextmenu.stop="onContextmenu">
-		<!-- name + time + message action menu (selector under bubble moved here; no reply hook) -->
+		<!-- name + time + compact action control (inline after time) -->
 		<div :class="$style.header">
-			<div :class="$style.headerMeta">
-				<MkUserName v-if="prefer.s['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/>
-				<MkTime :class="$style.time" :time="message.createdAt"/>
-			</div>
-			<!-- Always on top of sticky avatars / media so others' ⋯ stays tappable -->
+			<MkUserName v-if="prefer.s['chat.showSenderName'] && message.fromUser != null" :user="message.fromUser"/>
+			<MkTime :class="$style.time" :time="message.createdAt"/>
 			<div :class="$style.headerActions">
 				<button
+					ref="menuBtn"
 					type="button"
-					class="_button"
+					class="_textButton"
 					:class="$style.headerAction"
-					aria-label="menu"
-					@click.stop.prevent="showMenu"
+					:aria-label="i18n.ts.menu"
+					@click.stop="onMenuClick"
 				>
-					<i class="ti ti-dots"></i>
+					<i class="ti ti-dots-circle-horizontal"></i>
 				</button>
 			</div>
 		</div>
@@ -48,13 +46,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div :class="$style.replyText">{{ replyPreviewLabel }}</div>
 					</div>
 				</button>
-				<div v-if="(message as any).isE2ee" :class="$style.e2eeBody">
+				<!-- Escrow chat: server reveals plaintext over TLS for authorized users (encryptedAtRest).
+				     Legacy client E2EE (v1.): text null + ciphertext → local decrypt. Notes/posts never use this. -->
+				<div v-if="showE2eeShell" :class="$style.e2eeBody">
 					<span v-if="decrypting" :class="$style.e2eeMuted"><i class="ti ti-loader-2"></i></span>
-					<template v-else-if="decryptedText">
+					<template v-else-if="displayText">
 						<Mfm
 							class="_selectable"
 							:class="$style.messageText"
-							:text="decryptedText"
+							:text="displayText"
 							:i="$i"
 							:nyaize="'respect'"
 						/>
@@ -62,11 +62,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<span v-else :class="$style.e2eeMuted"><i class="ti ti-lock"></i> {{ e2eeFailLabel }}</span>
 				</div>
 				<Mfm
-					v-else-if="message.text"
+					v-else-if="displayText"
 					ref="text"
 					class="_selectable"
 					:class="$style.messageText"
-					:text="message.text"
+					:text="displayText"
 					:parsedNotes="parsed"
 					:i="$i"
 					:nyaize="'respect'"
@@ -107,7 +107,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, defineAsyncComponent, inject, provide, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, inject, provide, ref, useTemplateRef, watch } from 'vue';
 import * as mfm from 'mfm-js';
 import * as Misskey from 'misskey-js';
 import { url } from '@@/js/config.js';
@@ -115,7 +115,6 @@ import { isLink } from '@@/js/is-link.js';
 import type { MenuItem } from '@/types/menu.js';
 import type { NormalizedChatMessage } from './room.vue';
 import { ensureSignin } from '@/i.js';
-import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import MkFukidashi from '@/components/MkFukidashi.vue';
 import { decryptChatText } from './chat-e2ee.js';
@@ -136,6 +135,7 @@ import SkUrlPreviewGroup from '@/components/SkUrlPreviewGroup.vue';
 const $i = ensureSignin();
 const chatWs = inject(chatWsKey, null);
 const roomCanMod = inject(chatRoomCanModerateKey, null);
+const menuBtn = useTemplateRef<HTMLButtonElement>('menuBtn');
 
 const props = defineProps<{
 	message: NormalizedChatMessage | Misskey.entities.ChatMessage;
@@ -153,11 +153,45 @@ const decryptedText = ref<string | null>(null);
 const decrypting = ref(false);
 const e2eeFailLabel = chatT('e2eeDecryptFailed', chatFb.e2eeDecryptFailed);
 
+/** Server-revealed plaintext (escrow) or plain message */
+const serverText = computed(() => {
+	const t = props.message.text;
+	return t && String(t).length > 0 ? String(t) : null;
+});
+
+/** Need client-side decrypt only for legacy v1. when server left text empty */
+const needsClientDecrypt = computed(() => {
+	const m = props.message as any;
+	if (!m.isE2ee) return false;
+	if (serverText.value) return false;
+	const ct = m.ciphertext;
+	return typeof ct === 'string' && ct.startsWith('v1.');
+});
+
+const showE2eeShell = computed(() => {
+	const m = props.message as any;
+	// Lock shell only when still waiting on client decrypt / failed legacy decrypt
+	return needsClientDecrypt.value || (m.isE2ee && !serverText.value && !decryptedText.value && m.ciphertext);
+});
+
+const displayText = computed(() => {
+	return serverText.value ?? decryptedText.value;
+});
+
 watch(
-	() => [(props.message as any).isE2ee, (props.message as any).ciphertext, props.message.fromUserId] as const,
-	async ([isE2ee, ciphertext, fromUserId]) => {
+	() => [
+		(props.message as any).isE2ee,
+		(props.message as any).ciphertext,
+		props.message.fromUserId,
+		props.message.text,
+	] as const,
+	async ([isE2ee, ciphertext, fromUserId, text]) => {
 		decryptedText.value = null;
+		// Escrow: server already put plaintext in text — no local decrypt
+		if (text && String(text).length > 0) return;
 		if (!isE2ee || !ciphertext || typeof ciphertext !== 'string') return;
+		// Only legacy peer E2EE (v1.) is decrypted in the browser
+		if (!String(ciphertext).startsWith('v1.')) return;
 		decrypting.value = true;
 		try {
 			decryptedText.value = await decryptChatText(String(fromUserId), ciphertext);
@@ -169,7 +203,7 @@ watch(
 );
 
 const parsed = computed(() => {
-	const t = (props.message as any).isE2ee ? decryptedText.value : props.message.text;
+	const t = displayText.value;
 	return t ? mfm.parse(t) : [];
 });
 /** Skip URL preview work when message has no links (saves network + DOM) */
@@ -301,7 +335,13 @@ function onContextmenu(ev: MouseEvent) {
 	showMenu(ev, true);
 }
 
-function showMenu(ev: MouseEvent, contextmenu = false) {
+function onMenuClick(ev: MouseEvent) {
+	// Keep the event target (button) for popup anchor; do not preventDefault
+	// (that can break focus/anchor for MkPopupMenu on some mobile browsers).
+	showMenu(ev, false);
+}
+
+function buildMenu(): MenuItem[] {
 	const menu: MenuItem[] = [];
 
 	if ($i.policies.chatAvailability === 'available') {
@@ -332,7 +372,7 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 		text: i18n.ts.copyContent,
 		icon: 'ti ti-copy',
 		action: () => {
-			copyToClipboard(props.message.text ?? '');
+			copyToClipboard(displayText.value ?? '');
 		},
 	});
 
@@ -349,14 +389,14 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 
 	if ((canDeleteOwn || allowModDelete) && $i.policies.chatAvailability === 'available') {
 		menu.push({
-			text: allowModDelete ? tChat('modDeleteMessage', chatFb.modDeleteMessage) : i18n.ts.delete,
+			text: allowModDelete ? chatT('modDeleteMessage', chatFb.modDeleteMessage) : i18n.ts.delete,
 			icon: 'ti ti-trash',
 			danger: true,
 			action: async () => {
 				if (allowModDelete) {
 					const { canceled } = await os.confirm({
 						type: 'warning',
-						text: tChat('modDeleteMessageConfirm', chatFb.modDeleteMessageConfirm),
+						text: chatT('modDeleteMessageConfirm', chatFb.modDeleteMessageConfirm),
 					});
 					if (canceled) return;
 				}
@@ -394,10 +434,24 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 		});
 	}
 
+	// Drop trailing divider if last item is a divider
+	while (menu.length && (menu[menu.length - 1] as any).type === 'divider') {
+		menu.pop();
+	}
+	return menu;
+}
+
+function showMenu(ev: MouseEvent, contextmenu = false) {
+	const menu = buildMenu();
+	if (menu.length === 0) return;
+
 	if (contextmenu) {
-		os.contextMenu(menu, ev);
+		void os.contextMenu(menu, ev);
 	} else {
-		os.popupMenu(menu, ev.currentTarget ?? ev.target);
+		const src = menuBtn.value
+			?? getHTMLElementOrNull(ev.currentTarget)
+			?? getHTMLElementOrNull(ev.target);
+		void os.popupMenu(menu, src);
 	}
 }
 </script>
@@ -428,9 +482,6 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 	  Estimated intrinsic height (e.g. 72px) vs real media rows (~200px)
 	  makes the timeline jump while scrolling up OR down.
 	*/
-	/* Keep this message's chrome above previous sticky leftovers */
-	isolation: isolate;
-
 	&.isMe {
 		flex-direction: row-reverse;
 		text-align: right;
@@ -443,14 +494,9 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 			flex-direction: row-reverse;
 		}
 
-		.headerMeta {
-			flex-direction: row-reverse;
-		}
-
 		.headerActions {
 			margin-left: 0;
-			margin-right: 0;
-			order: -1;
+			margin-right: 0.15em;
 		}
 
 		.reactions {
@@ -471,8 +517,7 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 
 .avatar {
 	/*
-	  No sticky: sticky avatars sit under the header and cover the next
-	  message's ⋯ menu (others only — own avatar is hidden on narrow).
+	  No sticky: sticky avatars cover the next message's ⋯ (others only).
 	*/
 	position: relative;
 	z-index: 0;
@@ -508,67 +553,58 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 	min-width: 0;
 	flex: 1;
 	position: relative;
-	z-index: 1;
-}
-
-.header {
-	min-height: 28px; // touch-friendly row for ⋯
-	font-size: 80%;
-	display: flex;
-	align-items: center;
-	gap: 0.35em;
-	margin-bottom: 2px;
-	/* Don't wrap ⋯ under the name where sticky/media can cover it */
-	flex-wrap: nowrap;
-	position: relative;
 	z-index: 2;
 }
 
-.headerMeta {
+.header {
+	min-height: 4px; // also positions fukidashi
+	font-size: 80%;
 	display: flex;
 	align-items: center;
 	gap: 0.5em;
-	min-width: 0;
-	flex: 1;
-	overflow: hidden;
+	margin-bottom: 2px;
+	flex-wrap: wrap;
+	position: relative;
+	z-index: 3;
 }
 
 .headerActions {
 	display: inline-flex;
 	align-items: center;
-	justify-content: center;
+	gap: 0.15em;
+	margin-left: 0.15em;
+	opacity: 0.55;
 	flex-shrink: 0;
-	margin-left: auto;
-	opacity: 0.75;
 	position: relative;
-	z-index: 3;
+	z-index: 4;
 	pointer-events: auto;
 }
 
 .headerAction {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	/* Larger hit target so mobile taps register on others' messages */
-	min-width: 36px;
-	min-height: 36px;
-	padding: 0 6px;
-	line-height: 1;
-	font-size: 1.15em;
+	/* Compact control next to time (not a fat pill) */
+	padding: 2px 4px;
+	line-height: 1.2;
+	font-size: 1.05em;
 	color: inherit;
-	border-radius: 999px;
+	/* Expand hit box without changing visual size */
+	position: relative;
+
+	&::before {
+		content: '';
+		position: absolute;
+		inset: -8px -6px;
+	}
 
 	&:hover,
 	&:active {
 		opacity: 1;
 		color: var(--MI_THEME-accent);
-		background: color-mix(in srgb, var(--MI_THEME-accent) 12%, transparent);
 	}
 }
 
 .root:hover .headerActions,
 .root:focus-within .headerActions {
-	opacity: 1;
+	opacity: 0.9;
 }
 
 .bubbleInner {

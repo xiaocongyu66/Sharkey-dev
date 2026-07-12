@@ -13,6 +13,7 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { UserEntityService } from './UserEntityService.js';
 import { DriveFileEntityService } from './DriveFileEntityService.js';
+import { ChatCryptoService } from '@/core/ChatCryptoService.js';
 import { In } from 'typeorm';
 
 @Injectable()
@@ -33,7 +34,34 @@ export class ChatEntityService {
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
 		private idService: IdService,
+		private chatCryptoService: ChatCryptoService,
 	) {
+	}
+
+	/** Conversation key for escrow reveal (DM or room). Chat only — not notes. */
+	private conversationIdFor(message: MiChatMessage): string {
+		if (message.toRoomId) {
+			return this.chatCryptoService.roomConversationId(message.toRoomId);
+		}
+		if (message.toUserId) {
+			return this.chatCryptoService.dmConversationId(message.fromUserId, message.toUserId);
+		}
+		return `orphan:${message.id}`;
+	}
+
+	/** Reveal escrow ciphertext for authorized pack (participants get plaintext over TLS). */
+	private revealBody(message: MiChatMessage): {
+		text: string | null;
+		isE2ee: boolean;
+		ciphertext: string | null;
+		encryptedAtRest: boolean;
+	} {
+		return this.chatCryptoService.revealForPack({
+			conversationId: this.conversationIdFor(message),
+			isE2ee: message.isE2ee === true,
+			text: message.text ?? null,
+			ciphertext: message.ciphertext ?? null,
+		});
 	}
 
 	@bindThis
@@ -68,12 +96,15 @@ export class ChatEntityService {
 			? (message.reply ?? await this.chatMessagesRepository.findOneBy({ id: message.replyId }))
 			: null;
 
+		const body = this.revealBody(message);
+
 		return {
 			id: message.id,
 			createdAt: this.idService.parse(message.id).date.toISOString(),
-			text: message.isE2ee ? null : message.text,
-			isE2ee: message.isE2ee === true,
-			ciphertext: message.isE2ee ? (message.ciphertext ?? null) : null,
+			text: body.text,
+			isE2ee: body.isE2ee,
+			ciphertext: body.ciphertext,
+			encryptedAtRest: body.encryptedAtRest,
 			fromUserId: message.fromUserId,
 			fromUser: packedUsers?.get(message.fromUserId) ?? await this.userEntityService.pack(message.fromUser ?? message.fromUserId, me),
 			toUserId: message.toUserId,
@@ -103,10 +134,11 @@ export class ChatEntityService {
 				file = null;
 			}
 		}
+		const body = this.revealBody(reply);
 		return {
 			id: reply.id,
-			text: reply.isE2ee ? null : reply.text,
-			isE2ee: reply.isE2ee === true,
+			text: body.text,
+			isE2ee: body.isE2ee,
 			fromUserId: reply.fromUserId,
 			fromUser,
 			fromUsername: fromUser.username,
@@ -193,12 +225,15 @@ export class ChatEntityService {
 			? (message.reply ?? await this.chatMessagesRepository.findOneBy({ id: message.replyId }))
 			: null;
 
+		const body = this.revealBody(message);
+
 		return {
 			id: message.id,
 			createdAt: this.idService.parse(message.id).date.toISOString(),
-			text: message.isE2ee ? null : message.text,
-			isE2ee: message.isE2ee === true,
-			ciphertext: message.isE2ee ? (message.ciphertext ?? null) : null,
+			text: body.text,
+			isE2ee: body.isE2ee,
+			ciphertext: body.ciphertext,
+			encryptedAtRest: body.encryptedAtRest,
 			fromUserId: message.fromUserId,
 			toUserId: message.toUserId!,
 			fileId: message.fileId,
@@ -252,12 +287,15 @@ export class ChatEntityService {
 			? (message.reply ?? await this.chatMessagesRepository.findOneBy({ id: message.replyId }))
 			: null;
 
+		const body = this.revealBody(message);
+
 		return {
 			id: message.id,
 			createdAt: this.idService.parse(message.id).date.toISOString(),
-			text: message.isE2ee ? null : message.text,
-			isE2ee: message.isE2ee === true,
-			ciphertext: message.isE2ee ? (message.ciphertext ?? null) : null,
+			text: body.text,
+			isE2ee: body.isE2ee,
+			ciphertext: body.ciphertext,
+			encryptedAtRest: body.encryptedAtRest,
 			fromUserId: message.fromUserId,
 			fromUser: packedUsers?.get(message.fromUserId) ?? await this.userEntityService.pack(message.fromUser ?? message.fromUserId),
 			toRoomId: message.toRoomId!,

@@ -15,7 +15,13 @@ export const meta = {
 
 	requireCredential: true,
 
+	// Chat search is not public notes — token + read:chat required
 	kind: 'read:chat',
+
+	limit: {
+		duration: 1000 * 60,
+		max: 30,
+	},
 
 	res: {
 		type: 'array',

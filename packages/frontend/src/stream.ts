@@ -43,6 +43,40 @@ export function getStreamOrigin(): string {
 }
 
 /**
+ * Wait until the shared Misskey stream WebSocket is connected.
+ * Used by chat room/DM open path so history loads over WS instead of hanging on REST.
+ */
+export function waitForStreamConnected(
+	s?: Misskey.IStream | null,
+	timeoutMs = 6000,
+): Promise<boolean> {
+	const stream = s ?? useStream();
+	if (stream.state === 'connected') return Promise.resolve(true);
+
+	return new Promise((resolve) => {
+		let settled = false;
+		const finish = (ok: boolean) => {
+			if (settled) return;
+			settled = true;
+			window.clearTimeout(timer);
+			try {
+				stream.off('_connected_', onConnected);
+			} catch { /* ignore */ }
+			resolve(ok);
+		};
+		const onConnected = () => finish(true);
+		const timer = window.setTimeout(() => {
+			finish(stream.state === 'connected');
+		}, timeoutMs);
+		stream.on('_connected_', onConnected);
+		// Nudge half-open / not-yet-open sockets
+		try {
+			wakeStream({ force: stream.state !== 'initializing' });
+		} catch { /* ignore */ }
+	});
+}
+
+/**
  * Call when the tab becomes visible / network returns.
  * Forces socket reconnect if needed and pings so channels re-subscribe.
  */

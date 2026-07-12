@@ -76,7 +76,7 @@ export function createChatWsFromConnection(
 			errEvent: string,
 			apiEndpoint?: string,
 			apiBody?: Record<string, unknown>,
-			timeoutMs = 15000,
+			timeoutMs = 8000,
 		): Promise<T> => {
 			const conn = getConnection();
 			if (!conn) {
@@ -88,7 +88,9 @@ export function createChatWsFromConnection(
 
 			const reqId = nextReqId();
 			return await new Promise<T>((resolve, reject) => {
+				let settled = false;
 				const timer = window.setTimeout(() => {
+					if (settled) return;
 					cleanup();
 					if (apiEndpoint) {
 						misskeyApi(apiEndpoint as any, (apiBody ?? {}) as any)
@@ -101,21 +103,27 @@ export function createChatWsFromConnection(
 
 				const onOk = (body: any) => {
 					if (body?.reqId != null && body.reqId !== reqId) return;
+					if (settled) return;
 					cleanup();
 					resolve(body as T);
 				};
 				const onErr = (body: any) => {
 					if (body?.reqId != null && body.reqId !== reqId) return;
+					if (settled) return;
 					cleanup();
-					if (apiEndpoint) {
+					// Channel-level errors should surface (ACCESS_DENIED etc.), not silently REST-retry
+					// unless it looks like a transport failure.
+					const code = body?.code;
+					if (apiEndpoint && (code === 'HISTORY_FAILED' || code === 'ROOM_FAILED' || code === 'USER_FAILED' || !code)) {
 						misskeyApi(apiEndpoint as any, (apiBody ?? {}) as any)
 							.then(r => resolve(r as T))
 							.catch(reject);
 					} else {
-						reject(new Error(body?.message || body?.code || 'WS request failed'));
+						reject(Object.assign(new Error(body?.message || code || 'WS request failed'), body ?? {}));
 					}
 				};
 				const cleanup = () => {
+					settled = true;
 					window.clearTimeout(timer);
 					try {
 						conn.off?.(okEvent as any, onOk);
@@ -123,20 +131,26 @@ export function createChatWsFromConnection(
 					} catch { /* ignore */ }
 				};
 
-				try {
-					conn.on?.(okEvent as any, onOk);
-					conn.on?.(errEvent as any, onErr);
-					conn.send(wsType as any, { ...wsBody, reqId } as any);
-				} catch (e) {
-					cleanup();
-					if (apiEndpoint) {
-						misskeyApi(apiEndpoint as any, (apiBody ?? {}) as any)
-							.then(r => resolve(r as T))
-							.catch(reject);
-					} else {
-						reject(e);
+				const sendOnce = () => {
+					try {
+						conn.on?.(okEvent as any, onOk);
+						conn.on?.(errEvent as any, onErr);
+						conn.send(wsType as any, { ...wsBody, reqId } as any);
+					} catch (e) {
+						cleanup();
+						if (apiEndpoint) {
+							misskeyApi(apiEndpoint as any, (apiBody ?? {}) as any)
+								.then(r => resolve(r as T))
+								.catch(reject);
+						} else {
+							reject(e);
+						}
 					}
-				}
+				};
+
+				// Channel connect is async on the server — brief delay reduces lost first frames
+				// after useChannel() on a freshly opened socket.
+				window.setTimeout(sendOnce, 30);
 			});
 		},
 	};

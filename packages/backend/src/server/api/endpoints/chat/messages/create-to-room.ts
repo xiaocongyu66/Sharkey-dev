@@ -93,6 +93,8 @@ export const paramDef = {
 		fileId: { type: 'string', format: 'misskey:id' },
 		toRoomId: { type: 'string', format: 'misskey:id' },
 		replyId: { type: 'string', format: 'misskey:id', nullable: true },
+		isE2ee: { type: 'boolean', default: false },
+		ciphertext: { type: 'string', nullable: true, maxLength: 100000 },
 	},
 	required: ['toRoomId'],
 } as const;
@@ -112,7 +114,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		super(meta, paramDef, async (ps, me) => {
 			await this.chatService.checkChatAvailability(me.id, 'write');
 
-			if (ps.text && ps.text.length > this.config.maxNoteLength) {
+			const isE2ee = ps.isE2ee === true;
+
+			if (!isE2ee && ps.text && ps.text.length > this.config.maxNoteLength) {
 				throw new ApiError(meta.errors.maxLength);
 			}
 
@@ -133,16 +137,21 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			// テキストが無いかつ添付ファイルも無かったらエラー
-			if (ps.text == null && file == null) {
+			// テキストが無いかつ添付ファイルも無かったらエラー（加密时可用 ciphertext）
+			if (!isE2ee && ps.text == null && file == null) {
+				throw new ApiError(meta.errors.contentRequired);
+			}
+			if (isE2ee && (ps.ciphertext == null || ps.ciphertext === '') && file == null) {
 				throw new ApiError(meta.errors.contentRequired);
 			}
 
 			try {
 				return await this.chatService.createMessageToRoom(me, room, {
-					text: ps.text,
+					text: isE2ee ? null : ps.text,
 					file: file,
 					replyId: ps.replyId,
+					isE2ee,
+					ciphertext: isE2ee ? ps.ciphertext : null,
 				});
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : '';

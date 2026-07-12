@@ -13,6 +13,7 @@ import { IdService } from '@/core/IdService.js';
 import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
 import { ChatEntityService } from '@/core/entities/ChatEntityService.js';
+import { ChatCryptoService } from '@/core/ChatCryptoService.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
 import { PushNotificationService } from '@/core/PushNotificationService.js';
 import { bindThis } from '@/decorators.js';
@@ -94,6 +95,7 @@ export class ChatService {
 
 		private userEntityService: UserEntityService,
 		private chatEntityService: ChatEntityService,
+		private chatCryptoService: ChatCryptoService,
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
 		private apRendererService: ApRendererService,
@@ -356,12 +358,18 @@ export class ChatService {
 			}
 		}
 
-		const isE2ee = params.isE2ee === true;
-		if (isE2ee) {
-			if (!params.ciphertext || params.ciphertext.trim().length === 0) {
-				throw new Error('ciphertext required for e2ee');
-			}
-		} else if (!params.text && !params.file) {
+		// Chat-only escrow (v3s) or client-supplied ciphertext — never notes/posts
+		const convId = this.chatCryptoService.dmConversationId(fromUser.id, toUser.id);
+		const sealed = this.chatCryptoService.prepareOutboundText({
+			conversationId: convId,
+			text: params.text,
+			isE2ee: params.isE2ee === true,
+			ciphertext: params.ciphertext,
+		});
+		if (sealed.isE2ee && !sealed.ciphertext && !params.file) {
+			throw new Error('ciphertext required for e2ee');
+		}
+		if (!sealed.text && !sealed.ciphertext && !params.file) {
 			// same as API: need content — leave validation to caller if only file
 		}
 
@@ -369,10 +377,10 @@ export class ChatService {
 			id: this.idService.gen(),
 			fromUserId: fromUser.id,
 			toUserId: toUser.id,
-			// Never store plaintext for E2EE; ciphertext is opaque to the server
-			text: isE2ee ? null : (params.text ? params.text.trim() : null),
-			isE2ee,
-			ciphertext: isE2ee ? params.ciphertext!.trim() : null,
+			// Escrow: plaintext not stored; operator + participants can reveal via ChatCryptoService
+			text: sealed.text,
+			isE2ee: sealed.isE2ee,
+			ciphertext: sealed.ciphertext,
 			fileId: params.file ? params.file.id : null,
 			reads: [],
 			uri: params.uri ?? null,
@@ -431,6 +439,8 @@ export class ChatService {
 		file?: MiDriveFile | null;
 		uri?: string | null;
 		replyId?: string | null;
+		isE2ee?: boolean;
+		ciphertext?: string | null;
 	}): Promise<Packed<'ChatMessageLiteForRoom'>> {
 		const memberships = (await this.chatRoomMembershipsRepository.findBy({ roomId: toRoom.id })).map(m => ({
 			userId: m.userId,
@@ -475,11 +485,28 @@ export class ChatService {
 
 		const membershipsOtherThanMe = memberships.filter(member => member.userId !== fromUser.id);
 
+		// Room chat escrow (same three-party model as DM; notes/posts unaffected)
+		const roomConvId = this.chatCryptoService.roomConversationId(toRoom.id);
+		const sealed = this.chatCryptoService.prepareOutboundText({
+			conversationId: roomConvId,
+			text: params.text,
+			isE2ee: params.isE2ee === true,
+			ciphertext: params.ciphertext,
+		});
+		if (sealed.isE2ee && !sealed.ciphertext && !params.file) {
+			throw new Error('ciphertext required for e2ee');
+		}
+		if (!sealed.text && !sealed.ciphertext && !params.file) {
+			throw new Error('content required');
+		}
+
 		const message = {
 			id: this.idService.gen(),
 			fromUserId: fromUser.id,
 			toRoomId: toRoom.id,
-			text: params.text ? params.text.trim() : null,
+			text: sealed.text,
+			isE2ee: sealed.isE2ee,
+			ciphertext: sealed.ciphertext,
 			fileId: params.file ? params.file.id : null,
 			reads: [],
 			uri: params.uri ?? null,

@@ -4,11 +4,13 @@
  */
 
 /**
- * Chat E2EE (1:1) using Web Crypto:
+ * Legacy client-side E2EE (1:1, wire prefix v1.) using Web Crypto:
  * - ECDH P-256 long-term keypair (private key stays in IndexedDB / localStorage)
  * - AES-GCM message encryption with derived shared secret
- * - keyId fingerprint for rotation detection
- * Server only stores ciphertext + public keys.
+ *
+ * Preferred model is server-side chat escrow (v3s, AES-GCM) in ChatCryptoService:
+ * participants + operator with chatEscrowSecret can read; notes/posts are never encrypted.
+ * This module remains only for decrypting older v1. client-E2EE messages.
  */
 
 import { misskeyApi } from '@/utility/misskey-api.js';

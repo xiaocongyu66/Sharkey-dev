@@ -17,6 +17,11 @@ export const meta = {
 
 	kind: 'read:chat',
 
+	limit: {
+		duration: 1000 * 60,
+		max: 60,
+	},
+
 	res: {
 		type: 'array',
 		optional: false, nullable: false,
