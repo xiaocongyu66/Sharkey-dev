@@ -93,6 +93,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **054** | Meili filter/sort: escape + order enum + host pattern |
 | **057** | WS `serverStats` gated by `enableServerMachineStats` |
 | **058** | WS `queueStats` requires login + moderator |
+| **059** | WS auth via `Sec-WebSocket-Protocol` (no `?i=` in modern client) |
 
 #### Still open / residual (not “all clear”)
 
@@ -116,7 +117,6 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **055** | ZIP extract zip-slip residual via `slacc` (L–M; library claims path-safe — residual) |
 | **056** | `app/create` free permission strings (L, accepted design) |
 
-| **059** | Token in query/WS `?i=` (L–M log/Referer leak) |
 | **060** | Public API catalog (`/api.json`, endpoints) — accepted open recon |
 
 #### Ops-only (not closed by code alone)
@@ -1265,15 +1265,18 @@ WS (`StreamingApiServerService`): same Bearer **or** `q.get('i')`.
 |--|--|
 | **Severity** | **L–M** (token theft via logs / Referer / shared URLs) |
 | **CWE** | CWE-598 |
-| **Status** | **Open** (Misskey legacy; frontend prefers Bearer for POST) |
-| **Components** | `ApiCallService` GET + `body.i`; `StreamingApiServerService` `searchParams.i` |
+| **Status** | **Partially fixed in tree** — modern WS client uses `Sec-WebSocket-Protocol: misskey.i.<token>`; server accepts protocol before legacy `?i=` |
+| **Components** | `misskey-js/streaming.ts`; `StreamingApiServerService`; residual: GET `allowGet` + `body.i` / legacy `?i=` still accepted |
 
 **Attack / reverse technique**  
-1. Intercept or log `wss://host/streaming?i=NATIVE_TOKEN`  
+1. Intercept or log `wss://host/streaming?i=NATIVE_TOKEN` (legacy clients)  
 2. Replay as `Authorization: Bearer` or POST `{ "i": "..." }`  
 
-**Remediation**  
-Deprecate query `i` (or only allow short-lived tickets); document “never put token in URL”; strip `i` from access logs; prefer Sec-WebSocket-Protocol or first-message auth for browsers.
+**Fix summary**  
+Browser client no longer puts token in WS URL; uses subprotocol. Server prefers Bearer → protocol → query `i`.  
+
+**Residual**  
+Legacy `?i=` still works for old clients; GET endpoints may still take `i` in query when `allowGet`.
 
 ---
 
@@ -1306,7 +1309,7 @@ Risk appears only if a future endpoint does `repository.update(ps)` / `Object.as
 | Forge actor | `userId` of another user on write | Not taken from client for “who am I”; uses authenticated `me` |
 | App permission | App claims `write:admin:*` | Token still needs user accept; rank demotion for shared access |
 | Channel / room id | Subscribe foreign streams | Chat room gated (001); timelines public by design |
-| WS channel name | `admin`, `queueStats`, `serverStats` | admin needs credential+kind; **queueStats/serverStats still open (057/058)** |
+| WS channel name | `admin`, `queueStats`, `serverStats` | admin needs credential+kind; queueStats moderator-only (058); serverStats meta-gated (057) |
 
 ---
 
@@ -1334,7 +1337,7 @@ There is **no** client-side “hidden admin API key” in frontend env for core 
      - id fields (IDOR)
      - free strings (inject)  → Meili only if enabled
      - extra JSON keys (mass assign smoke)
-5. Open unauth WS: serverStats / queueStats  →  host load recon (057/058)
+5. Open WS serverStats (if machine stats enabled) / queueStats (needs mod) 
 6. Drive/import paths with stolen fileIds  →  should fail after 051
 ```
 
@@ -1369,13 +1372,12 @@ Internet
 ```
 
 **Highest residual ROI after remediation (for attackers / next hardening)**  
-1. **SK-057 / SK-058** — unauthenticated WS `serverStats` / `queueStats`  
-2. **SK-059** — token in `?i=` / WS query (steal via logs)  
-3. Session/token theft (SK-017/020); catalog recon **SK-060** (expected open)  
-4. Authenticated SSRF-ish surfaces (`/proxy`, webhooks)  
-5. Escrow key compromise (SK-010) — design  
-6. Import zip-slip residual (SK-055)  
-7. Mis-deploy: `NODE_ENV=test`, gateway without API key
+1. Session/token theft (SK-017/020); catalog recon **SK-060** (expected open)  
+2. **SK-059 residual** — legacy `?i=` / GET query still accepted  
+3. Authenticated SSRF-ish surfaces (`/proxy`, webhooks)  
+4. Escrow key compromise (SK-010) — design  
+5. Import zip-slip residual (SK-055)  
+6. Mis-deploy: `NODE_ENV=test`, gateway without API key
 
 ---
 
@@ -1430,6 +1432,8 @@ Internet
 | 26 | **SK-054** Meili filter/sort injection | **DONE** |
 | 27 | **SK-057** WS serverStats meta gate | **DONE** |
 | 28 | **SK-058** WS queueStats moderator-only | **DONE** |
+| 29 | **SK-059** WS token via Sec-WebSocket-Protocol (not URL) | **PARTIAL** (modern client; legacy `?i=` kept) |
+| 30 | **SK-060** public API catalog | **Accepted design** (optional lock-down) |
 
 ### P3 — hygiene
 
@@ -1514,6 +1518,7 @@ Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings 
 | 1.0 | 2026-07-14 | **Pass 3 remediations + chat scroll:** SK-051/052/053 fixed; fling scroll anti-twitch; AMD matrix updated |
 | 1.1 | 2026-07-14 | **Pass 4 remediations:** SK-054 Meili escape/order/host; 055 residual (slacc); 056 accepted design |
 | 1.2 | 2026-07-14 | **Pass 5 remediations:** SK-057 serverStats meta gate; SK-058 queueStats moderator-only |
+| 1.3 | 2026-07-14 | **Pass 6:** reverse API playbook; SK-059 WS protocol auth (partial); SK-060 catalog accepted |
 
 ---
 

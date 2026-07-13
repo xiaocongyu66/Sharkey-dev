@@ -106,6 +106,15 @@ export class StreamingApiServerService implements BeforeApplicationShutdown {
 			backlog: ConnectionBacklogLimit,
 			// @ts-expect-error type definitions have not been updated for version 8.19.0.
 			closeTimeout: CloseTimeout,
+			// SK-2026-059: accept misskey / misskey.i.* subprotocols (token not in URL).
+			// Returning false = no subprotocol selected (anonymous / clients without Sec-WebSocket-Protocol).
+			handleProtocols: (protocols) => {
+				if (protocols.has('misskey')) return 'misskey';
+				for (const p of protocols) {
+					if (typeof p === 'string' && p.startsWith('misskey.i.')) return 'misskey';
+				}
+				return false;
+			},
 		});
 
 		// ws library will kill the process if we don't catch unhandled exceptions.
@@ -172,12 +181,32 @@ export class StreamingApiServerService implements BeforeApplicationShutdown {
 			? new URL(request.url, `https://${request.headers.host}`).searchParams
 			: new URLSearchParams();
 
+		// SK-2026-059: prefer non-URL credentials (Bearer or Sec-WebSocket-Protocol)
+		// before legacy query `?i=` (logs / Referer / history leak).
+		// Protocol form: misskey.i.<token> (browser-safe; no custom headers).
+		let tokenFromProtocol: string | null = null;
+		const protoHeader = request.headers['sec-websocket-protocol'];
+		if (typeof protoHeader === 'string') {
+			for (const part of protoHeader.split(',')) {
+				const p = part.trim();
+				if (p.startsWith('misskey.i.') && p.length > 'misskey.i.'.length) {
+					// decodeURIComponent for tokens that needed encoding
+					try {
+						tokenFromProtocol = decodeURIComponent(p.slice('misskey.i.'.length));
+					} catch {
+						tokenFromProtocol = p.slice('misskey.i.'.length);
+					}
+					break;
+				}
+			}
+		}
+
 		// https://datatracker.ietf.org/doc/html/rfc6750.html#section-2.1
 		// Note that the standard WHATWG WebSocket API does not support setting any headers,
 		// but non-browser apps may still be able to set it.
 		const authToken = request.headers.authorization?.startsWith('Bearer ')
 			? request.headers.authorization.slice(7)
-			: q.get('i');
+			: (tokenFromProtocol ?? q.get('i'));
 
 		try {
 			const [user, token] = await this.authenticateService.authenticate(authToken);

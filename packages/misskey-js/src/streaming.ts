@@ -81,16 +81,24 @@ export default class Stream extends EventEmitter<StreamEvents> implements IStrea
 		// eslint-disable-next-line no-param-reassign
 		options = options ?? { };
 
+		// SK-2026-059: do not put session token in the WS URL (proxy logs / Referer).
+		// Auth via Sec-WebSocket-Protocol: misskey + misskey.i.<token>
+		// (legacy servers still accept ?i=; we omit it from modern clients)
 		const query = urlQuery({
-			i: user?.token,
-
 			// To prevent cache of an HTML such as error screen
 			_t: Date.now(),
 		});
 
 		const wsOrigin = origin.replace('http://', 'ws://').replace('https://', 'wss://');
 
-		this.stream = new ReconnectingWebSocketConstructor(`${wsOrigin}/streaming?${query}`, '', {
+		const protocols: string[] = [];
+		if (user?.token) {
+			protocols.push('misskey');
+			// encodeURIComponent so odd token chars stay one protocol token
+			protocols.push(`misskey.i.${encodeURIComponent(user.token)}`);
+		}
+
+		this.stream = new ReconnectingWebSocketConstructor(`${wsOrigin}/streaming?${query}`, protocols, {
 			// Aggressive reconnect for mobile background / flaky networks
 			minReconnectionDelay: 200,
 			maxReconnectionDelay: 8000,
