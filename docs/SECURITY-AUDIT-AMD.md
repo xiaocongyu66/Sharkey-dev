@@ -117,7 +117,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **055** | ZIP extract zip-slip residual via `slacc` (L–M; library claims path-safe — residual) |
 | **056** | `app/create` free permission strings (L, accepted design) |
 
-| **060** | ~~Public API catalog~~ **Mitigated** — `/api.json` + catalog endpoints require login |
+| **060** | Public API catalog (`/api.json`, endpoints) — **accepted / intentional** (open to all) |
 
 #### Ops-only (not closed by code alone)
 
@@ -1349,10 +1349,10 @@ There is **no** client-side “hidden admin API key” in frontend env for core 
 |--|--|
 | **Severity** | **I** (information disclosure / recon; intentional for public APIs) |
 | **CWE** | CWE-200 |
-| **Status** | **Accepted for open instances**; optional lock-down for private |
-| **Components** | `/api.json`, `endpoints`, `endpoint`, openapi source links |
+| **Status** | **Accepted design** — product requires open `/api-doc` + `/api.json` for everyone |
+| **Components** | `/api.json`, `endpoints`, `endpoint`, `/api-doc` |
 
-Not a direct exploit; accelerates every other attack. Private/corp instances may want to disable or auth-wall.
+Not a direct exploit; accelerates recon. This instance keeps the catalog public by product choice (third-party clients, operator docs).
 
 ---
 

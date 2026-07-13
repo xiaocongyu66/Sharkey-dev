@@ -8,8 +8,8 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import endpoints from '../endpoints.js';
 
 export const meta = {
-	// SK-2026-060: catalog was public recon — require login
-	requireCredential: true,
+	// Public API catalog — no login (open to all clients / third parties)
+	requireCredential: false,
 
 	tags: ['meta'],
 
