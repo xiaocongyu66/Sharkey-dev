@@ -853,3 +853,19 @@ _search:
 
 enableNoteRenderSkipping: "노트 렌더 건너뛰기 사용"
 enableStackingRouterView: "스택 라우터 뷰 사용"
+
+_customEmojisManager:
+  _fields:
+    name: "Name"
+    category: "Category"
+    aliases: "Aliases"
+    type: "Type"
+    license: "License"
+    sensitive: "Sensitive"
+    localOnly: "Local only"
+    updatedAtFrom: "Updated at (from)"
+    updatedAtTo: "Updated at (to)"
+    role: "Role"
+    host: "Host"
+    uri: "URI"
+    publicUrl: "Public URL"

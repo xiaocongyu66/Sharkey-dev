@@ -35,6 +35,7 @@ import MkSwitch from '@/components/MkSwitch.vue';
 import { copyGridDataToClipboard } from '@/components/grid/grid-utils.js';
 
 import type { RequestLogItem } from '@/pages/admin/custom-emojis-manager.impl.js';
+import { emojiFieldLabel } from '@/pages/admin/custom-emojis-manager.impl.js';
 import type { GridSetting } from '@/components/grid/grid.js';
 
 function setupGrid(): GridSetting {
@@ -54,10 +55,10 @@ function setupGrid(): GridSetting {
 			},
 		},
 		cols: [
-			{ bindTo: 'failed', title: 'failed', type: 'boolean', editable: false, width: 50 },
+			{ bindTo: 'failed', title: i18n.ts.error, type: 'boolean', editable: false, width: 50 },
 			{ bindTo: 'url', icon: 'ti-icons', type: 'image', editable: false, width: 'auto' },
-			{ bindTo: 'name', title: 'name', type: 'text', editable: false, width: 140 },
-			{ bindTo: 'error', title: 'log', type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'name', title: emojiFieldLabel('name'), type: 'text', editable: false, width: 140 },
+			{ bindTo: 'error', title: i18n.ts.details, type: 'text', editable: false, width: 'auto' },
 		],
 		cells: {
 			contextMenuFactory: (col, row, value, context) => {

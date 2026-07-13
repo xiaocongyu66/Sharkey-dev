@@ -131,6 +131,7 @@ import MkSortOrderEditor from '@/components/MkSortOrderEditor.vue';
 
 import {
 	gridSortOrderKeys,
+	emojiFieldLabel,
 } from './custom-emojis-manager.impl.js';
 
 import { i18n } from '@/i18n.js';
@@ -153,16 +154,6 @@ const emit = defineEmits<{
 
 const model = ref<EmojiSearchQuery>(props.query);
 const queryRolesText = computed(() => model.value.roles.map(it => it.name).join(','));
-
-/** Prefer _customEmojisManager._fields.*, then top-level i18n keys, then English fallback */
-function emojiFieldLabel(fieldKey: string, fallback: string): string {
-	const fields = (i18n.ts as any)._customEmojisManager?._fields;
-	const fromFields = fields?.[fieldKey];
-	if (typeof fromFields === 'string' && fromFields.length > 0) return fromFields;
-	const top = (i18n.ts as any)[fieldKey];
-	if (typeof top === 'string' && top.length > 0 && top !== fieldKey) return top;
-	return fallback;
-}
 
 watch(model, () => {
 	emit('queryUpdated', model.value);

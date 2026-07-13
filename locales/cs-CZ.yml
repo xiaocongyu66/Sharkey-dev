@@ -2048,3 +2048,19 @@ _search:
   searchScopeAll: "Vše"
   searchScopeLocal: "Místní"
   searchScopeUser: "Upřesnit uživatele"
+
+_customEmojisManager:
+  _fields:
+    name: "Name"
+    category: "Category"
+    aliases: "Aliases"
+    type: "Type"
+    license: "License"
+    sensitive: "Sensitive"
+    localOnly: "Local only"
+    updatedAtFrom: "Updated at (from)"
+    updatedAtTo: "Updated at (to)"
+    role: "Role"
+    host: "Host"
+    uri: "URI"
+    publicUrl: "Public URL"

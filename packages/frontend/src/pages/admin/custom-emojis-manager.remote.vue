@@ -153,7 +153,7 @@ import { i18n } from '@/i18n.js';
 import MkButton from '@/components/MkButton.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkGrid from '@/components/grid/MkGrid.vue';
-import { emptyStrToUndefined, gridSortOrderKeys } from '@/pages/admin/custom-emojis-manager.impl.js';
+import { emptyStrToUndefined, gridSortOrderKeys, emojiFieldLabel } from '@/pages/admin/custom-emojis-manager.impl.js';
 import MkFolder from '@/components/MkFolder.vue';
 import XRegisterLogs from '@/pages/admin/custom-emojis-manager.logs.vue';
 import * as os from '@/os.js';
@@ -173,15 +173,6 @@ type GridItem = {
 
 function setupGrid(): GridSetting {
 	const $style = useCssModule();
-
-function emojiFieldLabel(fieldKey: string, fallback: string): string {
-	const fields = (i18n.ts as any)._customEmojisManager?._fields;
-	const fromFields = fields?.[fieldKey];
-	if (typeof fromFields === 'string' && fromFields.length > 0) return fromFields;
-	const top = (i18n.ts as any)[fieldKey];
-	if (typeof top === 'string' && top.length > 0 && top !== fieldKey) return top;
-	return fallback;
-}
 
 	return {
 		row: {
@@ -211,11 +202,11 @@ function emojiFieldLabel(fieldKey: string, fallback: string): string {
 		cols: [
 			{ bindTo: 'checked', icon: 'ti-download', type: 'boolean', editable: true, width: 34 },
 			{ bindTo: 'url', icon: 'ti-icons', type: 'image', editable: false, width: 'auto' },
-			{ bindTo: 'name', title: 'name', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'host', title: 'host', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'license', title: 'license', type: 'text', editable: false, width: 200 },
-			{ bindTo: 'uri', title: 'uri', type: 'text', editable: false, width: 'auto' },
-			{ bindTo: 'publicUrl', title: 'publicUrl', type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'name', title: emojiFieldLabel('name'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'host', title: emojiFieldLabel('host'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'license', title: emojiFieldLabel('license'), type: 'text', editable: false, width: 200 },
+			{ bindTo: 'uri', title: emojiFieldLabel('uri'), type: 'text', editable: false, width: 'auto' },
+			{ bindTo: 'publicUrl', title: emojiFieldLabel('publicUrl'), type: 'text', editable: false, width: 'auto' },
 		],
 		cells: {
 			contextMenuFactory: (col, row, value, context) => {

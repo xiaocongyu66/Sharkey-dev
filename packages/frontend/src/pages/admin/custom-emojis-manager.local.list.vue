@@ -80,6 +80,7 @@ import {
 	emptyStrToNull,
 	emptyStrToUndefined,
 	roleIdsParser,
+	emojiFieldLabel,
 } from '@/pages/admin/custom-emojis-manager.impl.js';
 import MkGrid from '@/components/grid/MkGrid.vue';
 import { i18n } from '@/i18n.js';
@@ -184,16 +185,16 @@ function setupGrid(): GridSetting {
 				},
 			},
 			{
-				bindTo: 'name', title: 'name', type: 'text', editable: true, width: 140,
+				bindTo: 'name', title: emojiFieldLabel('name'), type: 'text', editable: true, width: 140,
 				validators: [required, regex, unique],
 			},
-			{ bindTo: 'category', title: 'category', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'aliases', title: 'aliases', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'license', title: 'license', type: 'text', editable: true, width: 140 },
-			{ bindTo: 'isSensitive', title: 'sensitive', type: 'boolean', editable: true, width: 90 },
-			{ bindTo: 'localOnly', title: 'localOnly', type: 'boolean', editable: true, width: 90 },
+			{ bindTo: 'category', title: emojiFieldLabel('category'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'aliases', title: emojiFieldLabel('aliases'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'license', title: emojiFieldLabel('license'), type: 'text', editable: true, width: 140 },
+			{ bindTo: 'isSensitive', title: emojiFieldLabel('sensitive'), type: 'boolean', editable: true, width: 90 },
+			{ bindTo: 'localOnly', title: emojiFieldLabel('localOnly'), type: 'boolean', editable: true, width: 90 },
 			{
-				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: 'role', type: 'text', editable: true, width: 140,
+				bindTo: 'roleIdsThatCanBeUsedThisEmojiAsReaction', title: emojiFieldLabel('role'), type: 'text', editable: true, width: 140,
 				valueTransformer(row) {
 					// バックエンドからからはIDと名前のペア配列で受け取るが、表示にIDがあると煩雑なので名前だけにする
 					return gridItems.value[row.index].roleIdsThatCanBeUsedThisEmojiAsReaction
