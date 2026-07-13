@@ -23,6 +23,7 @@ type PageMode = 'local' | 'remote';
 
 const headerTab = ref<PageMode>('local');
 
+// Text-only tabs (no icons): titles always visible; avoid icon+label expand animation path
 const headerTabs = computed(() => [{
 	key: 'local',
 	title: i18n.ts.local,

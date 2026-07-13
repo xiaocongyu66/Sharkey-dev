@@ -326,6 +326,7 @@ const headerActions = computed(() => [{
 	handler: menu,
 }]);
 
+// Text-only local/remote tabs — titles always shown (see MkPageHeader.tabs)
 const headerTabs = computed(() => [{
 	key: 'local',
 	title: i18n.ts.local,

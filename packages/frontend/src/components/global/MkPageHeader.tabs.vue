@@ -15,8 +15,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<i v-if="t.icon" :class="[$style.tabIcon, t.icon]"></i>
 				<!-- iconOnly: never expand with text (tooltips carry the label) — keeps mobile tab row short -->
 				<template v-if="!t.iconOnly">
+					<!--
+					  Text-only tabs (e.g. admin emoji 本地/远程): always show every title.
+					  Width-collapse animation is only for icon+label tabs; applying it to
+					  text-only tabs hid inactive labels and looked like the text was offset.
+					-->
 					<div
-						v-if="!prefer.s.animation || t.key === tab"
+						v-if="!t.icon || !prefer.s.animation || t.key === tab"
 						:class="$style.tabTitle"
 					>
 						{{ t.title }}
@@ -258,6 +263,10 @@ onUnmounted(() => {
 	overflow: hidden;
 	position: relative;
 	z-index: 1;
+	/* Keep label centered in the tab hit area (avoids baseline/vertical drift) */
+	line-height: 1.2;
+	display: inline-flex;
+	align-items: center;
 
 	&.animate {
 		transition: width .15s linear, padding-left .15s linear;
