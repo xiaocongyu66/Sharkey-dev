@@ -4,37 +4,214 @@
 		<title>Sharkey API</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<meta name="description" content="OpenAPI reference for this Sharkey instance">
+		<meta name="description" content="OpenAPI reference for this Sharkey instance (login required)">
 		<meta name="robots" content="noindex">
 		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #0f1115;
+				--fg: #e8eaed;
+				--muted: #9aa0a6;
+				--accent: #8b5cf6;
+				--card: #1a1d24;
+				--border: #2a2f3a;
+			}
+			@media (prefers-color-scheme: light) {
+				:root {
+					--bg: #f6f7f9;
+					--fg: #1a1d24;
+					--muted: #5f6368;
+					--card: #fff;
+					--border: #dadce0;
+				}
+			}
+			* { box-sizing: border-box; }
 			body {
 				margin: 0;
 				padding: 0;
+				font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+				background: var(--bg);
+				color: var(--fg);
 			}
+			#gate {
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 24px;
+			}
+			.card {
+				width: 100%;
+				max-width: 420px;
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				padding: 28px 24px;
+				box-shadow: 0 8px 32px rgba(0,0,0,.12);
+			}
+			h1 { font-size: 1.35rem; margin: 0 0 8px; }
+			p { margin: 0 0 16px; color: var(--muted); line-height: 1.5; font-size: 0.95rem; }
+			label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: var(--muted); }
+			input[type="password"], input[type="text"] {
+				width: 100%;
+				padding: 10px 12px;
+				border-radius: 10px;
+				border: 1px solid var(--border);
+				background: var(--bg);
+				color: var(--fg);
+				font-size: 0.95rem;
+				margin-bottom: 12px;
+			}
+			button {
+				width: 100%;
+				padding: 11px 14px;
+				border: 0;
+				border-radius: 10px;
+				background: var(--accent);
+				color: #fff;
+				font-weight: 600;
+				font-size: 0.95rem;
+				cursor: pointer;
+			}
+			button:disabled { opacity: 0.6; cursor: not-allowed; }
+			.err {
+				color: #f87171;
+				font-size: 0.9rem;
+				margin: 0 0 12px;
+				display: none;
+			}
+			.err.show { display: block; }
+			.hint { font-size: 0.8rem; margin-top: 14px; }
+			#docs { min-height: 100vh; }
+			#loading {
+				min-height: 100vh;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				color: var(--muted);
+			}
+			code { font-size: 0.85em; }
 		</style>
 	</head>
 	<body>
-		<!--
-			Live OpenAPI 3.1 from this instance (/api.json).
-			Auth: use Authorize → Bearer token (user or app access token).
-			Prefer Authorization: Bearer over legacy body field "i".
-			WS streaming auth (modern clients): Sec-WebSocket-Protocol misskey.i.<token>
-		-->
-		<script
-			id="api-reference"
-			data-url="/api.json"
-			data-configuration='{
-				"theme": "purple",
-				"layout": "modern",
-				"hideModels": false,
-				"defaultOpenAllTags": false,
-				"authentication": {
-					"preferredSecurityScheme": "bearerAuth"
-				},
-				"metaData": {
-					"title": "Sharkey API"
-				}
-			}'></script>
+		<div id="gate">
+			<div class="card">
+				<h1>Sharkey API docs</h1>
+				<p>This catalog requires a signed-in account. Use your access token (same as the web client).</p>
+				<div id="err" class="err" role="alert"></div>
+				<label for="token">Access token</label>
+				<input id="token" type="password" autocomplete="off" placeholder="Auto-filled if you are logged in on this site" />
+				<button id="go" type="button">Open API reference</button>
+				<p class="hint">
+					If you already use this site in the same browser, the token is usually detected automatically.
+					Direct access: <code>GET /api.json</code> with header <code>Authorization: Bearer &lt;token&gt;</code>.
+				</p>
+			</div>
+		</div>
+		<div id="loading">Loading OpenAPI…</div>
+		<div id="docs"></div>
+
 		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+		<script>
+			(function () {
+				const gate = document.getElementById('gate');
+				const loading = document.getElementById('loading');
+				const docs = document.getElementById('docs');
+				const err = document.getElementById('err');
+				const tokenInput = document.getElementById('token');
+				const go = document.getElementById('go');
+
+				function showError(msg) {
+					err.textContent = msg;
+					err.classList.add('show');
+				}
+				function clearError() {
+					err.textContent = '';
+					err.classList.remove('show');
+				}
+
+				function tokenFromLocalStorage() {
+					try {
+						const raw = localStorage.getItem('account');
+						if (!raw) return null;
+						const acc = JSON.parse(raw);
+						if (acc && typeof acc.token === 'string' && acc.token.length > 0) return acc.token;
+					} catch (_) { /* ignore */ }
+					return null;
+				}
+
+				function mountScalar(spec) {
+					docs.innerHTML = '';
+					const mount = document.createElement('div');
+					mount.id = 'app';
+					docs.appendChild(mount);
+
+					// Scalar CDN global (createApiReference) — preferred
+					if (typeof Scalar !== 'undefined' && typeof Scalar.createApiReference === 'function') {
+						Scalar.createApiReference('#app', {
+							spec: { content: spec },
+							theme: 'purple',
+							layout: 'modern',
+							authentication: { preferredSecurityScheme: 'bearerAuth' },
+							metaData: { title: 'Sharkey API' },
+						});
+						return;
+					}
+
+					// Fallback: classic data-url pattern cannot auth; show download hint
+					const pre = document.createElement('pre');
+					pre.style.cssText = 'padding:16px;overflow:auto;max-height:80vh;font-size:12px;';
+					pre.textContent = JSON.stringify(spec, null, 2).slice(0, 500000);
+					docs.appendChild(pre);
+				}
+
+				async function loadDocs(token) {
+					clearError();
+					if (!token) {
+						showError('Token required.');
+						return;
+					}
+					gate.style.display = 'none';
+					loading.style.display = 'flex';
+					try {
+						const res = await fetch('/api.json', {
+							headers: {
+								'Authorization': 'Bearer ' + token,
+								'Accept': 'application/json',
+							},
+							credentials: 'same-origin',
+						});
+						if (res.status === 401) {
+							loading.style.display = 'none';
+							gate.style.display = 'flex';
+							showError('Authentication failed. Check the token or sign in again.');
+							return;
+						}
+						if (!res.ok) throw new Error('HTTP ' + res.status);
+						const spec = await res.json();
+						loading.style.display = 'none';
+						mountScalar(spec);
+					} catch (e) {
+						loading.style.display = 'none';
+						gate.style.display = 'flex';
+						showError((e && e.message) ? e.message : 'Failed to load API catalog.');
+					}
+				}
+
+				const existing = tokenFromLocalStorage();
+				if (existing) {
+					tokenInput.value = existing;
+					loadDocs(existing);
+				}
+
+				go.addEventListener('click', function () {
+					const t = (tokenInput.value || '').trim() || tokenFromLocalStorage();
+					loadDocs(t);
+				});
+				tokenInput.addEventListener('keydown', function (ev) {
+					if (ev.key === 'Enter') go.click();
+				});
+			})();
+		</script>
 	</body>
 </html>

@@ -117,7 +117,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **055** | ZIP extract zip-slip residual via `slacc` (L–M; library claims path-safe — residual) |
 | **056** | `app/create` free permission strings (L, accepted design) |
 
-| **060** | Public API catalog (`/api.json`, endpoints) — accepted open recon |
+| **060** | ~~Public API catalog~~ **Mitigated** — `/api.json` + catalog endpoints require login |
 
 #### Ops-only (not closed by code alone)
 
