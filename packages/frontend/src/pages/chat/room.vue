@@ -30,8 +30,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template v-else>
 				<!-- NagramX/Telegram pinned-message style announcement (sticky under header) -->
 				<ChatAnnouncementBar
-					v-if="room && (room as any).announcement && canViewTimeline"
-					:text="(room as any).announcement"
+					v-if="room && room.announcement && canViewTimeline"
+					:text="room.announcement"
 					:title="announcementTitle"
 					:editLabel="i18n.ts.edit"
 					:canEdit="canEditAnnouncement"
@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<div style="margin-top: 4px; opacity: 0.9;">{{ tChat('staffReadonlyViewHint') }}</div>
 					</MkInfo>
 				</div>
-				<div v-if="room && (room as any).isMutedAll && isMember" class="_panel" style="padding: 10px 12px;">
+				<div v-if="room && room.isMutedAll && isMember" class="_panel" style="padding: 10px 12px;">
 					<MkInfo warn>
 						<div style="font-weight: bold;">{{ tChat('mutedAll') }}</div>
 						<div style="margin-top: 4px; opacity: 0.9;">{{ tChat('mutedAllHint') }}</div>
@@ -61,8 +61,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 					</div>
 					<div v-if="room?.description" style="margin-bottom: 12px; opacity: 0.85; white-space: pre-wrap;">{{ room.description }}</div>
 					<ChatAnnouncementBar
-						v-if="(room as any)?.announcement"
-						:text="(room as any).announcement"
+						v-if="room?.announcement"
+						:text="room.announcement"
 						:title="announcementTitle"
 						:editLabel="i18n.ts.edit"
 						:canEdit="false"
@@ -237,7 +237,7 @@ import XInfo from './room.info.vue';
 import XManage from './room.manage.vue';
 import ChatAnnouncementBar from './ChatAnnouncementBar.vue';
 import { ChatHistoryPrefetcher, loadUntilMessageFound } from './chat-history-loader.js';
-import type { NormalizedChatMessage } from './chat-types.js';
+import type { NormalizedChatMessage, ChatRoomView } from './chat-types.js';
 import { normalizeChatMessage } from './chat-normalize.js';
 import {
 	isNearLiveEdge,
@@ -258,9 +258,10 @@ import {
 	NORMALIZE_POOL,
 } from './use-chat-messages.js';
 import { useChatMentions } from './use-chat-mentions.js';
+import { useChatChannel } from './use-chat-channel.js';
 import type { PageHeaderItem } from '@/types/page-header.js';
 import * as os from '@/os.js';
-import { useStream, wakeStream, waitForStreamConnected } from '@/stream.js';
+import { wakeStream } from '@/stream.js';
 import * as sound from '@/utility/sound.js';
 import { i18n } from '@/i18n.js';
 import { $i, iAmModerator } from '@/i.js';
@@ -273,7 +274,7 @@ import MkInfo from '@/components/MkInfo.vue';
 import { makeDateSeparatedTimelineComputedRef } from '@/utility/timeline-date-separate.js';
 import { pleaseLogin } from '@/utility/please-login.js';
 import { chatT, chatFb, ensureChatLocaleFresh } from './chat-i18n.js';
-import { chatWsKey, chatRoomCanModerateKey, createChatWsFromConnection } from './chat-ws.js';
+import { chatWsKey, chatRoomCanModerateKey } from './chat-ws.js';
 import { formatApiError } from '@/utility/format-api-error.js';
 
 /** Re-export for any external importers that still point at room.vue */
@@ -319,7 +320,20 @@ function mergeOlderPage(page: NormalizedChatMessage[]) {
 
 let historyPrefetcher: ChatHistoryPrefetcher<NormalizedChatMessage> | null = null;
 const user = ref<Misskey.entities.UserDetailed | null>(null);
-const room = ref<Misskey.entities.ChatRoom | null>(null);
+const room = ref<ChatRoomView | null>(null);
+
+const {
+	connection,
+	chatWs,
+	stream,
+	streamState,
+	ensureStreamReady,
+	openRoomChannel: openRoomChannelCore,
+	openUserChannel: openUserChannelCore,
+	disposeConnection,
+	syncStreamState,
+} = useChatChannel();
+provide(chatWsKey, chatWs);
 const replyTo = ref<NormalizedChatMessage | null>(null);
 const highlightId = ref<string | null>(null);
 /**
@@ -541,7 +555,7 @@ async function onMentionFabClick() {
 
 const canModerate = computed(() => {
 	if (!room.value || !$i) return false;
-	const role = (room.value as any).myRole;
+	const role = room.value.myRole;
 	return role === 'owner' || role === 'admin' || $i.isAdmin || $i.isModerator;
 });
 
@@ -558,7 +572,7 @@ async function refreshRoom() {
 	if (!props.roomId) return;
 	try {
 		const r = await loadRoomMetaApi(chatWs, props.roomId);
-		if (r?.id) room.value = r as Misskey.entities.ChatRoom;
+		if (r?.id) room.value = r as ChatRoomView;
 	} catch { /* ignore */ }
 }
 
@@ -709,13 +723,7 @@ async function onSearchJump(messageId: string) {
 		});
 	}
 }
-const connection = ref<Misskey.IChannelConnection<Misskey.Channels['chatUser']> | Misskey.IChannelConnection<Misskey.Channels['chatRoom']> | null>(null);
-/** Prefer WebSocket for chat actions (msg / react / delete / clear) */
-const chatWs = createChatWsFromConnection(() => connection.value);
-provide(chatWsKey, chatWs);
 const showIndicator = ref(false);
-const stream = useStream();
-const streamState = ref(stream.state);
 /** Avoid stacking catch-up requests on flaky reconnects */
 let catchUpInFlight = false;
 let lastCatchUpAt = 0;
@@ -789,7 +797,7 @@ async function catchUpChatMessages() {
 }
 
 function onStreamState() {
-	streamState.value = stream.state;
+	syncStreamState();
 	// Re-subscribe + refresh messages when socket is back
 	if (stream.state === 'connected' && canViewTimeline.value && isActivated) {
 		void catchUpChatMessages();
@@ -988,39 +996,16 @@ function onMemberMuted(_body: { userId?: string; mutedUntil?: string | null }) {
 	// Soft signal; send path already enforces mute. Could show banner later.
 }
 
-/** Ensure shared stream socket is up before channel history (avoids 15s REST spin). */
-async function ensureStreamReady(timeoutMs = 5000): Promise<boolean> {
-	try {
-		return await waitForStreamConnected(stream, timeoutMs);
-	} catch {
-		return stream.state === 'connected';
-	}
-}
-
 /**
  * Open chatRoom channel as soon as we have a roomId (even before membership is known).
  * Server allows connect when room exists; history/roomShow enforce access.
  */
 async function openRoomChannel(roomId: string) {
-	if (!roomId) return;
-	connection.value?.dispose();
-	// Prefer connected socket so the first connect+history frames aren't dropped
-	await ensureStreamReady(4500);
-	connection.value = stream.useChannel('chatRoom', { roomId });
-	bindChatChannelEvents();
-	// Give server a tick to finish channel init before first request
-	await nextTick();
-	await new Promise<void>(r => window.setTimeout(() => r(), 40));
+	await openRoomChannelCore(roomId, bindChatChannelEvents);
 }
 
 async function openUserChannel(otherId: string) {
-	if (!otherId) return;
-	connection.value?.dispose();
-	await ensureStreamReady(4500);
-	connection.value = stream.useChannel('chatUser', { otherId });
-	bindChatChannelEvents();
-	await nextTick();
-	await new Promise<void>(r => window.setTimeout(() => r(), 40));
+	await openUserChannelCore(otherId, bindChatChannelEvents);
 }
 
 async function enterRoomChannel() {
@@ -1165,8 +1150,8 @@ async function initialize() {
 			// 1) Open chatRoom channel immediately (before rooms/show REST)
 			await openRoomChannel(props.roomId);
 			// 2) Room meta over WS roomShow (REST fallback)
-			const r = await loadRoomMeta(props.roomId);
-			room.value = r as Misskey.entities.ChatRoom;
+			const r = await loadRoomMeta(props.roomId) as ChatRoomView;
+			room.value = r;
 			roomPreviewName.value = r.name ?? '';
 			joinPolicy.value = r.joinPolicy ?? 'invite';
 			const member = r.isMember === true || r.myRole != null || r.ownerId === $i.id;
@@ -1175,8 +1160,7 @@ async function initialize() {
 			if (!member && !isStaffViewer.value) {
 				needJoin.value = true;
 				// Keep channel disposed for non-members (join gate)
-				connection.value?.dispose();
-				connection.value = null;
+				disposeConnection();
 				initializing.value = false;
 				return;
 			}
@@ -1435,8 +1419,7 @@ function releaseChatResources(opts?: { clearMessages?: boolean }) {
 		clearTimeout(highlightTimer);
 		highlightTimer = null;
 	}
-	connection.value?.dispose();
-	connection.value = null;
+	disposeConnection();
 	// Drop message list to free Vue VNodes + media decoders when leaving page
 	if (opts?.clearMessages !== false) {
 		messages.value = [];

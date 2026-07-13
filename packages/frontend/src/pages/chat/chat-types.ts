@@ -12,3 +12,21 @@ export type NormalizedChatMessage = Omit<Misskey.entities.ChatMessageLite, 'from
 		user: Misskey.entities.UserLite;
 	})[];
 };
+
+/**
+ * Room payload as used by Sharkey chat UI (extends misskey-js ChatRoom with
+ * moderation / announcement fields returned by rooms/show).
+ */
+export type ChatRoomView = Misskey.entities.ChatRoom & {
+	announcement?: string | null;
+	isMutedAll?: boolean;
+	/** Membership role for current user when present */
+	myRole?: 'owner' | 'admin' | 'member' | string | null;
+	isMember?: boolean;
+	joinPolicy?: 'public' | 'link' | 'invite' | 'closed';
+	ownerId?: string;
+};
+
+export type ChatChannelConnection =
+	| Misskey.IChannelConnection<Misskey.Channels['chatUser']>
+	| Misskey.IChannelConnection<Misskey.Channels['chatRoom']>;
