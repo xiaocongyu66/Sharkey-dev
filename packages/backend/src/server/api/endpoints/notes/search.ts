@@ -50,6 +50,10 @@ export const paramDef = {
 		offset: { type: 'integer', default: 0 },
 		host: {
 			type: 'string',
+			nullable: true,
+			// SK-2026-054: free host was Meili filter injection surface
+			// `.` = local; otherwise hostname-like (no quotes/ops)
+			pattern: '^(\\.|[a-zA-Z0-9._:-]{1,253})$',
 			description: 'The local host is represented with `.`.',
 		},
 		filetype: {
@@ -59,7 +63,8 @@ export const paramDef = {
 		},
 		userId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
 		channelId: { type: 'string', format: 'misskey:id', nullable: true, default: null },
-		order: { type: 'string' },
+		// SK-2026-054: was free string interpolated into Meili sort
+		order: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
 	},
 	required: ['query'],
 } as const;

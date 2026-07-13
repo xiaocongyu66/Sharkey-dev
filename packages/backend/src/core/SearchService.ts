@@ -115,15 +115,41 @@ export type SearchPagination = {
 	limit: number;
 };
 
+/**
+ * Meili filter string literal. Escape `'` as `\'` (Meili filter grammar).
+ * SK-2026-054: previously unescaped → filter injection via host/etc.
+ */
 function compileValue(value: V): string {
 	if (typeof value === 'string') {
-		return `'${value}'`; // TODO: escape
+		// Also strip NULs / control chars that can confuse filter parsers
+		const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, '');
+		return `'${cleaned.replace(/\\/g, '\\\\').replace(/'/g, '\\\'')}'`;
 	} else if (typeof value === 'number') {
+		if (!Number.isFinite(value)) throw new Error('invalid number');
 		return value.toString();
 	} else if (typeof value === 'boolean') {
 		return value.toString();
 	}
 	throw new Error('unrecognized value');
+}
+
+/** Meili sort direction only (SK-2026-054) */
+function normalizeMeiliOrder(order: string | null | undefined): 'asc' | 'desc' {
+	return order === 'asc' ? 'asc' : 'desc';
+}
+
+/**
+ * Host filter for Meili: `.` = local; otherwise hostname-like only.
+ * Rejects quotes / filter metacharacters even after compileValue escape.
+ */
+function normalizeMeiliHost(host: string | null | undefined): string | null {
+	if (host == null || host === '') return null;
+	if (host === '.') return '.';
+	// Allow IDN / DNS labels + dots; no spaces, quotes, or filter ops
+	if (!/^[a-zA-Z0-9._:-]{1,253}$/.test(host)) {
+		throw new Error('invalid host');
+	}
+	return host;
 }
 
 function compileQuery(q: Q): string {
@@ -349,10 +375,11 @@ export class SearchService {
 		if (opts.userId) filter.qs.push({ op: '=', k: 'userId', v: opts.userId });
 		if (opts.channelId) filter.qs.push({ op: '=', k: 'channelId', v: opts.channelId });
 		if (opts.host) {
-			if (opts.host === '.') {
+			const host = normalizeMeiliHost(opts.host);
+			if (host === '.') {
 				filter.qs.push({ op: 'is null', k: 'userHost' });
-			} else {
-				filter.qs.push({ op: '=', k: 'userHost', v: opts.host });
+			} else if (host != null) {
+				filter.qs.push({ op: '=', k: 'userHost', v: host });
 			}
 		}
 
@@ -362,7 +389,7 @@ export class SearchService {
 		}
 
 		const res = await this.meilisearchNoteIndex.search(q, {
-			sort: [`createdAt:${opts.order ? opts.order : 'desc'}`],
+			sort: [`createdAt:${normalizeMeiliOrder(opts.order)}`],
 			matchingStrategy: 'all',
 			attributesToRetrieve: ['id', 'createdAt'],
 			filter: compileQuery(filter),

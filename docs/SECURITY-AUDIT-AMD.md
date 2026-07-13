@@ -52,7 +52,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **Critical / High** | 3–4 | Chat WS leak, non-prod SSRF disable, OAuth dummy tokens |
 | **Medium** | 15+ | CSS, invite entropy, SQL concat, blocks, escrow, push unregister, SSRF surfaces |
 | **Low / Info** | 20+ | Token length, DoS knobs, privacy, misconfig, TODOs |
-| **Total IDs** | **SK-2026-001 … 053** | Living document (pass 3: real IDOR vulns) |
+| **Total IDs** | **SK-2026-001 … 056** | Living document (pass 4: injection/crypto) |
 
 ### 0.4 Remediation status matrix (code vs residual)
 
@@ -90,6 +90,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **051** | Import APIs require drive file ownership |
 | **052** | Private Flash visibility on show/like |
 | **053** | Admin emoji only own/unowned drive files |
+| **054** | Meili filter/sort: escape + order enum + host pattern |
 
 #### Still open / residual (not “all clear”)
 
@@ -110,6 +111,8 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **007** residual | MFM UI abuse (scale/animation/phishing) still possible within clamps |
 | **046** residual | Making a private clip public does not re-scan already-attached notes |
 | **050** | Site mod can mute/rate-limit any room (open-ops privilege — skip for product) |
+| **055** | ZIP extract zip-slip residual via `slacc` (L–M; library claims path-safe — residual) |
+| **056** | `app/create` free permission strings (L, accepted design) |
 
 #### Ops-only (not closed by code alone)
 
@@ -1073,6 +1076,93 @@ Reject files owned by others; clear ownership only on own files.
 
 ---
 
+## 1d. Pass 4 (2026-07-14) — injection / crypto / reverse-engineering surface
+
+Focus: **SQL/Meili filter injection**, command/eval, unsafe deserialize, path/zip, crypto misuse.  
+Open-ops design (public TL, mod powers, escrow) not treated as defects.
+
+### Injection scan summary
+
+| Class | Result |
+|-------|--------|
+| Classic SQL concat of user text | Mostly parameterized; poll `votes[index]` integer-bounded |
+| SQL LIKE | `sqlLikeEscape` on note search |
+| ORDER BY free string | `users` sort **enum-switched** (safe) |
+| Meili filter/sort | **SK-054** when provider is meilisearch |
+| Command injection | No user-driven `child_process` + input |
+| `eval` / `new Function` | Not found on user input in backend src |
+| Prototype pollution | AP header copy strips `__proto__` |
+| JSON.parse on imports | Archive data only; no code exec |
+| XSS | sanitize-html (SK-006); MFM color/time validated |
+
+---
+
+### SK-2026-054 — MeiliSearch filter/sort injection (`compileValue` unescaped + free `order`/`host`)
+
+| | |
+|--|--|
+| **Severity** | **M–H** **only if** `fulltextSearch.provider = 'meilisearch'` |
+| **CWE** | CWE-74 / CWE-943 |
+| **Status** | **Fixed in tree** — escape + `order` enum + host pattern |
+| **Components** | `core/SearchService.ts`; `notes/search.ts` |
+
+**Description**  
+Prior: `compileValue` unescaped strings; free `order`/`host` into Meili filter/sort.
+
+**Fix summary**  
+1. Escape `\` and `'` in `compileValue`; strip control chars.  
+2. `order` API enum `asc`|`desc`; service `normalizeMeiliOrder`.  
+3. `host` pattern `^(\.|[a-zA-Z0-9._:-]{1,253})$` + service `normalizeMeiliHost`.
+
+---
+
+### SK-2026-055 — ZIP extract via `slacc` (zip-slip residual)
+
+| | |
+|--|--|
+| **Severity** | **L–M** (library-dependent; not fully confirmed) |
+| **CWE** | CWE-22 |
+| **Status** | **Open / residual** |
+| **Components** | `ImportNotesProcessorService`, `ImportCustomEmojisProcessorService` — `ZipReader.withDestinationPath(...).viaBuffer(...)` |
+
+User ZIP extracted by native `slacc`. If entries with `../` are not rejected, zip-slip could write outside the temp dir under the worker user. Code then reads fixed subpaths; slip is the residual concern.
+
+**Remediation**  
+Confirm `slacc` path sanitization; or use extract-to-prefix with explicit rejection of `..` / absolute paths.
+
+---
+
+### SK-2026-056 — Unauthenticated `app/create` arbitrary permission strings
+
+| | |
+|--|--|
+| **Severity** | **L** (Misskey app model) |
+| **CWE** | CWE-862 (soft / phishing) |
+| **Status** | **Accepted design** for open instances unless you want stricter apps |
+| **Components** | `app/create.ts` — `requireCredential: false`, free `permission[]` |
+
+Tokens still require user `auth/accept` (secure). Risk is social engineering (“app wants admin scopes”), not silent grant.
+
+**Remediation (optional)**  
+Allowlist known `kind` values; hard-warn on admin scopes.
+
+---
+
+### Crypto / reverse-engineering notes (pass 4)
+
+| Topic | Assessment |
+|-------|------------|
+| Password hashing | argon2 + bcrypt verify/migrate — OK |
+| 2FA backup codes | `equalsConstantTime` — OK |
+| Native session token | 16-char CSPRNG (length residual SK-017) |
+| App access token | `sha256(token+app.secret)` as lookup hash — OK |
+| Chat escrow | AES-256-GCM + HMAC-SHA256 KDF; operator-readable by design (SK-010) |
+| AP HTTP signatures | digest + verify; JsonLd forbids `@graph` / `@reverse` / `@included` |
+| JsonLd remote `@context` | Fetched via `HttpRequestService` (SSRF guards) |
+| “逆向” practical path | Steal tokens/keys, Meili filter (054), residual import/zip — not breaking GCM without key |
+
+---
+
 ## 2. Attack surface map (abbreviated)
 
 ```
@@ -1089,11 +1179,13 @@ Internet
 ```
 
 **Highest residual ROI after remediation (for attackers / next hardening)**  
-1. Session/token theft (SK-017/020)  
-2. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
-3. Escrow key compromise (SK-010)  
-4. Mis-deploy: `NODE_ENV=test`, gateway without API key  
-5. MFM UI abuse within clamps (SK-007 residual)
+1. **SK-054** Meili filter/sort injection (if Meili enabled)  
+2. Session/token theft (SK-017/020)  
+3. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
+4. Escrow key compromise (SK-010) — design, not a crypto break  
+5. Import zip-slip residual (SK-055)  
+6. Mis-deploy: `NODE_ENV=test`, gateway without API key  
+7. MFM UI abuse within clamps (SK-007 residual)
 
 ---
 
@@ -1222,6 +1314,7 @@ Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings 
 | 0.8 | 2026-07-14 | **Pass 2 logic screening:** SK-043..050 (ignored invite join, re-invite, unreact auth, public clip private notes, favorite visibility, reaction race, x-algo black-hole) |
 | 0.9 | 2026-07-14 | **Pass 2 remediations:** SK-043..049 fixed in code (invite ignore/join, re-invite, unreact auth, clip/favorite visibility, reaction race, x-algo); matrix + P2 plan updated |
 | 0.9b | 2026-07-14 | **Pass 3 real vulns (skip open-ops):** SK-051 import file IDOR (**H**); SK-052 private flash leak (**M**); SK-053 admin emoji file detach (L); residual matrix + ROI updated |
+| 1.0 | 2026-07-14 | **Pass 4 injection/crypto:** SK-054 Meili filter/sort injection; SK-055 zip-slip residual; SK-056 app permissions phishing; SQL/cmd/eval/XSS scan notes |
 | 0.9c | 2026-07-14 | **§8 Project optimization evaluation** (multi-pass code review): scores, chat perf/WS/escrow/algo, engineering process, residual backlog, production gate |
 | 1.0 | 2026-07-14 | **Pass 3 remediations + chat scroll:** SK-051/052/053 fixed; fling scroll anti-twitch; AMD matrix updated |
 
