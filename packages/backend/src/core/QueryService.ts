@@ -68,8 +68,13 @@ export class QueryService {
 		q: SelectQueryBuilder<any>,
 		me?: { id: string } | null,
 	): Promise<SelectQueryBuilder<any>> {
-		const includeHidden = me != null && await this.roleService.isModerator(me);
-		return this.generateVisibilityQuery(q, me, { includeHidden });
+		const isStaff = me != null && await this.roleService.isModerator(me);
+		this.generateVisibilityQuery(q, me, { includeHidden: isStaff });
+		// Site-wide remote note block: only staff (mod/admin) can see federated notes
+		if (this.meta.blockRemoteNotes && !isStaff) {
+			q.andWhere('note.userHost IS NULL');
+		}
+		return q;
 	}
 
 	public makePaginationQuery<T extends ObjectLiteral>(

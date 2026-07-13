@@ -16,6 +16,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<template #label>{{ an.disableLocalNoteCreation }}</template>
 						<template #caption>{{ an.disableLocalNoteCreationCaption }}</template>
 					</MkSwitch>
+					<MkSwitch :modelValue="blockRemoteNotes" @update:modelValue="onToggleBlockRemote">
+						<template #label>{{ an.blockRemoteNotes }}</template>
+						<template #caption>{{ an.blockRemoteNotesCaption }}</template>
+					</MkSwitch>
 				</div>
 			</MkFolder>
 
@@ -130,7 +134,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkInput from '@/components/MkInput.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
@@ -148,6 +152,7 @@ import { fetchInstance } from '@/instance.js';
 import { iAmAdmin } from '@/i.js';
 import { useRouter } from '@/router.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
+import { useStream, wakeStream } from '@/stream.js';
 
 const router = useRouter();
 
@@ -158,6 +163,9 @@ const anFb = {
 	disableLocalNoteCreation: '禁止全站发帖',
 	disableLocalNoteCreationCaption: '启用后，非版主的本站用户将无法发帖。',
 	disableConfirm: '确定禁止全站用户发帖？版主仍可发帖。',
+	blockRemoteNotes: '屏蔽远程帖子',
+	blockRemoteNotesCaption: '启用后，除管理员/版主外，所有人（含游客）在时间线、搜索等处看不到远程联合帖子。后台「远程 / 已隐藏」仍可管理。',
+	blockRemoteConfirm: '确定对普通用户屏蔽所有远程帖子？仅管理员与版主仍可见。',
 	listHint: '本站帖子按时间线样式展示。',
 	openUser: '打开用户',
 	suspendUser: '封禁用户',
@@ -223,9 +231,12 @@ const loading = ref(true);
 const loadingMore = ref(false);
 const canLoadMore = ref(false);
 const disableLocalNoteCreation = ref(false);
+const blockRemoteNotes = ref(false);
 const selectedIds = ref(new Set<string>());
 const prohibitedWords = ref('');
 const sensitiveWords = ref('');
+/** Cancel stale list fetches when switching tabs quickly */
+let fetchSeq = 0;
 
 const PAGE_SIZE = 30;
 
@@ -238,10 +249,12 @@ const scopeHint = computed(() => {
 try {
 	const meta = await misskeyApi('admin/meta') as unknown as {
 		disableLocalNoteCreation?: boolean;
+		blockRemoteNotes?: boolean;
 		prohibitedWords?: string[];
 		sensitiveWords?: string[];
 	};
 	disableLocalNoteCreation.value = !!meta.disableLocalNoteCreation;
+	blockRemoteNotes.value = !!meta.blockRemoteNotes;
 	prohibitedWords.value = (meta.prohibitedWords ?? []).join('\n');
 	sensitiveWords.value = (meta.sensitiveWords ?? []).join('\n');
 } catch { /* ignore */ }
@@ -255,11 +268,7 @@ async function saveKeywordBlocks() {
 	fetchInstance(true);
 }
 
-async function fetchPage(untilId?: string) {
-	const scope =
-		viewTab.value === 'remote' ? 'remote'
-			: viewTab.value === 'hidden' ? 'hidden'
-				: 'local';
+async function fetchPage(scope: 'local' | 'remote' | 'hidden', untilId?: string) {
 	const res = await misskeyApi('admin/notes' as any, {
 		limit: PAGE_SIZE,
 		username: username.value || null,
@@ -273,37 +282,77 @@ async function fetchPage(untilId?: string) {
 	return res;
 }
 
+function currentScope(): 'local' | 'remote' | 'hidden' {
+	return viewTab.value === 'remote' ? 'remote'
+		: viewTab.value === 'hidden' ? 'hidden'
+			: 'local';
+}
+
 async function reload() {
+	const seq = ++fetchSeq;
+	const scope = currentScope();
 	loading.value = true;
+	// Clear list immediately so empty tabs never briefly show previous tab's notes
+	items.value = [];
 	selectedIds.value = new Set();
+	canLoadMore.value = false;
 	try {
-		const res = await fetchPage();
+		const res = await fetchPage(scope);
+		// Stale response (user switched tab/filter mid-flight)
+		if (seq !== fetchSeq || currentScope() !== scope) return;
 		items.value = res;
 		canLoadMore.value = res.length >= PAGE_SIZE;
+	} catch (e) {
+		if (seq !== fetchSeq) return;
+		items.value = [];
+		canLoadMore.value = false;
+		console.error(e);
 	} finally {
-		loading.value = false;
+		if (seq === fetchSeq) loading.value = false;
 	}
 }
 
 async function loadMore() {
 	if (items.value.length === 0 || loadingMore.value) return;
+	const seq = fetchSeq;
+	const scope = currentScope();
 	loadingMore.value = true;
 	try {
 		const last = items.value[items.value.length - 1];
-		const res = await fetchPage(last.id);
-		// de-dupe by id
+		const res = await fetchPage(scope, last.id);
+		if (seq !== fetchSeq || currentScope() !== scope) return;
 		const seen = new Set(items.value.map(n => n.id));
 		for (const n of res) {
 			if (!seen.has(n.id)) items.value.push(n);
 		}
 		canLoadMore.value = res.length >= PAGE_SIZE;
 	} finally {
-		loadingMore.value = false;
+		if (seq === fetchSeq) loadingMore.value = false;
 	}
 }
 
 watch([username, email, query, clientIp, clientFingerprint, viewTab], () => {
-	reload();
+	void reload();
+});
+
+// Refresh list when returning to the page / WS reconnect (admin console feels snappier)
+const stream = useStream();
+const onStreamConnected = () => {
+	// Soft refresh current tab without clearing selection mid-action
+	if (!loading.value && !loadingMore.value) void reload();
+};
+const onVis = () => {
+	if (window.document.visibilityState === 'visible') {
+		wakeStream({ force: false });
+	}
+};
+onMounted(() => {
+	stream.on('_connected_', onStreamConnected);
+	window.document.addEventListener('visibilitychange', onVis);
+});
+onBeforeUnmount(() => {
+	stream.off('_connected_', onStreamConnected);
+	window.document.removeEventListener('visibilitychange', onVis);
 });
 
 await reload();
@@ -315,6 +364,16 @@ async function onToggleDisablePosting(value: boolean) {
 	}
 	disableLocalNoteCreation.value = value;
 	await os.apiWithDialog('admin/update-meta', { disableLocalNoteCreation: value } as never);
+	fetchInstance(true);
+}
+
+async function onToggleBlockRemote(value: boolean) {
+	if (value) {
+		const { canceled } = await os.confirm({ type: 'warning', text: an.blockRemoteConfirm });
+		if (canceled) return;
+	}
+	blockRemoteNotes.value = value;
+	await os.apiWithDialog('admin/update-meta', { blockRemoteNotes: value } as never);
 	fetchInstance(true);
 }
 

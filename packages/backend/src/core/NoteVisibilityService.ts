@@ -8,6 +8,7 @@ import type { MiNote } from '@/models/Note.js';
 import type { MiUser } from '@/models/User.js';
 import type { MiUserListMembership } from '@/models/UserListMembership.js';
 import type { NotesRepository } from '@/models/_.js';
+import type { MiMeta } from '@/models/Meta.js';
 import type { Packed } from '@/misc/json-schema.js';
 import { CacheService, UserRelation } from '@/core/CacheService.js';
 import { UtilityService } from '@/core/UtilityService.js';
@@ -68,6 +69,9 @@ export class NoteVisibilityService {
 	constructor(
 		@Inject(DI.notesRepository)
 		private readonly notesRepository: NotesRepository,
+
+		@Inject(DI.meta)
+		private readonly meta: MiMeta,
 
 		private readonly cacheService: CacheService,
 		private readonly idService: IdService,
@@ -325,6 +329,11 @@ export class NoteVisibilityService {
 
 		// We can *never* view blocked notes
 		if (data.userRelations.get(note.userId)?.isBlocked) return false;
+
+		// Site-wide remote note block: only moderators/admins can see federated notes
+		if (this.meta.blockRemoteNotes && !data.iAmModerator && note.userHost != null) {
+			return false;
+		}
 
 		// Staff soft-hidden notes: only moderators/admins can see them
 		if (!data.iAmModerator && (note as any).isHidden === true) {

@@ -20,6 +20,7 @@ import { CacheService } from '@/core/CacheService.js';
 import { isReply } from '@/misc/is-reply.js';
 import { isInstanceMuted } from '@/misc/is-instance-muted.js';
 import { NoteVisibilityService, type NoteVisibilityData, type PopulatedNote } from '@/core/NoteVisibilityService.js';
+import { RoleService } from '@/core/RoleService.js';
 
 type TimelineOptions = {
 	untilId: string | null,
@@ -57,6 +58,7 @@ export class FanoutTimelineEndpointService {
 		private fanoutTimelineService: FanoutTimelineService,
 		private utilityService: UtilityService,
 		private readonly noteVisibilityService: NoteVisibilityService,
+		private readonly roleService: RoleService,
 	) {
 	}
 
@@ -134,6 +136,18 @@ export class FanoutTimelineEndpointService {
 
 					return parentFilter(note, populated, visData);
 				};
+			}
+
+			// Site-wide: hide all remote notes from non-staff when blockRemoteNotes is on
+			if (this.meta.blockRemoteNotes) {
+				const iAmStaff = me != null && await this.roleService.isModerator(me);
+				if (!iAmStaff) {
+					const parentFilter = filter;
+					filter = (note, populated, visData) => {
+						if (note.userHost != null) return false;
+						return parentFilter(note, populated, visData);
+					};
+				}
 			}
 
 			{

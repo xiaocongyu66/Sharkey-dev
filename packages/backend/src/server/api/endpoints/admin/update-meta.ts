@@ -24,6 +24,7 @@ export const paramDef = {
 	properties: {
 		disableRegistration: { type: 'boolean', nullable: true },
 		disableLocalNoteCreation: { type: 'boolean', nullable: true },
+		blockRemoteNotes: { type: 'boolean', nullable: true },
 		pinnedUsers: {
 			type: 'array', nullable: true, items: {
 				type: 'string',
@@ -273,6 +274,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (typeof ps.disableLocalNoteCreation === 'boolean') {
 				set.disableLocalNoteCreation = ps.disableLocalNoteCreation;
+			}
+
+			if (typeof ps.blockRemoteNotes === 'boolean') {
+				set.blockRemoteNotes = ps.blockRemoteNotes;
 			}
 
 			if (Array.isArray(ps.pinnedUsers)) {

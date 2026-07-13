@@ -113,6 +113,16 @@ export class MiMeta {
 	})
 	public disableLocalNoteCreation: boolean;
 
+	/**
+	 * When true, remote (federated) notes are hidden from everyone except
+	 * moderators and administrators (timelines, search, AP-facing packs, etc.).
+	 * Staff can still manage them in admin notes UI.
+	 */
+	@Column('boolean', {
+		default: false,
+	})
+	public blockRemoteNotes: boolean;
+
 	@Column('varchar', {
 		length: 1024, array: true, default: '{}',
 	})

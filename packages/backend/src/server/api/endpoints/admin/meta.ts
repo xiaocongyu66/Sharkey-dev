@@ -502,6 +502,10 @@ export const meta = {
 				type: 'boolean',
 				optional: false, nullable: false,
 			},
+			blockRemoteNotes: {
+				type: 'boolean',
+				optional: false, nullable: false,
+			},
 			impressumUrl: {
 				type: 'string',
 				optional: false, nullable: true,
@@ -691,6 +695,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				inquiryUrl: instance.inquiryUrl,
 				disableRegistration: instance.disableRegistration,
 				disableLocalNoteCreation: instance.disableLocalNoteCreation,
+				blockRemoteNotes: instance.blockRemoteNotes === true,
 				emailRequiredForSignup: instance.emailRequiredForSignup,
 				approvalRequiredForSignup: instance.approvalRequiredForSignup,
 				enableHcaptcha: instance.enableHcaptcha,
