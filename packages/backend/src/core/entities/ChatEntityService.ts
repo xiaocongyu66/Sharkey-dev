@@ -205,19 +205,23 @@ export class ChatEntityService {
 		options?: {
 			_hint_?: {
 				packedFiles: Map<MiChatMessage['fileId'], Packed<'DriveFile'> | null>;
+				packedUsers?: Map<MiUser['id'], Packed<'UserLite'>>;
 			};
 		},
 	): Promise<Packed<'ChatMessageLiteFor1on1'>> {
 		const packedFiles = options?._hint_?.packedFiles;
+		const packedUsers = options?._hint_?.packedUsers;
 
 		const message = typeof src === 'object' ? src : await this.chatMessagesRepository.findOneByOrFail({ id: src });
 
-		const reactions: { reaction: string; }[] = [];
+		const reactions: { reaction: string; user?: Packed<'UserLite'> }[] = [];
 
 		for (const record of message.reactions) {
 			const [userId, reaction] = record.split('/');
 			reactions.push({
 				reaction,
+				// Include reactor lite so UI avatars work without peer race
+				user: packedUsers?.get(userId) ?? await this.userEntityService.pack(userId),
 			});
 		}
 
@@ -226,6 +230,8 @@ export class ChatEntityService {
 			: null;
 
 		const body = this.revealBody(message);
+		const fromUser = packedUsers?.get(message.fromUserId)
+			?? await this.userEntityService.pack(message.fromUser ?? message.fromUserId);
 
 		return {
 			id: message.id,
@@ -235,12 +241,14 @@ export class ChatEntityService {
 			ciphertext: body.ciphertext,
 			encryptedAtRest: body.encryptedAtRest,
 			fromUserId: message.fromUserId,
+			// Required for 1:1 timeline avatars (frontend used to fill from peer meta, race-prone)
+			fromUser,
 			toUserId: message.toUserId!,
 			fileId: message.fileId,
 			file: message.fileId ? (packedFiles?.get(message.fileId) ?? await this.driveFileEntityService.pack(message.file ?? message.fileId)) : null,
 			reactions,
 			replyId: message.replyId,
-			reply: reply ? await this.packReplyPreview(reply) : null,
+			reply: reply ? await this.packReplyPreview(reply, packedUsers) : null,
 		};
 	}
 
@@ -250,12 +258,31 @@ export class ChatEntityService {
 	) {
 		if (messages.length === 0) return [];
 
-		const [packedFiles] = await Promise.all([
+		const users = messages.map(x => x.fromUser ?? x.fromUserId);
+		const reactedUserIds = messages.flatMap(x => x.reactions.map(r => r.split('/')[0]));
+		for (const reactedUserId of reactedUserIds) {
+			if (!users.some(x => typeof x === 'string' ? x === reactedUserId : x.id === reactedUserId)) {
+				users.push(reactedUserId);
+			}
+		}
+		const replyIds = messages.map(m => m.replyId).filter((x): x is string => x != null);
+		const replyMessages = replyIds.length > 0
+			? await this.chatMessagesRepository.findBy({ id: In(replyIds) })
+			: [];
+		for (const rm of replyMessages) {
+			if (!users.some(x => typeof x === 'string' ? x === rm.fromUserId : x.id === rm.fromUserId)) {
+				users.push(rm.fromUserId);
+			}
+		}
+
+		const [packedUsers, packedFiles] = await Promise.all([
+			this.userEntityService.packMany(users)
+				.then(users => new Map(users.map(u => [u.id, u]))),
 			this.driveFileEntityService.packMany(messages.map(m => m.file).filter(x => x != null))
 				.then(files => new Map(files.map(f => [f.id, f]))),
 		]);
 
-		return await Promise.all(messages.map(message => this.packMessageLiteFor1on1(message, { _hint_: { packedFiles } })));
+		return await Promise.all(messages.map(message => this.packMessageLiteFor1on1(message, { _hint_: { packedFiles, packedUsers } })));
 	}
 
 	@bindThis

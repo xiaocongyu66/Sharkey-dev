@@ -8,6 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkPolkadots v-if="tab === 'home'" accented/>
 	<div class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XHome v-if="tab === 'home'"/>
+		<XSearch v-else-if="tab === 'search'"/>
 		<XInvitations v-else-if="tab === 'invitations'"/>
 		<XJoiningRooms v-else-if="tab === 'joiningRooms'"/>
 		<XOwnedRooms v-else-if="tab === 'ownedRooms'"/>
@@ -18,6 +19,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
 import XHome from './home.home.vue';
+import XSearch from './home.search.vue';
 import XInvitations from './home.invitations.vue';
 import XJoiningRooms from './home.joiningRooms.vue';
 import XOwnedRooms from './home.ownedRooms.vue';
@@ -33,6 +35,10 @@ const headerTabs = computed(() => [{
 	key: 'home',
 	title: i18n.ts._chat.home,
 	icon: 'ti ti-home',
+}, {
+	key: 'search',
+	title: i18n.ts.search,
+	icon: 'ti ti-search',
 }, {
 	key: 'invitations',
 	title: i18n.ts._chat.invitations,

@@ -1032,12 +1032,11 @@ async function initialize() {
 		if (props.userId) {
 			// 1) Open chatUser channel first (WS)
 			await openUserChannel(props.userId);
-			// 2) Peer meta + history in parallel over the same channel
-			const [u, list] = await Promise.all([
-				loadUserMeta(props.userId),
-				loadInitialTimeline('user', props.userId),
-			]);
+			// 2) Peer meta first so 1:1 normalize can fill avatars if payload omits fromUser
+			const u = await loadUserMeta(props.userId);
 			user.value = u;
+			// 3) History (backend now packs fromUser; peer is still used as fallback)
+			const list = await loadInitialTimeline('user', props.userId);
 			isMember.value = true;
 			messages.value = list;
 			rebuildKnownIds();

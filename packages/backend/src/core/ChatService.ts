@@ -929,7 +929,8 @@ export class ChatService {
 		}
 
 		const existingInvitation = await this.chatRoomInvitationsRepository.findOneBy({ roomId, userId: inviteeId });
-		if (existingInvitation) {
+		// SK-2026-044: ignored invite can be re-issued (un-ignore + re-notify)
+		if (existingInvitation && !existingInvitation.ignored) {
 			throw new Error('already invited');
 		}
 
@@ -944,6 +945,14 @@ export class ChatService {
 			|| await this.userBlockingService.checkBlocked(inviterId, inviteeId);
 		if (blocked) {
 			throw new Error('blocked');
+		}
+
+		if (existingInvitation?.ignored) {
+			await this.chatRoomInvitationsRepository.update(existingInvitation.id, { ignored: false });
+			this.notificationService.createNotification(inviteeId, 'chatRoomInvitationReceived', {
+				invitationId: existingInvitation.id,
+			}, inviterId);
+			return await this.chatRoomInvitationsRepository.findOneByOrFail({ id: existingInvitation.id });
 		}
 
 		const invitation = {
@@ -1020,9 +1029,9 @@ export class ChatService {
 				throw new Error('invalid invite code');
 			}
 		} else {
-			// invite policy (default): require invitation
+			// invite policy (default): require non-ignored invitation (SK-2026-043)
 			const invitation = await this.chatRoomInvitationsRepository.findOneBy({ roomId, userId });
-			if (invitation == null) {
+			if (invitation == null || invitation.ignored) {
 				throw new Error('no invitation');
 			}
 			await this.chatRoomInvitationsRepository.delete(invitation.id);
@@ -1409,10 +1418,6 @@ export class ChatService {
 			throw new Error('cannot react to others message');
 		}
 
-		if (message.reactions.length >= MAX_REACTIONS_PER_MESSAGE) {
-			throw new Error('too many reactions');
-		}
-
 		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
 
 		if (room) {
@@ -1421,12 +1426,26 @@ export class ChatService {
 			}
 		}
 
-		// SK-2026-011: parameterized reaction token
+		// SK-2026-011 + SK-2026-048: parameterized token; reject dupes / race past MAX
 		const reactionToken = `${userId}/${reaction}`;
-		await this.chatMessagesRepository.query(
-			`UPDATE "chat_message" SET "reactions" = array_append("reactions", $1) WHERE "id" = $2`,
-			[reactionToken, message.id],
+		if (message.reactions.includes(reactionToken)) {
+			throw new Error('already reacted');
+		}
+		if (message.reactions.length >= MAX_REACTIONS_PER_MESSAGE) {
+			throw new Error('too many reactions');
+		}
+
+		const updated = await this.chatMessagesRepository.query(
+			`UPDATE "chat_message" SET "reactions" = array_append("reactions", $1)
+			 WHERE "id" = $2
+			   AND NOT ($1 = ANY("reactions"))
+			   AND cardinality("reactions") < $3
+			 RETURNING "id"`,
+			[reactionToken, message.id, MAX_REACTIONS_PER_MESSAGE],
 		);
+		if (!Array.isArray(updated) || updated.length === 0) {
+			throw new Error('too many reactions');
+		}
 
 		if (room) {
 			this.globalEventService.publishChatRoomStream(room.id, 'react', {
@@ -1459,19 +1478,34 @@ export class ChatService {
 			reaction = `:${name}:`;
 		}
 
-		// NOTE: 自分のリアクションを(あれば)削除するだけなので諸々の権限チェックは必要なし
-
 		const message = await this.chatMessagesRepository.findOneByOrFail({ id: messageId });
+
+		// SK-2026-045: mirror react auth — only DM party or room members may unreact/publish
+		if (message.toRoomId == null) {
+			if (message.toUserId !== userId && message.fromUserId !== userId) {
+				throw new Error('cannot unreact to others message');
+			}
+		}
 
 		const room = message.toRoomId ? await this.chatRoomsRepository.findOneByOrFail({ id: message.toRoomId }) : null;
 
+		if (room) {
+			if (!await this.isRoomMember(room, userId)) {
+				throw new Error('cannot unreact to others message');
+			}
+		}
+
 		const reactionToken = `${userId}/${reaction}`;
-		await this.chatMessagesRepository.query(
-			`UPDATE "chat_message" SET "reactions" = array_remove("reactions", $1) WHERE "id" = $2`,
+		// Only publish when a token was actually removed
+		const updated = await this.chatMessagesRepository.query(
+			`UPDATE "chat_message" SET "reactions" = array_remove("reactions", $1)
+			 WHERE "id" = $2 AND $1 = ANY("reactions")
+			 RETURNING "id"`,
 			[reactionToken, message.id],
 		);
-
-		// TODO: 実際に削除が行われたときのみイベントを発行する
+		if (!Array.isArray(updated) || updated.length === 0) {
+			return;
+		}
 
 		if (room) {
 			this.globalEventService.publishChatRoomStream(room.id, 'unreact', {

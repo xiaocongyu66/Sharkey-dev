@@ -11836,12 +11836,14 @@ export type components = {
             /** Format: date-time */
             createdAt: string;
             fromUserId: string;
+            fromUser: components['schemas']['UserLite'];
             toUserId: string;
             text?: string | null;
             fileId?: string | null;
             file?: components['schemas']['DriveFile'] | null;
             reactions: {
                 reaction: string;
+                user?: components['schemas']['UserLite'] | null;
             }[];
         };
         ChatMessageLiteForRoom: {

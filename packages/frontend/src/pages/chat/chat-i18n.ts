@@ -442,6 +442,12 @@ export const chatFb = {
 		'zh-TW': "搜尋訊息…",
 		ja: "メッセージを検索…",
 	},
+	globalSearchHint: {
+		en: "Search only in chats you already have (1:1 and rooms). Results open the conversation at that message.",
+		zh: "仅搜索你已有的私信与群聊。点击结果会打开对应会话并定位到该消息。",
+		'zh-TW': "僅搜尋你已有的私訊與群聊。點擊結果會開啟對應對話並定位到該訊息。",
+		ja: "すでに参加している1:1・ルーム内のみ検索します。結果をタップすると該当メッセージへジャンプします。",
+	},
 	filterBySpeaker: {
 		en: "Speaker",
 		zh: "发言人",

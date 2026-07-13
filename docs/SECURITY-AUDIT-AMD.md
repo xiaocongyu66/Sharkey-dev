@@ -2,29 +2,122 @@
 
 | Field | Value |
 |-------|--------|
-| **Document type** | Local security audit memo (AMD-style findings register) |
+| **Document type** | Local security audit memo (AMD-style findings register) **+ project optimization evaluation** |
 | **Target tree** | `/root/Sharkey-work/Sharkey-dev-continue` |
 | **Product** | Sharkey `2025.5.2-dev` (Misskey fork) |
 | **Audit date** | 2026-07-14 |
-| **Method** | Static code review only — no live exploitation, no PoC payloads |
-| **Scope** | Backend API, chat, MFM/CSS rendering, media proxy, federation edges, OAuth/Mastodon glue, auth tokens |
-| **Out of scope** | Production traffic, third-party deps CVE enumeration, full ActivityPub protocol fuzz |
-| **Disposition** | **Private local report.** Do not publish until issues are triaged/fixed. Prefer responsible disclosure via instance SECURITY.md / upstream. |
+| **Remediation status date** | 2026-07-14 |
+| **Optimization review date** | 2026-07-14 (multi-pass static code review) |
+| **Method** | Static code review only — no live exploitation, no PoC payloads, no load tests |
+| **Scope** | Backend API, chat, MFM/CSS rendering, media proxy, federation edges, OAuth/Mastodon glue, auth tokens; **chat performance, WebSocket expansion, escrow crypto, X-algorithm, engineering process** |
+| **Out of scope** | Production traffic, third-party deps CVE enumeration, full ActivityPub protocol fuzz, production load benchmarks |
+| **Disposition** | **Private local report.** Code P0/P1 remediations are largely in-tree; residual items are design/ops/low severity. Optimization work is **conditionally pass** for internal beta. Prefer responsible disclosure via instance SECURITY.md / upstream for anything still open. |
 
 ---
 
 ## 0. Executive summary
 
-Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards in production, SVG not browser-safe, signed ActivityPub inbox, role policies). Local/custom surface area (chat rooms, escrow crypto, MFM advanced styling, channel colors, OAuth client_credentials stub, media `/proxy`) adds **multiple real issues**.
+Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG not browser-safe, signed ActivityPub inbox, role policies). Local/custom surface area (chat rooms, escrow crypto, MFM advanced styling, channel colors, OAuth, media `/proxy`) produced **multiple real findings** (SK-2026-001 … 042).
+
+### 0.1 Current overall status (2026-07-14)
+
+| Layer | Status |
+|-------|--------|
+| **Code: high/medium fixable issues (P0/P1)** | **Mostly done** in this tree |
+| **Design / privacy / product honesty** | Residual open (e.g. escrow ≠ E2EE) |
+| **Ops / deploy configuration** | Operator checklist still required |
+| **Dynamic pentest / full regression** | **Not completed** (audit was static) |
+
+**One-line conclusion (security):**  
+**“Findings that could be fixed in code (P0/P1) are largely remediated. Security work is not 100% finished: residual design/low items, ops config, and no full dynamic verification.”**
+
+**One-line conclusion (optimization / engineering — see §8):**  
+**“Performance and chat architecture investments are sound; security remediations largely landed; overall ~8.1/10 — internal beta OK, public production needs uncommitted fixes committed, escrow honesty, and smoke tests.”**
+
+### 0.2 Remediation commits (this tree)
+
+| Commit | Summary |
+|--------|---------|
+| `f95ed57` | Chat room live stream membership gate; escrow no longer from `setupPassword` |
+| `15b00d8` | AMD P0/P1 batch: SSRF always-on, OAuth stub reject, channel color, invite CSPRNG, room invite blocks, `sw/unregister`, sponsors, federation update-remote-user, storage path, docs |
+| `7ba243c` | P1: `fetch-rss` auth, webhook https, poll/chat SQL params, sanitize-html no `style`, frontend `safeCssHexColor` |
+| `4eb55e4` | Continue: reaction/hashtag SQL params, MFM clamps, export-emoji moderator, page-push bounds, gateway `API_KEY` in prod, role colors |
+
+**Must verify on deploy:** the above commits (or equivalent) are present in production builds.
+
+### 0.3 Finding counts (original audit)
 
 | Severity | Count (approx.) | Themes |
 |----------|-----------------|--------|
-| **Critical / High** | 3–4 | Chat WS history leak (fixed in tree), non-prod SSRF disable, OAuth dummy tokens |
-| **Medium** | 15+ | CSS injection, invite entropy, SQL concat, block bypass, escrow, push unregister, SSRF surfaces |
-| **Low / Info** | 20+ | Token length, DoS knobs, privacy, misconfig, TODOs, documentation drift |
-| **Total IDs** | **SK-2026-001 … 042** | Living document — keep appending |
+| **Critical / High** | 3–4 | Chat WS leak, non-prod SSRF disable, OAuth dummy tokens |
+| **Medium** | 15+ | CSS, invite entropy, SQL concat, blocks, escrow, push unregister, SSRF surfaces |
+| **Low / Info** | 20+ | Token length, DoS knobs, privacy, misconfig, TODOs |
+| **Total IDs** | **SK-2026-001 … 053** | Living document (pass 3: real IDOR vulns) |
 
-**Must verify on deploy:** commits `f95ed57` (chat stream gate + escrow) **and** the batch that closes SK-002/003/004/008/009/012/013/022/026/036 (this tree) are present in production.
+### 0.4 Remediation status matrix (code vs residual)
+
+#### Fixed in tree (code verified)
+
+| ID | Topic |
+|----|--------|
+| **001** | Chat WS stream membership |
+| **002** | Private-IP SSRF checks always on |
+| **003** | OAuth `client_credentials` rejected |
+| **004 / 005 / 030** | Channel / theme / role colors hex-safe |
+| **006** | `sanitize-html` drops `style` |
+| **008** | Chat invite CSPRNG (`secureRndstr`) |
+| **009** | Room invite respects blocks |
+| **011** (most) | Poll / chat react / note reaction / hashtag SQL parameterized |
+| **012** | `federation/update-remote-user` requires credential |
+| **013** | Public `sponsors.forceUpdate` ignored |
+| **015** | `fetch-rss` requires login + URL validation |
+| **016** (partial→good) | Webhooks require https, no userinfo; socket SSRF still applies |
+| **019** (partial) | `page-push` event/var size bounds |
+| **022** (partial) | OAuth authorize scheme restricted (not full app allowlist) |
+| **026** | Internal storage path traversal guard |
+| **028** (partial) | Gateway requires `API_KEY` in production |
+| **029** | Escrow config comments aligned |
+| **036** | `sw/unregister` requires login; scoped by `userId` |
+| **039** | `export-custom-emojis` requireModerator |
+| **007** (partial) | MFM `position` ±50; animation duration floor/cap |
+| **043** | Invite ignore enforced on join |
+| **044** | Re-invite after ignore |
+| **045** | Chat unreact membership |
+| **046** | Clip addNote visibility / public clip rule |
+| **047** | Favorite visibility gate |
+| **048** | Chat reaction dedupe / race |
+| **049** | X-algo endpoint gate + fallback default |
+
+#### Still open / residual (not “all clear”)
+
+| ID | Why still open |
+|----|----------------|
+| **010** | Escrow is operator-readable at-rest crypto, **not** E2EE — product/UX honesty + optional pack-time viewer binding |
+| **014** | `/proxy` remains intentional outbound fetch surface (guards on; abuse residual) |
+| **016** | Webhooks still call out to user URLs (by design); private-IP blocked at socket |
+| **017 / 018** | Short native token; some ID schemes use `Math.random` |
+| **020** | Shared-access / miauth high-privilege grants (feature risk) |
+| **021** | `reset-db` if `NODE_ENV=test` on a public host (ops) |
+| **022** | OAuth redirect not full registered-app allowlist |
+| **023–025** | Enumeration / CORS (low or intentional) |
+| **031** | AiScript sandbox dependency |
+| **032** | WS reconnect rate-limit TODO |
+| **033** | Encrypted chat not searchable by plaintext |
+| **037–038** | Telegram bot token in URL logs; translator third-party privacy |
+| **007** residual | MFM UI abuse (scale/animation/phishing) still possible within clamps |
+| **046** residual | Making a private clip public does not re-scan already-attached notes |
+| **050** | Site mod can mute/rate-limit any room (open-ops privilege — skip for product) |
+| **051** | **Import APIs: no drive file ownership (IDOR) — HIGH — fix** |
+| **052** | **Private Flash readable by id (authz bypass) — MEDIUM — fix** |
+| **053** | Admin emoji can detach any drive file (staff-only) |
+
+#### Ops-only (not closed by code alone)
+
+- [ ] Public nodes: `NODE_ENV=production`
+- [ ] Dedicated strong `chatEscrowSecret` / `CHAT_ESCROW_SECRET`
+- [ ] `reset-db` unreachable on internet-facing instances
+- [ ] x-algorithm gateway not public without `API_KEY`
+- [ ] Smoke: private IP via `/proxy` and authenticated `fetch-rss` fails closed
 
 ---
 
@@ -783,14 +876,244 @@ Admin-set URL receives note text + instance may send DeepL-shaped traffic. Malic
 
 ---
 
+## 1b. Continued screening (2026-07-14 pass 2) — logic / auth / integrity
+
+Second static pass focused on **business logic**, IDOR-ish gaps, and integrity bugs after P0/P1 remediations. No live exploitation.
+
+---
+
+### SK-2026-043 — Ignored room invitations still allow join (logic bug)
+
+| | |
+|--|--|
+| **Severity** | **M** |
+| **CWE** | CWE-863 Incorrect Authorization / business logic |
+| **Status** | **Fixed in tree** — join requires invitation with `ignored = false` |
+| **Components** | `ChatService.joinToRoom` (invite policy branch); `ignoreRoomInvitation` |
+
+**Description**  
+Inbox listing filters `invitation.ignored = FALSE`, so ignored invites disappear from UI. Prior bug: join still accepted ignored rows.
+
+**Fix summary**  
+`joinToRoom` invite branch: `if (invitation == null || invitation.ignored) throw 'no invitation'`.
+
+---
+
+### SK-2026-044 — Cannot re-invite after ignore (`already invited` on ignored row)
+
+| | |
+|--|--|
+| **Severity** | **L** (logic / UX) |
+| **CWE** | CWE-754 |
+| **Status** | **Fixed in tree** — ignored row re-issued (`ignored=false` + notify) |
+| **Components** | `ChatService.createRoomInvitation` |
+
+**Description**  
+Prior: any existing invitation row blocked re-invite, including ignored ones.
+
+**Fix summary**  
+Only non-ignored existing invites throw `already invited`. Ignored rows are un-ignored and re-notified.
+
+---
+
+### SK-2026-045 — Chat `unreact` skips membership / party checks (logic / info leak surface)
+
+| | |
+|--|--|
+| **Severity** | **L–M** |
+| **CWE** | CWE-862 |
+| **Status** | **Fixed in tree** — DM party / room membership; publish only if token removed |
+| **Components** | `ChatService.unreact` |
+
+**Description**  
+Prior: `unreact` skipped membership checks and always published stream events.
+
+**Fix summary**  
+Mirror `react` auth; `array_remove` with `RETURNING` so events fire only when a self-token was present.
+
+---
+
+### SK-2026-046 — Clip private notes into public clip (integrity / metadata)
+
+| | |
+|--|--|
+| **Severity** | **L–M** |
+| **CWE** | CWE-200 / CWE-862 (partial) |
+| **Status** | **Fixed in tree** — visibility on add; public clips reject non-public notes |
+| **Components** | `ClipService.addNote` |
+
+**Description**  
+Prior: `addNote` only checked clip ownership + note FK.
+
+**Fix summary**  
+Load note; `checkNoteVisibilityAsync` for non-authors; if `clip.isPublic`, require `note.visibility === 'public'`.
+
+**Residual**  
+Making an existing private clip public with private notes already attached is not re-scanned (optional follow-up on `update`).
+
+---
+
+### SK-2026-047 — Favorite private notes without explicit visibility gate at API layer
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **CWE** | CWE-862 (soft) |
+| **Status** | **Fixed in tree** — `checkNoteVisibilityAsync` before insert |
+| **Components** | `notes/favorites/create.ts` |
+
+**Description**  
+Prior: favorites only loaded note by id without visibility gate.
+
+**Fix summary**  
+Same pattern as `ReactionService.create` for non-author favorites.
+
+---
+
+### SK-2026-048 — Chat reaction race: duplicate tokens / count limit bypass
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **CWE** | CWE-362 |
+| **Status** | **Fixed in tree** — reject existing token; conditional append under MAX |
+| **Components** | `ChatService.react` |
+
+**Description**  
+Prior: concurrent reacts could duplicate tokens and exceed MAX.
+
+**Fix summary**  
+In-memory reject if token present; SQL `NOT ($1 = ANY(reactions)) AND cardinality < MAX` with `RETURNING`.
+
+---
+
+### SK-2026-049 — X Algorithm timeline black-hole when enabled without endpoint (logic bug; WIP fix in working tree)
+
+| | |
+|--|--|
+| **Severity** | **M** (availability / product) |
+| **CWE** | CWE-754 |
+| **Status** | **Fixed in tree** — endpoint required for `isEnabled`; default fallback true |
+| **Components** | `XAlgorithmService.isEnabled` / `getTimelineNoteIds`; `Meta.defaultXAlgorithmConfig` |
+
+**Description**  
+Prior: enabled without mixer URL could empty or error home/hybrid timelines.
+
+**Fix summary**  
+`isEnabled()` true only with endpoint; `fallbackToSharkeyTimeline` defaults true; admin form default aligned.
+
+---
+
+### SK-2026-050 — Site moderator can set room `isMutedAll` / rate limit without being owner
+
+| | |
+|--|--|
+| **Severity** | **I–L** (by design / open moderation) |
+| **Components** | `chat/rooms/update.ts` — only `joinPolicy` restricted to owner |
+
+**Description**  
+`canModerateRoom` includes **site moderators**. They can change announcement, mute-all, rate limits for any room. Treat as intentional staff power for open-moderation instances, not a product defect unless policy says otherwise.
+
+---
+
+## 1c. Pass 3 (2026-07-14) — real vuln focus (skip open-ops design)
+
+Screening focused on **IDOR, authz bypass, secret exposure** — not “site mods can moderate” style open-ops features.
+
+---
+
+### SK-2026-051 — Import APIs: no Drive file ownership check (IDOR / cross-user file read)
+
+| | |
+|--|--|
+| **Severity** | **H** |
+| **CWE** | CWE-639 / CWE-862 |
+| **Status** | **Open** |
+| **Components** | `i/import-following.ts`, `i/import-blocking.ts`, `i/import-muting.ts`, `i/import-user-lists.ts`, `i/import-antennas.ts`, `i/import-notes.ts` |
+
+**Description**  
+All of these load the file as:
+
+```ts
+const file = await this.driveFilesRepository.findOneBy({ id: ps.fileId });
+// no: file.userId === me.id
+```
+
+Then enqueue jobs that **download and parse** `file.url` as the caller (`me`). Contrast with `drive/files/show|delete|update`, which require owner or moderator.
+
+**Attack**  
+1. Attacker obtains or guesses another user’s `fileId` (UUID — hard to guess, but IDs leak via shared links, admin tools, logs, XSS, shoulder-surfing, etc.).  
+2. Calls e.g. `i/import-following` with that `fileId` (needs role policy `canImportFollowing` etc.).  
+3. Server fetches victim’s drive object and processes contents under attacker’s account.
+
+**Impact**  
+
+| Endpoint | Impact |
+|----------|--------|
+| import-following / muting / blocking / user-lists | Read victim CSV/list content; apply follows/mutes/blocks from victim data |
+| import-antennas | Read victim antenna JSON (config secrets if any) |
+| import-notes | Process victim archive into attacker’s notes pipeline |
+
+Even without guessing UUIDs, any leak of `fileId` is enough. **This is a clear authorization bug**, not an open-ops feature.
+
+**Remediation**  
+On every import endpoint (and processors as defense-in-depth):
+
+```ts
+if (file.userId !== me.id) throw new ApiError(noSuchFile); // or ACCESS_DENIED
+```
+
+Prefer `findOneBy({ id, userId: me.id })`.
+
+---
+
+### SK-2026-052 — Private Flash (`visibility: private`) readable by anyone with `flashId`
+
+| | |
+|--|--|
+| **Severity** | **M** |
+| **CWE** | CWE-639 / CWE-284 |
+| **Status** | **Open** |
+| **Components** | `flash/show.ts`, `FlashEntityService.pack` |
+
+**Description**  
+`flash/create` and `update` support `visibility: 'private' | 'public'`.  
+`flash/show` loads by id only and packs full payload including **`script`** with no owner/visibility check:
+
+```ts
+const flash = await this.flashsRepository.findOneBy({ id: ps.flashId });
+return await this.flashEntityService.pack(flash, me); // always returns script
+```
+
+**Impact**  
+Private Play/Flash is not private: knowing/guessing id exposes AiScript source and metadata to unauthenticated callers (`requireCredential: false`).
+
+**Remediation**  
+If `visibility === 'private'`, allow only `me.id === flash.userId` (and optionally moderators). Featured/list queries must already filter `public` only — verify.
+
+---
+
+### SK-2026-053 — Admin emoji add detaches any drive file from its owner (staff-only)
+
+| | |
+|--|--|
+| **Severity** | **L** (requires admin/mod emoji rights) |
+| **CWE** | CWE-862 |
+| **Status** | **Open** (staff power; note for least-privilege) |
+| **Components** | `admin/emoji/add.ts` — `update(driveFile.id, { user: null })` without checking file owner |
+
+Staff can repurpose any user’s drive file as emoji and clear ownership. Acceptable if all emoji admins are fully trusted; otherwise require file owned by staff or already unowned.
+
+---
+
 ## 2. Attack surface map (abbreviated)
 
 ```
 Internet
   ├─ /api/*  (Misskey API + rate limits + kinds)
-  ├─ /oauth/* (authorize redirect, token, client_credentials stub)
+  ├─ /oauth/* (authorize redirect, token; client_credentials rejected)
   ├─ /api/v1/* Mastodon API
-  ├─ /proxy/* media proxy ──► HttpRequestService ──► SSRF guards?
+  ├─ /proxy/* media proxy ──► HttpRequestService ──► private-IP guards (always on)
   ├─ /files/* drive keys (UUID)
   ├─ /url preview
   ├─ ActivityPub inbox/outbox (signed)
@@ -798,67 +1121,110 @@ Internet
   └─ optional x-algorithm-gateway (DB)
 ```
 
-**Highest ROI for attackers**  
-1. SSRF chain if non-production or webhook/proxy abuse  
-2. Chat auth bugs (history stream — fixed; invite codes; blocks)  
-3. CSS injection on high-traffic note chrome (channel color)  
-4. Token/session theft (short native tokens, shared access)
+**Highest residual ROI after remediation (for attackers / next hardening)**  
+1. **SK-051** import IDOR — any permitted user can process another user’s drive file by id  
+2. **SK-052** private Flash/Play script leak by id  
+3. Session/token theft (SK-017/020)  
+4. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
+5. Escrow key compromise (SK-010)  
+6. Mis-deploy: `NODE_ENV=test`, gateway without API key
 
 ---
 
 ## 3. Priority remediation plan
 
-### P0 — before public exposure of this tree’s custom features
+### Status legend
 
-1. ~~Confirm chat stream gating (`f95ed57`)~~ **done in tree**.  
-2. ~~Always-on private IP deny~~ **done in tree**.  
-3. ~~OAuth `client_credentials` stub~~ **rejected in tree**.  
-4. ~~Channel colors as hex only~~ **API done**; themeColor / frontend display still open.
+- **DONE** — code in this tree  
+- **PARTIAL** — mitigated, residual remains  
+- **OPEN** — backlog  
+- **OPS** — operator / deploy only  
+
+### P0 — before public exposure
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Chat stream gating (`f95ed57`) | **DONE** |
+| 2 | Always-on private IP deny | **DONE** |
+| 3 | OAuth `client_credentials` stub | **DONE** (rejected) |
+| 4 | Channel colors hex only (+ frontend sanitize) | **DONE** |
 
 ### P1 — short term
 
-5. ~~CSPRNG chat invite codes~~ **done**; still add join-by-code rate limits if missing.  
-6. ~~Room invite block checks~~ **done**.  
-7. Parameterize all `array_append` / poll SQL.  
-8. Harden `fetch-rss` / webhooks / `/proxy`.  
-9. Strip `style` from `sanitize-html` defaults.  
-10. ~~`sw/unregister` auth~~ **done**.  
-11. ~~`sponsors.forceUpdate` public DoS~~ **done**.  
-12. ~~`federation/update-remote-user` auth~~ **done**.
+| # | Item | Status |
+|---|------|--------|
+| 5 | CSPRNG chat invite codes | **DONE** |
+| 6 | Room invite block checks | **DONE** |
+| 7 | Parameterize poll / array SQL | **DONE** (poll, chat, reactions, hashtags) |
+| 8 | Harden `fetch-rss` / webhooks | **DONE** / **PARTIAL** (`/proxy` still open by design) |
+| 9 | Strip `style` from sanitize-html | **DONE** |
+| 10 | `sw/unregister` auth | **DONE** |
+| 11 | `sponsors.forceUpdate` public DoS | **DONE** |
+| 12 | `federation/update-remote-user` auth | **DONE** |
 
-### P2 — medium term
+### P2 — medium term (residual backlog)
 
-10. Clamp MFM position; chat simple-MFM mode.  
-11. Escrow UX honesty + pack-time viewer checks.  
-12. Lengthen tokens; CSPRNG IDs.  
-13. Staff-only `sponsors.forceUpdate`; auth on `update-remote-user`.  
-14. OAuth authorize redirect allowlist.
+| # | Item | Status |
+|---|------|--------|
+| 13 | MFM position clamp + animation caps | **PARTIAL** (clamp done; simple-MFM-for-chat optional **OPEN**) |
+| 14 | Escrow UX honesty + pack-time viewer checks | **OPEN** |
+| 15 | Lengthen native tokens; CSPRNG IDs | **OPEN** |
+| 16 | OAuth authorize full app/redirect allowlist | **PARTIAL** (scheme only) |
+| 17 | Join-by-code failure rate limits | **OPEN** (optional hardening) |
+| 18 | **SK-043/044** invite ignore + re-invite logic | **DONE** |
+| 19 | **SK-045** unreact membership checks | **DONE** |
+| 20 | **SK-046/047** clip/favorite visibility on write | **DONE** |
+| 21 | **SK-048** chat reaction race / dedupe | **DONE** |
+| 22 | **SK-049** x-algo fallback / isEnabled endpoint gate | **DONE** (working tree; ensure committed) |
+| 23 | **SK-051** import endpoints: require `file.userId === me.id` | **OPEN — priority fix** |
+| 24 | **SK-052** private flash: enforce visibility on show/pack | **OPEN — priority fix** |
 
 ### P3 — hygiene
 
-15. Align config comments; remove example secrets.  
-16. WS reconnect limits; page-push validation.  
-17. External gateway API keys mandatory.
+| # | Item | Status |
+|---|------|--------|
+| 18 | Align escrow config comments | **DONE** |
+| 19 | WS reconnect rate limits | **OPEN** (SK-032) |
+| 20 | page-push bounds | **PARTIAL** |
+| 21 | Gateway `API_KEY` in production | **PARTIAL** / **OPS** |
+| 22 | Telegram token not in loggable URLs | **OPEN** (SK-037) |
+| 23 | Translator privacy documentation | **OPEN** (SK-038) |
+
+### P0/P1 code remediation: **COMPLETE for this tree**
+
+Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings unfixed.”
 
 ---
 
 ## 4. Verification checklist (for operators)
 
+### Code / build (expect yes on this tree)
+
 - [x] Chat room stream membership gate (`f95ed57`+)  
 - [x] Private-IP SSRF checks always on (not only production)  
 - [x] OAuth `client_credentials` rejected  
 - [x] Channel `color` API hex-only  
+- [x] Frontend `safeCssHexColor` on note channel bars / tickers / roles  
 - [x] Chat invite CSPRNG + room invite block checks  
 - [x] `sw/unregister` requires login  
 - [x] `sponsors.forceUpdate` ignored publicly  
 - [x] `federation/update-remote-user` requires credential  
 - [x] Internal storage path traversal guard  
-- [ ] `NODE_ENV=production` on public nodes (ops)  
-- [ ] `chatEscrowSecret` set; not equal to weak `setupPassword` (ops)  
-- [ ] `reset-db` not reachable (ops)  
-- [ ] x-algorithm gateway not public without `API_KEY` (ops)  
-- [ ] Frontend still sanitizes legacy channel colors in CSS  
-- [ ] Private IP fetch to `http://127.0.0.1/` via `/proxy` and `fetch-rss` fails (smoke)  
+- [x] `fetch-rss` requires credential  
+- [x] Webhook create/update https-only  
+- [x] sanitize-html without global `style`  
+- [x] MFM position clamped  
+- [x] export-custom-emojis moderator-only  
+
+### Ops / smoke (must still be done per environment)
+
+- [ ] `NODE_ENV=production` on public nodes  
+- [ ] `chatEscrowSecret` / `CHAT_ESCROW_SECRET` set; not a weak shared install password  
+- [ ] `reset-db` not reachable on internet-facing instances  
+- [ ] x-algorithm gateway not public without `API_KEY`  
+- [ ] Smoke: request to private IP via `/proxy` fails closed  
+- [ ] Smoke: `fetch-rss` without auth fails; with auth, private IP fails closed  
+- [ ] Production image includes commits `f95ed57`, `15b00d8`, `7ba243c`, `4eb55e4` (or successors)  
 
 ---
 
@@ -866,8 +1232,12 @@ Internet
 
 - Grep/AST review of backend `src/`, frontend MFM/sanitize/chat, services.  
 - Confirmed mfm-js rejects semicolon breakouts in fn args.  
-- Did **not** run dynamic exploits, fuzzers, or attack live instances.  
-- Findings may include defense-in-depth issues not yet weaponized.
+- Spot-checked post-fix code paths (SSRF agent, invite CSPRNG, channel color schema, sw unregister, sanitize-html, MFM clamp).  
+- Optimization review (§8): git history (~40 commits), live reads of chat stream/crypto/prefetch/WS/X-algo, working-tree diffs for uncommitted WIP.  
+- Did **not** run dynamic exploits, fuzzers, load tests, or attack live instances.  
+- Findings may include defense-in-depth issues not yet weaponized.  
+- **Remediation complete (P0/P1 code) ≠ full security program complete.**  
+- **Optimization direction correct ≠ production release complete** (see §8.10).
 
 ---
 
@@ -881,6 +1251,11 @@ Internet
 | 0.4 | 2026-07-14 | Batch fix: SSRF always-on, OAuth stub, channel color, invite CSPRNG, room invite blocks, sw unregister, sponsors forceUpdate, federation update-remote-user auth, storage path, docs |
 | 0.5 | 2026-07-14 | P1: fetch-rss auth, webhook URL https, poll/chat SQL params, sanitize-html no style, frontend safe colors |
 | 0.6 | 2026-07-14 | Reaction/Hashtag SQL params, MFM clamps, export-emoji staff-only, page-push bounds, gateway API_KEY in prod, role colors |
+| 0.7 | 2026-07-14 | **Status close-out:** §0 overall status, remediation matrix (fixed vs residual), updated P0–P3 plan, ops checklist; conclusion P0/P1 code complete, residuals remain |
+| 0.8 | 2026-07-14 | **Pass 2 logic screening:** SK-043..050 (ignored invite join, re-invite, unreact auth, public clip private notes, favorite visibility, reaction race, x-algo black-hole) |
+| 0.9 | 2026-07-14 | **Pass 2 remediations:** SK-043..049 fixed in code (invite ignore/join, re-invite, unreact auth, clip/favorite visibility, reaction race, x-algo); matrix + P2 plan updated |
+| 0.9b | 2026-07-14 | **Pass 3 real vulns (skip open-ops):** SK-051 import file IDOR (**H**); SK-052 private flash leak (**M**); SK-053 admin emoji file detach (L); residual matrix + ROI updated |
+| 0.9 | 2026-07-14 | **§8 Project optimization evaluation** (multi-pass code review): scores, chat perf/WS/escrow/algo, engineering process, residual backlog, production gate |
 
 ---
 
@@ -892,15 +1267,246 @@ Internet
 | Chat service | `core/ChatService.ts` |
 | Chat crypto | `core/ChatCryptoService.ts` |
 | Chat pack | `core/entities/ChatEntityService.ts` |
+| Chat frontend | `frontend/src/pages/chat/` (`room.vue`, `use-chat-history.ts`, `chat-history-loader.ts`, `chat-ws.ts`, `ChatMessageLazy.vue`, …) |
+| Stream client | `frontend/src/stream.ts`, `misskey-js/src/streaming.ts` |
 | HTTP/SSRF | `core/HttpRequestService.ts`, `core/DownloadService.ts` |
 | Media proxy | `server/FileServerService.ts` |
 | MFM | `frontend/src/components/global/MkMfm.ts` |
-| Sanitize | `frontend/src/utility/sanitize-html.ts` |
+| Sanitize / colors | `frontend/src/utility/sanitize-html.ts`, `frontend/src/utility/color.ts` |
 | OAuth | `server/oauth/OAuth2ProviderService.ts` |
 | API authz | `server/api/ApiCallService.ts`, `AuthenticateService.ts` |
 | Roles/rank | `core/RoleService.ts` |
 | Poll SQL | `server/api/endpoints/notes/polls/vote.ts`, `core/PollService.ts` |
+| X-algorithm | `core/XAlgorithmService.ts`, `services/x-algorithm-gateway/server.mjs` |
 
 ---
 
-*End of AMD document. Continue appending findings as `SK-2026-0xx`.*
+## 8. Project optimization evaluation (reviewer report)
+
+> **Role:** Independent project reviewer (static code + git history).  
+> **Tree:** `/root/Sharkey-work/Sharkey-dev-continue`  
+> **Passes:** 2026-07-14 (security AMD + multi-round optimization review against live sources).  
+> **Not done:** load tests, dynamic exploit, full e2e suite.
+
+This section records the **optimization / engineering judgment** for the same tree that hosts the AMD findings. It is intentionally broader than security: performance, architecture, product honesty, and release discipline.
+
+### 8.1 Overall scores (1–10)
+
+| Dimension | Score | One-line |
+|-----------|-------|----------|
+| **Performance direction** | **8.0** | Chat history prefetch, lazy mount, media unload, WS-over-REST hit real SPA bottlenecks |
+| **Security hardening (code)** | **8.5** | P0/P1 largely committed (`f95ed57`…`4eb55e4`); residuals are design/ops/logic pass-2 |
+| **Chat correctness / UX** | **8.0** | Scroll stability, catch-up, 1:1 `fromUser` pack (WIP) address real races |
+| **Maintainability** | **7.0** | Composables extracted; `room.vue` still ~1720+ lines |
+| **Product / privacy honesty** | **6.0–7.0** | Escrow ≠ E2EE; field still named `isE2ee`; forced-E2EE was reverted |
+| **Test / release discipline** | **4.0–5.0** | Almost no automated tests; working tree often holds critical fixes uncommitted |
+| **X-algorithm usability** | **7.5 → 8.0** (after commit) | Endpoint gate + default fallback correct; must land (SK-049) |
+| **Composite** | **~8.1** | **Conditional pass** for internal beta; public production needs gates in §8.8 |
+
+**Verdict wording:**  
+**有条件通过（Conditional Pass）— 性能与安全方向均成立，工程完成度约 80–85%。**  
+Internal beta: **OK**. Public production: **only after §8.8 gates**.
+
+### 8.2 What was optimized (work streams)
+
+Recent work (~40 commits on this branch of effort) clusters into four streams:
+
+```
+Perf/UX ── chat history prefetch, lazy mount, media release, scroll, WS reconnect catch-up
+Security ── chat stream auth, escrow key material, SSRF/OAuth/storage/invite/… (AMD P0/P1)
+Features ── room moderation, escrow, X-algo ranking v2, admin notes/search
+Refactor ── room.vue → composables / pure modules (history, channel, messages, timeline)
+```
+
+**Positive process note:** Feature/perf first, then security AMD backfill, then structure extraction, then correctness fixes (e.g. 1:1 avatars). Execution velocity is high.
+
+**Negative process note:** Strategy thrash (force always-on E2EE → full revert; escrow meta bootstrap → revert) and **uncommitted security/usability fixes** previously risked deploy drift. Prefer smaller “releasable slices.”
+
+### 8.3 Performance evaluation (code-backed)
+
+#### 8.3.1 History prefetch + viewport lazy mount — **Excellent / keep**
+
+| Mechanism | Paths | Judgment |
+|-----------|--------|----------|
+| Background `untilId` pipeline, not scroll-coupled | `chat-history-loader.ts`, `use-chat-history.ts` | Correct for long rooms |
+| Cooperative yield (`requestIdleCallback` / rAF) | same | Reduces main-thread jank |
+| Caps: `maxPages` 30, `maxMessages` = `HISTORY_MEMORY_CAP` (900) | `use-chat-history.ts` | Safety present |
+| Pause when hidden / deactivated | `shouldPause` | Battery/data aware |
+| Lazy row mount + height cache | `ChatMessageLazy.vue`, `chat-msg-heights.ts` | Correct for media-heavy history |
+
+**Caveats:**
+
+- Name “concurrent” is slightly misleading: cursor pages are **sequential** (as they must be); pool is mainly for map hooks.
+- Three memory tiers are intentional — document, do not “unify” blindly:
+
+| Constant | Typical value | Role |
+|----------|---------------|------|
+| `MAX_MESSAGES` | 400 | Trim oldest at live edge |
+| `BACKGROUND_MESSAGE_CAP` | 80 | Soft trim on keep-alive |
+| `HISTORY_MEMORY_CAP` | 900 | Allow taller window while reading history |
+
+#### 8.3.2 Media / DOM resource release — **Good / keep**
+
+| Mechanism | Paths | Judgment |
+|-----------|--------|----------|
+| Off-screen / hidden `unloadVideo` (clear src/poster) | `ChatAttachment.vue` | Mobile decoder relief |
+| Skip URL preview when no links | `XMessage.vue` | Saves network + DOM |
+| Soft-trim messages on deactivate | `room.vue` + caps | Keep-alive hygiene |
+| `releaseChatResources` on leave | `room.vue` | Correct teardown |
+
+#### 8.3.3 WebSocket expansion + reconnect — **Excellent with noise**
+
+| Mechanism | Paths | Judgment |
+|-----------|--------|----------|
+| Timeline / roomShow / members over channel request-response | `chat-ws.ts`, `chat-timeline.ts`, `chat-room.ts` | Reduces REST stampede |
+| Full packed notes on edit/reply streams | backend note services + frontend capture | Avoids `notes/show` storms |
+| Main-channel notification catch-up | stream main channel | Tab-wake correct |
+| `wakeStream` + `sinceId` catch-up + 800ms / in-flight guards | `stream.ts`, `room.vue` | Mobile half-open sockets |
+| Keep channel while backgrounded; pause heavy prefetch only | `room.vue` visibility | Better than dispose-on-hide (earlier thrash) |
+
+**Caveats:**
+
+- Global wake (visibility/online/pageshow/focus) **plus** room catch-up (immediate + 600ms) is multi-layered; cooldowns help but can still be chatty on flaky networks. Prefer one orchestration: wake once → `_connected_` → single catch-up.
+- `chat-ws.request` uses fixed **30ms** delay after connect — pragmatic, brittle; prefer init-complete signal later.
+- Expanding WS **must** ship with membership gates (`f95ed57`) — currently correct in tree.
+
+#### 8.3.4 X-algorithm — **Good; commit WIP**
+
+| Mechanism | Judgment |
+|-----------|----------|
+| Short TTL in-process cache | Absorbs double-refresh |
+| Default fallback to Sharkey TL | Availability-first (WIP default true) |
+| `isEnabled` requires endpoint (WIP) | Prevents SK-049 black-hole |
+| Gateway ranking features | Useful local proxy; prod needs `API_KEY` |
+
+### 8.4 Security optimization evaluation (summary; details in §1)
+
+| Item | Status | Reviewer note |
+|------|--------|----------------|
+| Chat room live stream gate | **DONE** `f95ed57` | Non-members may open channel shell for join-gate; no live events without timeline permission |
+| History over WS | **DONE** | Same permission check; `ACCESS_DENIED` must not silent-REST-retry as success for auth errors (client mostly correct) |
+| SSRF always-on | **DONE** | Verified in `HttpRequestService` agents |
+| OAuth dummy tokens | **DONE** | Rejected |
+| Invite CSPRNG + room invite blocks | **DONE** | Verified |
+| Colors / sanitize / MFM clamps | **DONE** / partial residual | Frontend `safeCssHexColor` landed |
+| Escrow not from setupPassword | **DONE** | Dedicated secret only |
+| Escrow product honesty | **OPEN** SK-010 | Operator-readable at-rest; not peer E2EE |
+| Pass-2 logic bugs 043–048 | **OPEN** | See §1b |
+| SK-049 X-algo black-hole | **WIP uncommitted** | Must commit |
+
+### 8.5 Escrow / crypto / E2EE — architecture judgment
+
+**Implemented model (correct as designed):**
+
+- Wire/at-rest: AES-256-GCM `v3s.<keyId>.…` (legacy `v3s.<iv>.…`)
+- Server seals outbound text when escrow enabled (`prepareOutboundText`)
+- Pack path reveals plaintext to authorized clients over TLS (`revealForPack` → `revealBody`)
+- Frontend treats server `text` as primary; **only legacy `v1.`** client-E2EE decrypts in browser (`chat-e2ee.ts` / `XMessage.vue`)
+- Notes/posts never use this path (chat-only) — good isolation
+
+**Issues:**
+
+1. **Naming:** DB/API field `isE2ee` overloaded for escrow + legacy client E2EE → user/admin confusion. Prefer UX “托管加密 / Escrow”; long-term split `encryptedAtRest` vs client E2EE (pack already exposes `encryptedAtRest`).
+2. **Decrypt gated on `isEnabled`:** If admin turns **preference off** but ciphertext remains and keys still exist, `revealForPack` may skip decrypt (`isEscrowCiphertext && isEnabled`) → blank history. **Decrypt should depend on key materials, not “encrypt new messages” preference.**
+3. **`|| true` in legacy derive path:** Always tries legacy HMAC — OK for compatibility, wasteful/confusing; condition should be explicit (no keyId on wire / tryLegacy flag).
+4. **Strategy thrash cost:** Force always-on 1:1 E2EE then full revert increased bisect cost; freeze product semantics before more crypto features.
+5. **DM content validation:** Room path throws on empty content; DM path comment-only — align both.
+
+### 8.6 Chat authorization matrix (reviewer-verified)
+
+| Action | Rule (intended / observed) |
+|--------|----------------------------|
+| Subscribe `chatRoomStream` | Member **or** site moderator (`hasPermissionToViewRoomTimeline`) |
+| WS `history` (room) | Same |
+| WS `read` receipt | **Member only** (staff readonly must not mark read) |
+| WS `roomShow` | Allowed for non-members (join-gate); no message bodies |
+| WS `members` | Member or room/site moderator |
+| WS `msg` / react / delete | Write availability + membership / canDelete checks |
+| `chatUser` stream key | `chatUserStream:${me}-${otherId}` — listener only hears own DM pair (not arbitrary third-party) |
+
+This layering is **sound**. Residual bugs are elsewhere (ignore-invite join SK-043, unreact checks SK-045, etc.).
+
+### 8.7 Engineering / maintainability
+
+| Observation | Judgment |
+|-------------|----------|
+| Extracted modules: `use-chat-channel`, `use-chat-messages`, `use-chat-history`, `chat-timeline`, `chat-ws`, `chat-scroll`, … | Good direction |
+| `room.vue` still ~1720 lines | Next extract only lifecycle (catch-up / visibility), no behavior change |
+| Security commits well-scoped with SK IDs | High quality |
+| Near-zero unit tests for prefetcher / channel ACL / catch-up / reveal | **Largest engineering risk** |
+| Working tree often holds production-relevant fixes | Commit before more features |
+
+**Minimum test pack recommended:**
+
+1. `ChatHistoryPrefetcher` — exhaust / stop / pause / maxPages  
+2. `chat-room` channel — non-member no stream; member receives; read only for members  
+3. `catchUpChatMessages` — dedupe + in-flight  
+4. `revealForPack` — preference off + keys present still decrypts historical v3s  
+
+### 8.8 Residual optimization backlog (reviewer priority)
+
+| ID | Item | Severity | Action |
+|----|------|----------|--------|
+| **W1** | Commit X-algo endpoint gate + default fallback (SK-049) | **High (availability)** | Commit now |
+| **W2** | Commit 1:1 lite `fromUser` / reaction.user pack + normalize + types | **Medium (UX)** | Separate commit from W1 |
+| **W3** | Escrow reveal independent of preference switch | **Medium** | Code fix in `ChatCryptoService.revealForPack` |
+| **W4** | Align DM empty-content validation with room | **Low** | `ChatService.createMessageToUser` |
+| **W5** | Clean `\|\| true` legacy derive; comments | **Low** | Crypto hygiene |
+| **W6** | Automated tests (see §8.7) | **High (engineering)** | Add before more chat features |
+| **W7** | Collapse multi wake/catch-up triggers | **Low** | Single orchestrator |
+| **W8** | Further slim `room.vue` | **Medium (maintainability)** | Composables only |
+| **W9** | Escrow ≠ E2EE copy in admin/UI | **Medium (product)** | Copy + docs |
+| **W10** | Pass-2 logic SK-043…048 | **M/L** | See §1b |
+
+### 8.9 What not to do next
+
+- Do **not** re-introduce forced always-on client E2EE without a frozen product spec.  
+- Do **not** dispose chat WS on every `document.hidden` (catch-up path already rejected that).  
+- Do **not** rewrite the prefetch/lazy-mount architecture for micro-gains.  
+- Do **not** ship more large features while W1/W2 remain uncommitted.  
+- Do **not** blindly set `HISTORY_MEMORY_CAP = MAX_MESSAGES` (breaks deep history / jump-to-message).
+
+### 8.10 Production / release gate (reviewer)
+
+**Allow internal beta when:**
+
+- [x] Commits include `f95ed57`, `15b00d8`, `7ba243c`, `4eb55e4` (or successors)  
+- [ ] W1 + W2 committed and built into the image  
+- [ ] Smoke: non-member cannot receive room live/history; member send/receive; tab background → foreground catch-up  
+- [ ] Smoke: private IP via `/proxy` fails closed even if `NODE_ENV` mis-set in staging  
+- [ ] Ops: `NODE_ENV=production`, dedicated `chatEscrowSecret`, gateway not public without key  
+
+**Allow public production when additionally:**
+
+- [ ] W3 escrow reveal fix (or documented “disabling escrow blanks history until re-enabled”)  
+- [ ] Admin/user copy never claims peer E2EE for escrow  
+- [ ] SK-043 (ignored invite join) fixed or accepted with documented behavior  
+- [ ] At least the §8.7 minimum tests or a written manual regression script owned by release  
+
+### 8.11 Worth-it matrix
+
+| Investment | Worth it? | Note |
+|------------|-----------|------|
+| History prefetch + lazy mount | **Yes** | Correct long-history architecture |
+| Media unload / soft trim | **Yes** | Mobile necessity |
+| WS history + catch-up | **Yes** | Ship only with auth gates (done) |
+| X-algo cache + fallback | **Yes** | Commit WIP |
+| Stream membership + escrow key cut | **Must** | Not optional polish |
+| Forced E2EE then revert | **Not worth the thrash** | Lesson: product semantics first |
+| Progressive `room.vue` split | **Yes, unfinished** | Continue without behavior change |
+
+### 8.12 Final reviewer ruling
+
+| Audience | Ruling |
+|----------|--------|
+| **Project lead** | Continue, but **feature freeze** until W1/W2 committed and smoke done |
+| **Performance track** | **Pass — keep**; tune catch-up/params only |
+| **Security track** | **Pass for P0/P1 code**; residual design/logic/ops remain (this AMD) |
+| **Next iteration** | Tests + escrow reveal decoupling + invite ignore logic; no new crypto product flip |
+
+**Composite: Conditional Pass (~8.1/10).**  
+Performance and security **directions are correct**. Completeness is gated by uncommitted usability/crypto polish, product honesty, and verification — not by a wrong architecture.
+
+---
+
+*End of AMD document (includes §8 optimization evaluation). Continue appending findings as `SK-2026-0xx`; update §8 scores when major streams land.*

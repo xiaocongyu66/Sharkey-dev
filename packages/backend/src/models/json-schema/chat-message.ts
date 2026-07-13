@@ -212,6 +212,11 @@ export const packedChatMessageLiteFor1on1Schema = {
 			type: 'string',
 			optional: false, nullable: false,
 		},
+		fromUser: {
+			type: 'object',
+			optional: false, nullable: false,
+			ref: 'UserLite',
+		},
 		toUserId: {
 			type: 'string',
 			optional: false, nullable: false,
@@ -251,6 +256,11 @@ export const packedChatMessageLiteFor1on1Schema = {
 					reaction: {
 						type: 'string',
 						optional: false, nullable: false,
+					},
+					user: {
+						type: 'object',
+						optional: true, nullable: true,
+						ref: 'UserLite',
 					},
 				},
 			},

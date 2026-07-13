@@ -43,7 +43,8 @@ export const defaultXAlgorithmConfig: XAlgorithmConfig = {
 	enableGroxContentUnderstanding: true,
 	enableAdsBlending: false,
 	modelArtifactsPath: null,
-	fallbackToSharkeyTimeline: false,
+	// Default true: dead/misconfigured gateway must not break home/hybrid TL
+	fallbackToSharkeyTimeline: true,
 };
 
 @Entity('meta')

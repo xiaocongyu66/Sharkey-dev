@@ -54,7 +54,11 @@ export class XAlgorithmService {
 
 	@bindThis
 	public isEnabled(): boolean {
-		return this.meta.xAlgorithmConfig?.enabled === true;
+		const config = this.meta.xAlgorithmConfig;
+		if (config?.enabled !== true) return false;
+		// Toggle alone is not enough — without a mixer endpoint, never divert TL
+		// (avoids "I don't use Musk algo" black-hole when enabled but unconfigured).
+		return !!(config.homeMixerEndpoint || config.scoredPostsEndpoint);
 	}
 
 	@bindThis
@@ -68,11 +72,8 @@ export class XAlgorithmService {
 	public async getTimelineNoteIds(request: XAlgorithmTimelineRequest): Promise<string[]> {
 		const config = this.meta.xAlgorithmConfig;
 		const endpoint = config?.homeMixerEndpoint || config?.scoredPostsEndpoint;
-		if (!config?.enabled) {
+		if (!config?.enabled || !endpoint) {
 			return [];
-		}
-		if (!endpoint) {
-			throw new Error('X Algorithm endpoint is not configured');
 		}
 
 		const cacheKey = this.cacheKey(request);

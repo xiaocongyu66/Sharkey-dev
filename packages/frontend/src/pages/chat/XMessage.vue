@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	:class="[$style.root, { [$style.isMe]: isMe, [$style.highlighted]: highlighted }]"
 	:data-message-id="message.id"
 >
-	<MkAvatar :class="$style.avatar" :user="message.fromUser!" :link="!isMe" :preview="false"/>
+	<MkAvatar v-if="message.fromUser" :class="$style.avatar" :user="message.fromUser" :link="!isMe" :preview="false"/>
 	<div :class="$style.body" @contextmenu.stop="onContextmenu">
 		<!-- name + time + compact action control (inline after time) -->
 		<div :class="$style.header">
@@ -77,7 +77,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 			</div>
 		</MkFukidashi>
 		<div v-if="hasUrlPreview" class="_gaps_s" style="margin: 8px 0;" @click.stop>
-			<SkUrlPreviewGroup :sourceNodes="parsed" :showAsQuote="!message.fromUser.rejectQuotes"/>
+			<SkUrlPreviewGroup :sourceNodes="parsed" :showAsQuote="!message.fromUser?.rejectQuotes"/>
 		</div>
 		<!-- reactions back under the message -->
 		<SkTransitionGroup

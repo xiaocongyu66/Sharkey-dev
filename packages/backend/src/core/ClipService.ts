@@ -12,6 +12,7 @@ import { isDuplicateKeyValueError } from '@/misc/is-duplicate-key-value-error.js
 import { RoleService } from '@/core/RoleService.js';
 import { IdService } from '@/core/IdService.js';
 import { CollapsedQueueService } from '@/core/CollapsedQueueService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import type { MiLocalUser } from '@/models/User.js';
 import { TimeService } from '@/global/TimeService.js';
 
@@ -37,6 +38,7 @@ export class ClipService {
 		private idService: IdService,
 		private readonly timeService: TimeService,
 		private readonly collapsedQueueService: CollapsedQueueService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 	}
 
@@ -101,6 +103,21 @@ export class ClipService {
 
 		if (clip == null) {
 			throw new ClipService.NoSuchClipError();
+		}
+
+		// SK-2026-046: require visibility for me; public clips only accept public notes
+		const note = await this.notesRepository.findOneBy({ id: noteId });
+		if (note == null) {
+			throw new ClipService.NoSuchNoteError();
+		}
+		if (note.userId !== me.id) {
+			const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+			if (!accessible) {
+				throw new ClipService.NoSuchNoteError();
+			}
+		}
+		if (clip.isPublic && note.visibility !== 'public') {
+			throw new ClipService.NoSuchNoteError();
 		}
 
 		const currentCount = await this.clipNotesRepository.countBy({

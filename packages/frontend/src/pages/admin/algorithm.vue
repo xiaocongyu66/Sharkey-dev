@@ -237,7 +237,7 @@ const defaultConfig = {
 	enableGroxContentUnderstanding: true,
 	enableAdsBlending: false,
 	modelArtifactsPath: null,
-	fallbackToSharkeyTimeline: false,
+	fallbackToSharkeyTimeline: true,
 };
 
 let metaCfg: typeof defaultConfig | undefined;

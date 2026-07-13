@@ -11,26 +11,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<MkAd :preferForms="['horizontal', 'horizontal-big']"/>
 
-	<MkInput
-		v-model="searchQuery"
-		:placeholder="i18n.ts._chat.searchMessages"
-		type="search"
-	>
-		<template #prefix><i class="ti ti-search"></i></template>
-	</MkInput>
-
-	<MkButton v-if="searchQuery.length > 0" primary rounded @click="search">{{ i18n.ts.search }}</MkButton>
-
-	<MkFoldableSection v-if="searched">
-		<template #header>{{ i18n.ts.searchResult }}</template>
-
-		<div class="_gaps_s">
-			<div v-for="message in searchResults" :key="message.id" :class="$style.searchResultItem">
-				<XMessage :message="message" :isSearchResult="true"/>
-			</div>
-		</div>
-	</MkFoldableSection>
-
 	<MkFoldableSection>
 		<template #header>{{ i18n.ts._chat.history }}</template>
 
@@ -40,10 +20,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { onActivated, onDeactivated, onMounted, ref } from 'vue';
-import * as Misskey from 'misskey-js';
-import { useInterval } from '@@/js/use-interval.js';
-import XMessage from './XMessage.vue';
+import { onMounted } from 'vue';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
@@ -51,7 +28,6 @@ import { ensureSignin } from '@/i.js';
 import { useRouter } from '@/router.js';
 import * as os from '@/os.js';
 import { updateCurrentAccountPartial } from '@/accounts.js';
-import MkInput from '@/components/MkInput.vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkInfo from '@/components/MkInfo.vue';
 import MkChatHistories from '@/components/MkChatHistories.vue';
@@ -61,10 +37,6 @@ const $i = ensureSignin();
 const tChat = (key: keyof typeof chatFb) => chatT(key, chatFb[key]);
 
 const router = useRouter();
-
-const searchQuery = ref('');
-const searched = ref(false);
-const searchResults = ref<Misskey.entities.ChatMessage[]>([]);
 
 function start(ev: MouseEvent) {
 	os.popupMenu([{
@@ -151,15 +123,6 @@ async function joinByCode() {
 	router.push(`/chat/room/${(room as any).id}`);
 }
 
-async function search() {
-	const res = await misskeyApi('chat/messages/search', {
-		query: searchQuery.value,
-	});
-
-	searchResults.value = res;
-	searched.value = true;
-}
-
 onMounted(() => {
 	updateCurrentAccountPartial({ hasUnreadChatMessages: false });
 });
@@ -168,11 +131,5 @@ onMounted(() => {
 <style lang="scss" module>
 .start {
 	margin: 0 auto;
-}
-
-.searchResultItem {
-	padding: 12px;
-	border: solid 1px var(--MI_THEME-divider);
-	border-radius: 12px;
 }
 </style>
