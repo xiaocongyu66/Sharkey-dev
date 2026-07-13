@@ -168,19 +168,20 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 	</div>
 
-	<div v-else-if="tab === 'search' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
+	<!-- Independent v-if (not v-else-if): chat pane uses v-show to keep scroll/DOM -->
+	<div v-if="tab === 'search' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XSearch :userId="userId" :roomId="roomId" @jump="onSearchJump"/>
 	</div>
 
-	<div v-else-if="tab === 'members' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div v-if="tab === 'members' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XMembers v-if="room != null" :room="room" @inviteUser="inviteUser"/>
 	</div>
 
-	<div v-else-if="tab === 'info' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div v-if="tab === 'info' && canViewTimeline" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XInfo v-if="room != null" :room="room"/>
 	</div>
 
-	<div v-else-if="tab === 'manage' && canModerate" class="_spacer" style="--MI_SPACER-w: 700px;">
+	<div v-if="tab === 'manage' && canModerate" class="_spacer" style="--MI_SPACER-w: 700px;">
 		<XManage v-if="room != null" :room="room" @updated="refreshRoom" @cleared="onRoomCleared"/>
 	</div>
 
