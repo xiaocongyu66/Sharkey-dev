@@ -95,6 +95,11 @@ export interface MainEventTypes {
 		keyId: string | null;
 		updatedAt: string;
 	};
+	/** Own avatar refreshed (other tabs / cache bust) */
+	userAvatarUpdated: {
+		user: Packed<'UserLite'>;
+		updatedAt: string;
+	};
 }
 
 export interface DriveEventTypes {
@@ -200,6 +205,11 @@ export interface ChatEventTypes {
 	e2eeKeyUpdated: {
 		userId: MiUser['id'];
 		keyId: string | null;
+		updatedAt: string;
+	};
+	/** Member avatar/profile lite changed — clients should refresh avatars */
+	userAvatarUpdated: {
+		user: Packed<'UserLite'>;
 		updatedAt: string;
 	};
 }

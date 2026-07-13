@@ -9,7 +9,7 @@ import ms from 'ms';
 import { extractCustomEmojisFromMfm } from '@/misc/extract-custom-emojis-from-mfm.js';
 import { extractHashtags } from '@/misc/extract-hashtags.js';
 import * as Acct from '@/misc/acct.js';
-import type { UsersRepository, DriveFilesRepository, MiMeta, UserProfilesRepository, PagesRepository } from '@/models/_.js';
+import type { UsersRepository, DriveFilesRepository, MiMeta, UserProfilesRepository, PagesRepository, ChatRoomMembershipsRepository, ChatRoomsRepository } from '@/models/_.js';
 import type { MiLocalUser, MiUser } from '@/models/User.js';
 import { birthdaySchema, listenbrainzSchema, descriptionSchema, followedMessageSchema, locationSchema, nameSchema } from '@/models/User.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
@@ -306,6 +306,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		@Inject(DI.pagesRepository)
 		private pagesRepository: PagesRepository,
+
+		@Inject(DI.chatRoomMembershipsRepository)
+		private chatRoomMembershipsRepository: ChatRoomMembershipsRepository,
+
+		@Inject(DI.chatRoomsRepository)
+		private chatRoomsRepository: ChatRoomsRepository,
 
 		private userEntityService: UserEntityService,
 		private driveFileEntityService: DriveFileEntityService,
@@ -635,6 +641,38 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			// Publish meUpdated event
 			await this.globalEventService.publishMainStream(user.id, 'meUpdated', iObj);
+
+			// Avatar changed: push lite user to open chat streams so clients refresh
+			const avatarChanged =
+				(updates as any).avatarId !== undefined
+				|| (updates as any).avatarUrl !== undefined
+				|| (updates as any).avatarBlurhash !== undefined;
+			if (avatarChanged) {
+				try {
+					const lite = await this.userEntityService.pack(updatedUser, null, { schema: 'UserLite' });
+					const payload = { user: lite, updatedAt: new Date().toISOString() };
+					// Also on own main (other devices / UI that only listen to main)
+					await this.globalEventService.publishMainStream(user.id, 'userAvatarUpdated' as any, payload);
+					// Rooms this user is in (membership rows; owner may not have a row)
+					const memberships = await this.chatRoomMembershipsRepository.find({
+						where: { userId: user.id },
+						select: { roomId: true },
+						take: 200,
+					});
+					const roomIds = new Set(memberships.map(m => m.roomId));
+					const owned = await this.chatRoomsRepository.find({
+						where: { ownerId: user.id },
+						select: { id: true },
+						take: 100,
+					});
+					for (const row of owned) roomIds.add(row.id);
+					for (const roomId of roomIds) {
+						await this.globalEventService.publishChatRoomStream(roomId, 'userAvatarUpdated', payload);
+					}
+				} catch {
+					// non-fatal
+				}
+			}
 
 			// ハッシュタグ更新
 			await this.queueService.createUpdateUserTagsJob(user.id);

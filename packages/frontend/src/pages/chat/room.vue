@@ -7,7 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 <!-- Chat uses normal (non-reversed) page scroll: oldest→newest DOM, stick to bottom.
      column-reverse caused scrollTop sign flips and history jump (乱窜). -->
 <PageWithHeader v-model:tab="tab" :reversed="false" :tabs="headerTabs" :actions="headerActions" :thin="true" :class="$style.chatPage">
-	<div v-if="tab === 'chat'" class="_spacer" :class="$style.chatSpacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 4px; --MI_SPACER-max: 8px; --MI_SPACER-h: 4px;">
+	<!-- v-show: keep chat DOM when switching manage/info so scroll + media heights survive -->
+	<div v-show="tab === 'chat'" class="_spacer" :class="$style.chatSpacer" style="--MI_SPACER-w: 700px; --MI_SPACER-min: 4px; --MI_SPACER-max: 8px; --MI_SPACER-h: 4px;">
 		<div class="_gaps" :class="$style.chatGaps">
 			<!-- Not signed in: login gate for room invite links -->
 			<div v-if="!signedIn" class="_panel" style="padding: 20px; text-align: center;">
@@ -1116,6 +1117,35 @@ function bindChatChannelEvents() {
 			}).catch(() => { /* ignore */ });
 		}
 	});
+	// Avatar / profile lite update — refresh in-memory fromUser on messages
+	conn.on?.('userAvatarUpdated', (body: { user?: any; updatedAt?: string }) => {
+		const u = body?.user;
+		if (!u?.id) return;
+		const bust = body?.updatedAt ? `?t=${encodeURIComponent(body.updatedAt)}` : '';
+		const applyBust = (url: string | null | undefined) => {
+			if (!url) return url;
+			// Drop previous cache buster then append
+			const base = String(url).split('?')[0];
+			return bust ? `${base}${bust}` : base;
+		};
+		const patched = {
+			...u,
+			avatarUrl: applyBust(u.avatarUrl) ?? u.avatarUrl,
+		};
+		for (const m of messages.value) {
+			if (m.fromUserId === u.id && m.fromUser) {
+				m.fromUser = { ...m.fromUser, ...patched };
+			}
+			for (const r of m.reactions ?? []) {
+				if (r.user?.id === u.id) {
+					r.user = { ...r.user, ...patched };
+				}
+			}
+		}
+		if (user.value?.id === u.id) {
+			user.value = { ...user.value, ...patched } as any;
+		}
+	});
 }
 
 function onMemberKicked(body: { userId?: string }) {
@@ -1686,24 +1716,27 @@ onBeforeUnmount(() => {
 	releaseChatResources({ clearMessages: true });
 });
 
-// Keep-alive: soft-trim DOM when room is backgrounded in stacking router
+// Keep-alive: soft-trim only when truly leaving the room route (not tab manage/info).
+// Tab switches use v-show and keep the chat DOM + scroll intact.
+let savedScrollTop: number | null = null;
+
 onDeactivated(() => {
 	isActivated = false;
+	const sc = getChatScrollContainer();
+	if (sc) savedScrollTop = sc.scrollTop;
 	// Keep channel for faster resume; stop heavy history prefetch only
 	stopHistoryPrefetch();
-	// Soft-trim: drop oldest beyond a small window to free DOM/media
-	if (messages.value.length > BACKGROUND_MESSAGE_CAP) {
+	// Soft-trim only if list is huge (keep pin window)
+	if (messages.value.length > BACKGROUND_MESSAGE_CAP * 2) {
 		const pin = pinnedViewMessageId.value;
 		const pinIdx = pin ? messages.value.findIndex(m => m.id === pin) : -1;
 		if (pinIdx < 0) {
+			// Keep newest window
 			messages.value = messages.value.slice(0, BACKGROUND_MESSAGE_CAP);
-			canFetchMore.value = true;
-		} else if (pinIdx >= BACKGROUND_MESSAGE_CAP) {
-			const from = Math.max(0, pinIdx - 20);
-			messages.value = messages.value.slice(from, from + BACKGROUND_MESSAGE_CAP);
 			canFetchMore.value = true;
 		} else {
-			messages.value = messages.value.slice(0, BACKGROUND_MESSAGE_CAP);
+			const from = Math.max(0, pinIdx - 40);
+			messages.value = messages.value.slice(from, from + BACKGROUND_MESSAGE_CAP);
 			canFetchMore.value = true;
 		}
 		rebuildKnownIds();
@@ -1713,6 +1746,12 @@ onDeactivated(() => {
 onActivated(() => {
 	isActivated = true;
 	wakeStream({ force: true });
+	void nextTick().then(() => {
+		const sc = getChatScrollContainer();
+		if (sc && savedScrollTop != null) {
+			sc.scrollTop = savedScrollTop;
+		}
+	});
 	void catchUpChatMessages();
 	window.setTimeout(() => {
 		if (isActivated) void catchUpChatMessages();

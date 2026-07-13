@@ -5,8 +5,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 <!--
   Lazy mount for chat rows: light placeholder until near viewport, then mount
-  XMessage. Once mounted we keep it mounted — remount thrash was a major
-  cause of timeline 乱跳 (height estimate ≠ real media rows).
+  XMessage. Once mounted we keep it mounted and remember measured height so
+  tab switches / remounts use a correct placeholder (media-heavy history).
 -->
 <template>
 <div
@@ -32,9 +32,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import type { NormalizedChatMessage } from './room.vue';
 import XMessage from './XMessage.vue';
+import { getChatMsgHeight, rememberChatMsgHeight } from './chat-msg-heights.js';
 
 const props = defineProps<{
 	message: NormalizedChatMessage;
@@ -51,30 +52,44 @@ const emit = defineEmits<{
 }>();
 
 const rootEl = useTemplateRef<HTMLElement>('rootEl');
+const measuredH = ref(getChatMsgHeight(props.message.id) || 0);
+// Prefer known height as placeholder; only force-mount when asked
 const mounted = ref(!!props.forceMount);
 
 const placeholderStyle = computed(() => {
 	if (mounted.value) return undefined;
-	const h = props.estimateHeight || 72;
+	const h = measuredH.value || props.estimateHeight || 72;
 	return { minHeight: `${h}px` };
 });
 
 let io: IntersectionObserver | null = null;
+let ro: ResizeObserver | null = null;
+
+function measure() {
+	const el = rootEl.value;
+	if (!el || !mounted.value) return;
+	const h = Math.round(el.getBoundingClientRect().height);
+	if (h > 0) {
+		measuredH.value = h;
+		rememberChatMsgHeight(props.message.id, h);
+	}
+}
 
 function setupIo() {
 	io?.disconnect();
 	io = null;
-	if (props.forceMount || mounted.value) {
+	if (props.forceMount) {
 		mounted.value = true;
 		return;
 	}
+	// If we already know a solid height from a previous visit, mount immediately
+	// when near previous height was large (media) — still use IO for light rows
 	const el = rootEl.value;
 	if (!el || typeof IntersectionObserver === 'undefined') {
 		mounted.value = true;
 		return;
 	}
 
-	// Find scroll root if any
 	let root: Element | null = null;
 	let p: HTMLElement | null = el.parentElement;
 	while (p) {
@@ -90,18 +105,25 @@ function setupIo() {
 		for (const e of entries) {
 			if (e.isIntersecting) {
 				mounted.value = true;
-				// Stay mounted forever once shown — unmounting caused 乱跳
 				io?.disconnect();
 				io = null;
 			}
 		}
 	}, {
 		root: root ?? null,
-		// Prefetch a screen above/below
-		rootMargin: '150% 0px',
+		rootMargin: '200% 0px',
 		threshold: 0,
 	});
 	io.observe(el);
+}
+
+function setupRo() {
+	ro?.disconnect();
+	ro = null;
+	const el = rootEl.value;
+	if (!el || typeof ResizeObserver === 'undefined') return;
+	ro = new ResizeObserver(() => measure());
+	ro.observe(el);
 }
 
 watch(() => props.forceMount, (v) => {
@@ -112,13 +134,33 @@ watch(() => props.highlighted, (v) => {
 	if (v) mounted.value = true;
 });
 
+watch(mounted, async (v) => {
+	if (v) {
+		await nextTick();
+		requestAnimationFrame(() => {
+			measure();
+			// Late media (images/video) may grow — remeasure a few times
+			window.setTimeout(measure, 200);
+			window.setTimeout(measure, 800);
+			window.setTimeout(measure, 2000);
+		});
+	}
+});
+
 onMounted(() => {
 	setupIo();
+	setupRo();
+	if (mounted.value) {
+		void nextTick().then(measure);
+	}
 });
 
 onBeforeUnmount(() => {
+	measure();
 	io?.disconnect();
 	io = null;
+	ro?.disconnect();
+	ro = null;
 });
 </script>
 

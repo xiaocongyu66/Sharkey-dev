@@ -396,6 +396,18 @@ export async function mainBoot() {
 			updateCurrentAccountPartial({ hasUnreadAnnouncement: false });
 		});
 
+		// Avatar update on own account (other devices / pack refresh)
+		main.on('userAvatarUpdated', (body: any) => {
+			const u = body?.user;
+			if (!u?.id || !$i || u.id !== $i.id) return;
+			const updatedAt = body?.updatedAt ? String(body.updatedAt) : String(Date.now());
+			const base = u.avatarUrl ? String(u.avatarUrl).split('?')[0] : $i.avatarUrl;
+			updateCurrentAccountPartial({
+				...u,
+				avatarUrl: base ? `${base}?t=${encodeURIComponent(updatedAt)}` : $i.avatarUrl,
+			});
+		});
+
 		// 個人宛てお知らせが発行されたとき
 		main.on('announcementCreated', onAnnouncementCreated);
 
@@ -403,6 +415,67 @@ export async function mainBoot() {
 		// このままではMisskeyが利用できないので強制的にサインアウトさせる
 		main.on('myTokenRegenerated', () => {
 			signout();
+		});
+
+		// After reconnect / tab wake: catch up notifications over WS so @mentions
+		// and other alerts show as unread even if the tab was backgrounded.
+		const stream = useStream();
+		let notifCatchUpBusy = false;
+		const catchUpNotifications = async () => {
+			if (notifCatchUpBusy || !$i) return;
+			notifCatchUpBusy = true;
+			try {
+				const { streamRequest } = await import('@/pages/chat/chat-ws.js');
+				const res = await streamRequest<{
+					notifications?: Misskey.entities.Notification[];
+					hasMore?: boolean;
+				}>(
+					main as any,
+					'notifications',
+					{ limit: 30 },
+					'notifications',
+					'notificationsError',
+					'i/notifications',
+					// Do not mark as read on catch-up
+					{ limit: 30, markAsRead: false },
+					8000,
+				);
+				const list = Array.isArray(res)
+					? res
+					: (res as any)?.notifications;
+				if (Array.isArray(list) && list.length > 0) {
+					const unread = list.filter((n: any) => n && n.isRead !== true);
+					if (unread.length > 0) {
+						attemptShowNotificationDot();
+						updateCurrentAccountPartial({
+							hasUnreadNotification: true,
+							unreadNotificationsCount: Math.max(
+								$i.unreadNotificationsCount ?? 0,
+								unread.length,
+							),
+						});
+					}
+					// Notify in-app listeners (notification page uses its own channel;
+					// clientNotification reaches status bar / toast handlers)
+					const { globalEvents } = await import('@/events.js');
+					for (const n of unread.slice(0, 5).reverse()) {
+						globalEvents.emit('clientNotification', n);
+					}
+				}
+			} catch {
+				// ignore
+			} finally {
+				notifCatchUpBusy = false;
+			}
+		};
+
+		stream.on('_connected_', () => {
+			void catchUpNotifications();
+		});
+		window.document.addEventListener('visibilitychange', () => {
+			if (window.document.visibilityState === 'visible') {
+				void catchUpNotifications();
+			}
 		});
 	}
 

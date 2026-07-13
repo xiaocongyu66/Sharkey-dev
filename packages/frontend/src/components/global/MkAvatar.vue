@@ -83,10 +83,12 @@ const bound = computed(() => props.link
 	? { to: userPage(props.user), target: props.target }
 	: {});
 
+// Cache-bust when avatarUrl changes (WS userAvatarUpdated may append ?t=)
 const url = computed(() => {
 	if (props.user.avatarUrl == null) return null;
-	if (prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar) return getStaticImageUrl(props.user.avatarUrl);
-	return props.user.avatarUrl;
+	const raw = props.user.avatarUrl;
+	if (prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar) return getStaticImageUrl(raw);
+	return raw;
 });
 
 function onClick(ev: MouseEvent): void {

@@ -70,6 +70,11 @@ export type Channels = {
 				keyId: string | null;
 				updatedAt: string;
 			}) => void;
+			/** Avatar / profile lite changed (cache-bust client avatars) */
+			userAvatarUpdated: (payload: {
+				user: UserLite;
+				updatedAt: string;
+			}) => void;
 			/** Response to requestNotifications over main WS */
 			notifications: (payload: {
 				reqId?: string | null;
@@ -303,6 +308,10 @@ export type Channels = {
 				keyId: string | null;
 				updatedAt: string;
 			}) => void;
+			userAvatarUpdated: (payload: {
+				user: UserLite;
+				updatedAt: string;
+			}) => void;
 			react: (payload: {
 				reaction: string;
 				user?: UserLite;
@@ -379,6 +388,10 @@ export type Channels = {
 			memberKicked: (payload: { userId: string; byUserId: string }) => void;
 			memberBanned: (payload: { userId: string; byUserId: string }) => void;
 			memberUnbanned: (payload: { userId: string; byUserId: string }) => void;
+			userAvatarUpdated: (payload: {
+				user: UserLite;
+				updatedAt: string;
+			}) => void;
 			react: (payload: {
 				reaction: string;
 				user?: UserLite;
