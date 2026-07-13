@@ -39,10 +39,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<MkFolder :defaultOpen="true">
 		<template #icon><i class="ti ti-speakerphone"></i></template>
-		<template #label>{{ i18n.ts.announcement }}</template>
+		<template #label>{{ announcementLabel }}</template>
 		<div class="_gaps">
 			<MkTextarea v-model="announcement_">
-				<template #label>{{ i18n.ts.announcement }}</template>
+				<template #label>{{ announcementLabel }}</template>
 			</MkTextarea>
 			<MkButton primary @click="saveAnnouncement">{{ i18n.ts.save }}</MkButton>
 		</div>
@@ -111,6 +111,12 @@ const router = useRouter();
 const $i = ensureSignin();
 const tChat = (key: keyof typeof chatFb) => chatT(key, chatFb[key]);
 const chatWs = inject(chatWsKey, null);
+/** i18n.ts.announcement may be missing in older locale packs — always show 公告/Announcement */
+const announcementLabel = computed(() => {
+	const v = (i18n.ts as any).announcement;
+	if (typeof v === 'string' && v.length > 0 && !v.includes('announcement')) return v;
+	return tChat('roomAnnouncement', chatFb.roomAnnouncement);
+});
 
 const props = defineProps<{
 	room: Misskey.entities.ChatRoom;

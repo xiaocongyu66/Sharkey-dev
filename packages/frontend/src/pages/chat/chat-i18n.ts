@@ -16,6 +16,18 @@ type FallbackTable = {
 	fr?: string;
 	es?: string;
 	ru?: string;
+	it?: string;
+	pt?: string;
+	nl?: string;
+	pl?: string;
+	uk?: string;
+	tr?: string;
+	vi?: string;
+	th?: string;
+	id?: string;
+	ar?: string;
+	cs?: string;
+	sv?: string;
 };
 
 /**
@@ -41,6 +53,18 @@ export function chatT(key: string, fb: FallbackTable): string {
 	if (lower.startsWith('fr') && fb.fr) return fb.fr;
 	if (lower.startsWith('es') && fb.es) return fb.es;
 	if (lower.startsWith('ru') && fb.ru) return fb.ru;
+	if (lower.startsWith('it') && fb.it) return fb.it;
+	if (lower.startsWith('pt') && fb.pt) return fb.pt;
+	if (lower.startsWith('nl') && fb.nl) return fb.nl;
+	if (lower.startsWith('pl') && fb.pl) return fb.pl;
+	if (lower.startsWith('uk') && fb.uk) return fb.uk;
+	if (lower.startsWith('tr') && fb.tr) return fb.tr;
+	if (lower.startsWith('vi') && fb.vi) return fb.vi;
+	if (lower.startsWith('th') && fb.th) return fb.th;
+	if (lower.startsWith('id') && fb.id) return fb.id;
+	if (lower.startsWith('ar') && fb.ar) return fb.ar;
+	if (lower.startsWith('cs') && fb.cs) return fb.cs;
+	if (lower.startsWith('sv') && fb.sv) return fb.sv;
 	return fb.en;
 }
 
@@ -67,6 +91,30 @@ export const chatFb = {
 		fr: 'Tous les membres sont en sourdine',
 		es: 'Todos los miembros están silenciados',
 		ru: 'Все участники в муте',
+	},
+	/** Room announcement folder / pin strip title */
+	roomAnnouncement: {
+		en: 'Announcement',
+		zh: '公告',
+		'zh-TW': '公告',
+		ja: 'お知らせ',
+		ko: '공지',
+		de: 'Ankündigung',
+		fr: 'Annonce',
+		es: 'Anuncio',
+		ru: 'Объявление',
+		it: 'Annuncio',
+		pt: 'Anúncio',
+		nl: 'Aankondiging',
+		pl: 'Ogłoszenie',
+		uk: 'Оголошення',
+		tr: 'Duyuru',
+		vi: 'Thông báo',
+		th: 'ประกาศ',
+		id: 'Pengumuman',
+		ar: 'إعلان',
+		cs: 'Oznámení',
+		sv: 'Meddelande',
 	},
 	mutedAllHint: {
 		en: 'Only the owner, room admins, and instance moderators can send messages.',

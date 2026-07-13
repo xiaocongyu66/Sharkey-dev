@@ -255,6 +255,7 @@ usernameOrUserId: "사용자 이럼이나 사용자 아이디"
 noSuchUser: "사용자럴 몬 찾앗십니다"
 lookup: "찾아보기"
 announcements: "공지 걸"
+announcement: "공지"
 imageUrl: "이미지 주소"
 remove: "내삐리기"
 removed: "뭉캣십니다"
@@ -849,3 +850,6 @@ _remoteLookupErrors:
 _search:
   searchScopeAll: "말캉"
   searchScopeUser: "사용자 지정"
+
+enableNoteRenderSkipping: "노트 렌더 건너뛰기 사용"
+enableStackingRouterView: "스택 라우터 뷰 사용"

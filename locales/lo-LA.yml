@@ -218,6 +218,7 @@ usernameOrUserId: "ຊື່ຜູ້ໃຊ້ ຫຼື id ຜູ້ໃຊ້"
 noSuchUser: "ບໍ່ພົບຜູ້ໃຊ້"
 lookup: "ຄົ້ນ​ຫາ"
 announcements: "ປະກາດ"
+announcement: "ປະກາດ"
 imageUrl: "URL ຮູບພາບ"
 remove: "ລຶບ"
 removed: "ລຶບແລ້ວ"
@@ -483,3 +484,6 @@ _remoteLookupErrors:
     title: "ບໍ່ພົບ"
 _search:
   searchScopeAll: "ທັງໝົດ"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

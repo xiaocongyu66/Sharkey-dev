@@ -1,3 +1,4 @@
+announcement: "Anons"
 ---
 _lang_: "Japonè"
 password: "modpas"
@@ -16,3 +17,6 @@ _2fa:
   renewTOTPCancel: "Sispann"
 _widgets:
   profile: "pwofil"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

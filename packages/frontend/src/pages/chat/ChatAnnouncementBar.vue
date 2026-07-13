@@ -103,11 +103,14 @@ const expanded = ref(false);
 }
 
 .title {
-	font-size: 10px;
+	font-size: 11px;
 	font-weight: 700;
-	line-height: 1.15;
+	line-height: 1.2;
 	letter-spacing: 0.02em;
 	color: var(--MI_THEME-accent);
+	/* Never collapse empty-looking title row */
+	min-height: 1.2em;
+	opacity: 1;
 }
 
 .body {

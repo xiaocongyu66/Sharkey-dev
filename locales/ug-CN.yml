@@ -1,3 +1,4 @@
+announcement: "ئۇقتۇرۇش"
 ---
 _lang_: "ياپونچە"
 headlineMisskey: "خاتىرە ئارقىلىق ئۇلانغان تور"
@@ -20,3 +21,6 @@ _widgets:
 _notification:
   _types:
     login: "كىرىش"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

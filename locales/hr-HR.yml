@@ -1,5 +1,9 @@
+announcement: "Obavijest"
 ---
 _lang_: "japanski"
 ok: "OK"
 gotIt: "Razumijem"
 cancel: "otkazati"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

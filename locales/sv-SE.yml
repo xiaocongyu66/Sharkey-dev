@@ -242,6 +242,7 @@ usernameOrUserId: "Användarnamn eller användar-id"
 noSuchUser: "Kan inte hitta användaren"
 lookup: "Sökning"
 announcements: "Nyheter"
+announcement: "Meddelande"
 imageUrl: "Bild-URL"
 remove: "Radera"
 removed: "Borttaget"
@@ -712,3 +713,6 @@ _selfXssPrevention:
   warning: "VARNING"
 _search:
   searchScopeAll: "Allt"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

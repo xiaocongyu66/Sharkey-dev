@@ -88,10 +88,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<div class="_gaps_m">
 						<MkSwitch v-model="skipNoteRender">
-							<template #label>Enable note render skipping</template>
+							<template #label>{{ (i18n.ts as any).enableNoteRenderSkipping || 'Enable note render skipping' }}</template>
 						</MkSwitch>
 						<MkSwitch v-model="stackingRouterView">
-							<template #label>Enable stacking router view</template>
+							<template #label>{{ (i18n.ts as any).enableStackingRouterView || 'Enable stacking router view' }}</template>
 						</MkSwitch>
 					</div>
 				</MkFolder>

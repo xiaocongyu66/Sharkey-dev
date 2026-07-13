@@ -1,3 +1,4 @@
+announcement: "Közlemény"
 ---
 _lang_: "Magyar"
 monthAndDay: "{month}.{day}."
@@ -103,3 +104,6 @@ _deck:
   _columns:
     notifications: "Értesítések"
     tl: "Idővonal"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

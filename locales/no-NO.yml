@@ -191,6 +191,7 @@ attachFile: "Legg ved filer"
 more: "Mer!"
 noSuchUser: "Bruker ikke funnet"
 announcements: "Kunngjøringer"
+announcement: "Kunngjøring"
 remove: "Slett"
 removed: "Vellykket slettet"
 removeAreYouSure: "Er du sikker på at du vil fjerne \"{x}\"?"
@@ -736,3 +737,6 @@ _remoteLookupErrors:
     title: "Ikke funnet"
 _search:
   searchScopeAll: "Alle"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

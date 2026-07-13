@@ -158,6 +158,7 @@ attachFile: "Επισύναψη αρχείων"
 more: "Περισσότερα!"
 noSuchUser: "Το μέλος δεν βρέθηκε"
 announcements: "Ανακοινώσεις"
+announcement: "Ανακοίνωση"
 imageUrl: "URL εικόνας"
 remove: "Διαγραφή"
 removed: "Η διαγραφή ολοκληρώθηκε επιτυχώς"
@@ -403,3 +404,6 @@ _reversi:
   total: "Σύνολο"
 _search:
   searchScopeLocal: "Τοπικό"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

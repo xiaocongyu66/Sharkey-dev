@@ -1,3 +1,4 @@
+announcement: "නිවේදනය"
 ---
 _lang_: "සිංහල"
 monthAndDay: "{month}-{day}"
@@ -20,3 +21,6 @@ _profile:
 _notification:
   _types:
     login: "පිවිසෙන්න"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

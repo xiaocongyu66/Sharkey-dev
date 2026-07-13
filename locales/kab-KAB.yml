@@ -1,3 +1,4 @@
+announcement: "Alɣu"
 ---
 _lang_: "Taqbaylit"
 monthAndDay: "{day}/{month}"
@@ -108,3 +109,6 @@ _abuseReport:
   _notificationRecipient:
     _recipientType:
       mail: "Imayl"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

@@ -32,7 +32,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<ChatAnnouncementBar
 					v-if="room && (room as any).announcement && canViewTimeline"
 					:text="(room as any).announcement"
-					:title="i18n.ts.announcement"
+					:title="announcementTitle"
 					:editLabel="i18n.ts.edit"
 					:canEdit="canEditAnnouncement"
 					@edit="openAnnouncementEdit"
@@ -63,7 +63,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<ChatAnnouncementBar
 						v-if="(room as any)?.announcement"
 						:text="(room as any).announcement"
-						:title="i18n.ts.announcement"
+						:title="announcementTitle"
 						:editLabel="i18n.ts.edit"
 						:canEdit="false"
 						style="margin-bottom: 12px;"
@@ -260,6 +260,12 @@ ensureChatLocaleFresh();
 function tChat(key: keyof typeof chatFb) {
 	return chatT(key, chatFb[key]);
 }
+/** Pin strip / manage folder title — works even if locale pack lacks `announcement` key */
+const announcementTitle = computed(() => {
+	const v = (i18n.ts as any).announcement;
+	if (typeof v === 'string' && v.length > 0 && !String(v).includes('announcement')) return v;
+	return tChat('roomAnnouncement');
+});
 
 const props = defineProps<{
 	userId?: string;

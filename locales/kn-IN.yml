@@ -1,3 +1,4 @@
+announcement: "ಪ್ರಕಟಣೆ"
 ---
 _lang_: "ಕನ್ನಡ"
 introMisskey: "ಸ್ವಾಗತ! Misskey ಓಪನ್ ಸೋರ್ಸ್ ಒಕ್ಕೂಟ ಮೈಕ್ರೋಬ್ಲಾಗಿಂಗ್ ಸೇವೆಯಾಗಿದೆ.\n ಏನಾಗುತ್ತಿದೆ ಎಂಬುದನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಅಥವಾ ನಿಮ್ಮ ಬಗ್ಗೆ ಎಲ್ಲರಿಗೂ ಹೇಳಲು \"ಟಿಪ್ಪಣಿ\"ಗಳನ್ನು ರಚಿಸಿ📡\n \"ಸ್ಪಂದನೆ\" ಕ್ರಿಯೆಯೊಂದಿಗೆ, ನೀವು ಎಲ್ಲರ ಟಿಪ್ಪಣಿಗಳಿಗೆ ತ್ವರಿತವಾಗಿ ಸ್ಪಂದನೆಗಳನ್ನು ಕೂಡ ಸೇರಿಸಬಹುದು.👍\n ಹೊಸ ಜಗತ್ತನ್ನು ಅನ್ವೇಷಿಸಿ🚀"
@@ -86,3 +87,6 @@ _deck:
     notifications: "ಅಧಿಸೂಚನೆಗಳು"
     tl: "ಸಮಯಸಾಲು"
     mentions: "ಹೆಸರಿಸಿದ"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"

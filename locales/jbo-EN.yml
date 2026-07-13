@@ -1,3 +1,7 @@
+announcement: "notci"
 ---
 _lang_: "la .lojban."
 headlineMisskey: "lo se tcana noi jorne fi loi notci"
+
+enableNoteRenderSkipping: "Enable note render skipping"
+enableStackingRouterView: "Enable stacking router view"
