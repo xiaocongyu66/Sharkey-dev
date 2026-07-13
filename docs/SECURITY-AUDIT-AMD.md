@@ -1193,17 +1193,14 @@ Prior: REST `server-info` respected the flag; WS `serverStats` always leaked liv
 |--|--|
 | **Severity** | **L–M** |
 | **CWE** | CWE-200 |
-| **Status** | **Open** |
-| **Components** | `stream/channels/queue-stats.ts` — `// TODO require auth`, `requireCredential = false` |
+| **Status** | **Fixed in tree** — credential + `read:admin:queue` + moderator check in init |
+| **Components** | `stream/channels/queue-stats.ts` |
 
 **Description**  
-Anyone who can open a streaming connection can subscribe to `queueStats` and receive queue job counts / active-since-prev-tick for all queue types. REST equivalent is under **admin** queue stats.
+Prior: unauthenticated `queueStats` WS (TODO require auth).
 
-**Impact**  
-Recon of federation/delivery backlog, import load, worker health — helps attackers time abuse or confirm DoS effectiveness. Not remote code execution.
-
-**Remediation**  
-`requireCredential = true` + moderator/admin kind (match admin API), as the TODO says.
+**Fix summary**  
+`requireCredential = true`, `kind = read:admin:queue`; `init` requires `roleService.isModerator`.
 
 ---
 
@@ -1431,6 +1428,8 @@ Internet
 | 24 | **SK-052** private flash: enforce visibility on show/like | **DONE** |
 | 25 | **SK-053** admin emoji only own/unowned drive files | **DONE** |
 | 26 | **SK-054** Meili filter/sort injection | **DONE** |
+| 27 | **SK-057** WS serverStats meta gate | **DONE** |
+| 28 | **SK-058** WS queueStats moderator-only | **DONE** |
 
 ### P3 — hygiene
 
@@ -1514,6 +1513,7 @@ Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings 
 | 0.9c | 2026-07-14 | **§8 Project optimization evaluation** (multi-pass code review): scores, chat perf/WS/escrow/algo, engineering process, residual backlog, production gate |
 | 1.0 | 2026-07-14 | **Pass 3 remediations + chat scroll:** SK-051/052/053 fixed; fling scroll anti-twitch; AMD matrix updated |
 | 1.1 | 2026-07-14 | **Pass 4 remediations:** SK-054 Meili escape/order/host; 055 residual (slacc); 056 accepted design |
+| 1.2 | 2026-07-14 | **Pass 5 remediations:** SK-057 serverStats meta gate; SK-058 queueStats moderator-only |
 
 ---
 
