@@ -248,6 +248,7 @@ import {
 	createPageScrollMemory,
 } from './chat-scroll.js';
 import { loadRoomMeta as loadRoomMetaApi, loadUserMeta as loadUserMetaApi, patchAvatarUrls } from './chat-meta.js';
+import { fetchChatTimelinePage, type TimelineTarget } from './chat-timeline.js';
 import {
 	useChatMessages,
 	MAX_MESSAGES,
@@ -361,74 +362,42 @@ function onReply(message: NormalizedChatMessage | Misskey.entities.ChatMessage) 
 	replyTo.value = message as NormalizedChatMessage;
 }
 
+function timelineTarget(): TimelineTarget | null {
+	if (props.userId && user.value) {
+		return { kind: 'user', userId: user.value.id };
+	}
+	const roomId = room.value?.id ?? props.roomId;
+	if (props.roomId && roomId) {
+		return { kind: 'room', roomId };
+	}
+	return null;
+}
+
 /** Prefer WS history when channel is open; REST fallback. */
 async function fetchTimelinePage(args: {
 	limit: number;
 	untilId?: string | null;
 	sinceId?: string | null;
-}) {
-	const untilId = args.untilId ?? null;
-	const sinceId = args.sinceId ?? null;
-	const conn = connection.value;
-	if (conn && chatWs.ready()) {
-		try {
-			const res = await chatWs.request<{
-				messages?: any[];
-				hasMore?: boolean;
-			}>(
-				'history',
-				{ limit: args.limit, untilId, sinceId },
-				'history',
-				'historyError',
-				props.userId
-					? 'chat/messages/user-timeline'
-					: 'chat/messages/room-timeline',
-				props.userId
-					? {
-						userId: user.value!.id,
-						limit: args.limit,
-						...(untilId ? { untilId } : {}),
-						...(sinceId ? { sinceId } : {}),
-					}
-					: {
-						roomId: room.value?.id ?? props.roomId,
-						limit: args.limit,
-						...(untilId ? { untilId } : {}),
-						...(sinceId ? { sinceId } : {}),
-					},
-			);
-			const list = (res as any)?.messages ?? (Array.isArray(res) ? res : []);
-			return (list as any[]).map(x => normalizeMessage(x));
-		} catch {
-			// fall through to REST
-		}
-	}
-	if (props.userId && user.value) {
-		const raw = await misskeyApi('chat/messages/user-timeline', {
-			userId: user.value.id,
-			limit: args.limit,
-			...(untilId ? { untilId } : {}),
-			...(sinceId ? { sinceId } : {}),
-		});
-		return raw.map(x => normalizeMessage(x));
-	}
-	if (props.roomId && (room.value || props.roomId)) {
-		const raw = await misskeyApi('chat/messages/room-timeline', {
-			roomId: room.value?.id ?? props.roomId,
-			limit: args.limit,
-			...(untilId ? { untilId } : {}),
-			...(sinceId ? { sinceId } : {}),
-		});
-		return (raw as Misskey.entities.ChatMessagesRoomTimelineResponse).map(x => normalizeMessage(x));
-	}
-	return [];
+}): Promise<NormalizedChatMessage[]> {
+	const { list } = await fetchChatTimelinePage({
+		chatWs,
+		target: timelineTarget(),
+		args,
+		normalize: normalizeMessage,
+	});
+	return list;
 }
 
 function makeTimelineFetcher() {
-	return (args: { limit: number; untilId: string | null }) => fetchTimelinePage({
-		limit: args.limit,
-		untilId: args.untilId,
-	});
+	return async (args: { limit: number; untilId: string | null }) => {
+		const { list } = await fetchChatTimelinePage({
+			chatWs,
+			target: timelineTarget(),
+			args: { limit: args.limit, untilId: args.untilId },
+			normalize: normalizeMessage,
+		});
+		return list;
+	};
 }
 
 /**
@@ -543,26 +512,6 @@ async function ensureMessageLoaded(id: string): Promise<boolean> {
 	}
 }
 
-async function goMention(delta: number) {
-	if (mentions.value.length === 0 || mentionJumping.value) return;
-	if (delta !== 0) {
-		const n = mentions.value.length;
-		mentionCursor.value = (mentionCursor.value + delta + n) % n;
-	}
-	const target = mentions.value[mentionCursor.value];
-	if (!target) return;
-
-	mentionJumping.value = true;
-	try {
-		pinnedViewMessageId.value = target.id;
-		await ensureMessageLoaded(target.id);
-		await nextTick();
-		scrollToMessage(target.id);
-	} finally {
-		mentionJumping.value = false;
-	}
-}
-
 /**
  * Each tap: jump to one @ mention, then drop it (viewed once).
  * When the list is empty the FAB disappears — no endless cycling.
@@ -608,24 +557,8 @@ function openAnnouncementEdit() {
 async function refreshRoom() {
 	if (!props.roomId) return;
 	try {
-		// Prefer WS roomShow when chat channel is open
-		if (chatWs.ready()) {
-			const res = await chatWs.request<{ room?: any }>(
-				'roomShow',
-				{},
-				'room',
-				'roomError',
-				'chat/rooms/show',
-				{ roomId: props.roomId },
-			);
-			const r = (res as any)?.room ?? res;
-			if (r?.id) {
-				room.value = r as Misskey.entities.ChatRoom;
-				return;
-			}
-		}
-		const r = await misskeyApi('chat/rooms/show', { roomId: props.roomId }) as any;
-		room.value = r as Misskey.entities.ChatRoom;
+		const r = await loadRoomMetaApi(chatWs, props.roomId);
+		if (r?.id) room.value = r as Misskey.entities.ChatRoom;
 	} catch { /* ignore */ }
 }
 
@@ -1108,39 +1041,15 @@ async function loadUserMeta(userId: string): Promise<Misskey.entities.UserDetail
 
 /** Initial timeline page — WS history first, short REST fallback. */
 async function loadInitialTimeline(kind: 'room' | 'user', id: string): Promise<NormalizedChatMessage[]> {
-	const LIMIT = PAGE_LIMIT;
-	const api = kind === 'room' ? 'chat/messages/room-timeline' : 'chat/messages/user-timeline';
-	const apiBody = kind === 'room' ? { roomId: id, limit: LIMIT } : { userId: id, limit: LIMIT };
-
-	if (chatWs.ready()) {
-		try {
-			const res = await chatWs.request<{ messages?: any[]; hasMore?: boolean }>(
-				'history',
-				{ limit: LIMIT },
-				'history',
-				'historyError',
-				api,
-				apiBody,
-				7000,
-			);
-			// REST fallback returns raw array; WS returns { messages, hasMore }
-			if (Array.isArray(res)) {
-				const list = (res as any[]).map(x => normalizeMessage(x));
-				canFetchMore.value = list.length === LIMIT;
-				return list;
-			}
-			const raw = (res as any)?.messages ?? [];
-			const list = (raw as any[]).map(x => normalizeMessage(x));
-			canFetchMore.value = (res as any)?.hasMore ?? list.length === LIMIT;
-			return list;
-		} catch {
-			// fall through to REST
-		}
-	}
-
-	const raw = await misskeyApi(api as any, apiBody as any);
-	const list = (raw as any[]).map(x => normalizeMessage(x));
-	canFetchMore.value = list.length === LIMIT;
+	const target: TimelineTarget =
+		kind === 'room' ? { kind: 'room', roomId: id } : { kind: 'user', userId: id };
+	const { list, hasMore } = await fetchChatTimelinePage({
+		chatWs,
+		target,
+		args: { limit: PAGE_LIMIT },
+		normalize: normalizeMessage,
+	});
+	canFetchMore.value = hasMore ?? (list.length >= PAGE_LIMIT);
 	return list;
 }
 
@@ -1622,16 +1531,14 @@ watch(tab, (next, prev) => {
 	}
 }, { flush: 'pre' });
 
-// Returning to chat: restore after DOM is shown again
+// Returning to chat: restore after DOM is shown again (one nextTick + rAF inside restore)
 watch(tab, (next, prev) => {
 	if (next === 'chat' && prev !== 'chat') {
-		void nextTick(() => {
-			// Search/mention jump owns scroll via pinnedViewMessageId
-			if (pinnedViewMessageId.value) return;
-			pageScrollMemory.restore((apply) => {
-				void nextTick().then(() => {
-					requestAnimationFrame(apply);
-				});
+		// Search/mention jump owns scroll via pinnedViewMessageId
+		if (pinnedViewMessageId.value) return;
+		pageScrollMemory.restore((apply) => {
+			void nextTick().then(() => {
+				requestAnimationFrame(apply);
 			});
 		});
 	}
