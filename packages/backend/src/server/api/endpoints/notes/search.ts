@@ -15,6 +15,8 @@ export const meta = {
 
 	requireCredential: false,
 
+	description: 'Full-text search notes. When the instance uses Meilisearch, `order` is only `asc`|`desc` and `host` must be `.` (local) or a hostname-like string (filter injection hardened).',
+
 	res: {
 		type: 'array',
 		optional: false, nullable: false,

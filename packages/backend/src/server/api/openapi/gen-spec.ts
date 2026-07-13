@@ -14,17 +14,62 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 
 		info: {
 			version: config.version,
-			title: 'Misskey API',
+			title: 'Sharkey API',
+			description: [
+				'HTTP API for this Sharkey instance (Misskey fork).',
+				'',
+				'## Authentication',
+				'',
+				'Preferred: `Authorization: Bearer <token>` (RFC 6750).',
+				'',
+				'Legacy (still accepted): JSON body field `i` on POST, or query `i` on **GET** endpoints that set `allowGet`.',
+				'**Do not put long-lived tokens in URLs** when you can avoid it (proxy logs / Referer). Prefer Bearer for HTTP.',
+				'',
+				'WebSocket streaming (`/streaming`): modern clients send the token via `Sec-WebSocket-Protocol`',
+				'(`misskey` + `misskey.i.<token>`). Legacy `?i=` remains accepted for older clients.',
+				'',
+				'## Credentials & permissions',
+				'',
+				'- **Credential required**: needs a user or app access token.',
+				'- **Permission (`kind`)**: app tokens must include this scope (e.g. `write:notes`).',
+				'- **Moderator / Administrator**: role flags; not the same as app scopes alone.',
+				'- **Internal (`secure`)**: intended for the first-party web client only; third-party apps should not call these.',
+				'',
+				'## Interactive docs',
+				'',
+				`Human-readable explorer: ${config.url}/api-doc`,
+				'',
+				'Machine-readable OpenAPI 3.1: `/api.json` (this document).',
+				'',
+				'## Notes',
+				'',
+				'- Extra JSON properties are generally ignored (handlers pick known fields); do not rely on mass-assignment.',
+				'- Rate limits return HTTP 429 when configured on an endpoint.',
+				'- Public catalog endpoints (`/api.json`, `/api/endpoints`, `/api/endpoint`) are intentionally open on typical instances.',
+			].join('\n'),
+			// contact omitted — instance-specific
 		},
 
 		externalDocs: {
-			description: 'Repository',
+			description: 'Sharkey upstream repository',
 			url: 'https://activitypub.software/TransFem-org/Sharkey',
 		},
 
 		servers: [{
 			url: config.apiUrl,
+			description: 'This instance API base',
 		}],
+
+		tags: [
+			{ name: 'account', description: 'Account / profile' },
+			{ name: 'admin', description: 'Moderator / administrator' },
+			{ name: 'chat', description: 'Direct messages and chat rooms' },
+			{ name: 'drive', description: 'Drive files and folders' },
+			{ name: 'notes', description: 'Notes (posts)' },
+			{ name: 'users', description: 'Users' },
+			{ name: 'flashs', description: 'Play / Flash (AiScript pages)' },
+			{ name: 'meta', description: 'Instance meta' },
+		],
 
 		paths: {} as any,
 
@@ -35,6 +80,10 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 				bearerAuth: {
 					type: 'http',
 					scheme: 'bearer',
+					description: [
+						'User or app access token (preferred).',
+						'Legacy alternative: JSON body field `i` on POST, or query `i` on allowGet endpoints (avoid putting tokens in URLs).',
+					].join(' '),
 				},
 			},
 		},
@@ -60,13 +109,43 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 		let desc = (endpoint.meta.description ? endpoint.meta.description : 'No description provided.') + '\n\n';
 
 		if (endpoint.meta.secure) {
-			desc += '**Internal Endpoint**: This endpoint is an API for the misskey mainframe and is not intended for use by third parties.\n';
+			desc += '**Internal endpoint**: first-party web client only; not for third-party apps.\n\n';
+		}
+
+		if (endpoint.meta.stability === 'deprecated') {
+			desc += '**Stability**: deprecated — avoid new integrations.\n\n';
+		} else if (endpoint.meta.stability === 'experimental') {
+			desc += '**Stability**: experimental — may change without notice.\n\n';
 		}
 
 		desc += `**Credential required**: *${endpoint.meta.requireCredential ? 'Yes' : 'No'}*`;
+		if (endpoint.meta.requireModerator) {
+			desc += ' / **Moderator**: *Yes*';
+		}
+		if (endpoint.meta.requireAdmin) {
+			desc += ' / **Administrator**: *Yes*';
+		}
 		if (endpoint.meta.kind) {
-			const kind = endpoint.meta.kind;
-			desc += ` / **Permission**: *${kind}*`;
+			desc += ` / **Permission**: *${endpoint.meta.kind}*`;
+		}
+		if (endpoint.meta.requiredRolePolicy) {
+			desc += ` / **Role policy**: *${endpoint.meta.requiredRolePolicy}*`;
+		}
+		if (endpoint.meta.allowGet) {
+			desc += '\n\n**GET allowed**: yes (query parameters map to the same fields as the JSON body; avoid putting tokens in query strings).';
+		}
+		if (endpoint.meta.limit) {
+			const lim = endpoint.meta.limit as { duration?: number; max?: number; minInterval?: number };
+			const parts: string[] = [];
+			if (lim.max != null && lim.duration != null) {
+				parts.push(`${lim.max} calls / ${lim.duration}ms`);
+			}
+			if (lim.minInterval != null) {
+				parts.push(`min interval ${lim.minInterval}ms`);
+			}
+			if (parts.length) {
+				desc += `\n\n**Rate limit**: ${parts.join(', ')}.`;
+			}
 		}
 
 		const requestType = endpoint.meta.requireFile ? 'multipart/form-data' : 'application/json';
@@ -91,6 +170,8 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 
 		const hasBody = (schema.type === 'object' && schema.properties && Object.keys(schema.properties).length >= 1);
 
+		const needsAuth = !!(endpoint.meta.requireCredential || endpoint.meta.requireModerator || endpoint.meta.requireAdmin);
+
 		const info = {
 			operationId: endpoint.name.replaceAll('/', '___'), // NOTE: スラッシュは使えない
 			summary: endpoint.name,
@@ -102,7 +183,7 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			...(endpoint.meta.tags ? {
 				tags: [endpoint.meta.tags[0]],
 			} : {}),
-			...(endpoint.meta.requireCredential ? {
+			...(needsAuth ? {
 				security: [{
 					bearerAuth: [],
 				}],
@@ -208,16 +289,29 @@ export function genOpenapiSpec(config: Config, includeSelfRef = false) {
 			},
 		};
 
+		const { requestBody: postBody, ...infoWithoutBody } = info as typeof info & { requestBody?: unknown };
+
 		spec.paths['/' + endpoint.name] = {
 			...(endpoint.meta.allowGet ? {
 				get: {
-					...info,
+					...infoWithoutBody,
 					operationId: 'get___' + info.operationId,
+					description: info.description + '\n\nThis operation allows **GET** (query string parameters mirror the request body schema). Avoid tokens in the query string; use Bearer when the client can set headers.',
+					...(hasBody ? {
+						parameters: Object.entries(schema.properties ?? {}).map(([name, prop]: [string, any]) => ({
+							name,
+							in: 'query',
+							required: Array.isArray(schema.required) && schema.required.includes(name),
+							schema: prop,
+							description: typeof prop?.description === 'string' ? prop.description : undefined,
+						})),
+					} : {}),
 				},
 			} : {}),
 			post: {
 				...info,
 				operationId: 'post___' + info.operationId,
+				...(postBody ? { requestBody: postBody } : {}),
 			},
 		};
 	}

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 	<head>
-		<title>Misskey API</title>
+		<title>Sharkey API</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="OpenAPI reference for this Sharkey instance">
+		<meta name="robots" content="noindex">
 		<style>
 			body {
 				margin: 0;
@@ -12,9 +14,27 @@
 		</style>
 	</head>
 	<body>
+		<!--
+			Live OpenAPI 3.1 from this instance (/api.json).
+			Auth: use Authorize → Bearer token (user or app access token).
+			Prefer Authorization: Bearer over legacy body field "i".
+			WS streaming auth (modern clients): Sec-WebSocket-Protocol misskey.i.<token>
+		-->
 		<script
 			id="api-reference"
-			data-url="/api.json"></script>
+			data-url="/api.json"
+			data-configuration='{
+				"theme": "purple",
+				"layout": "modern",
+				"hideModels": false,
+				"defaultOpenAllTags": false,
+				"authentication": {
+					"preferredSecurityScheme": "bearerAuth"
+				},
+				"metaData": {
+					"title": "Sharkey API"
+				}
+			}'></script>
 		<script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 	</body>
 </html>
