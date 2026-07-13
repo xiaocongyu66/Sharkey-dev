@@ -1179,13 +1179,12 @@ Internet
 ```
 
 **Highest residual ROI after remediation (for attackers / next hardening)**  
-1. **SK-054** Meili filter/sort injection (if Meili enabled)  
-2. Session/token theft (SK-017/020)  
-3. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
-4. Escrow key compromise (SK-010) — design, not a crypto break  
-5. Import zip-slip residual (SK-055)  
-6. Mis-deploy: `NODE_ENV=test`, gateway without API key  
-7. MFM UI abuse within clamps (SK-007 residual)
+1. Session/token theft (SK-017/020)  
+2. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
+3. Escrow key compromise (SK-010) — design, not a crypto break  
+4. Import zip-slip residual (SK-055; slacc/rust zip claims path-safe)  
+5. Mis-deploy: `NODE_ENV=test`, gateway without API key  
+6. MFM UI abuse within clamps (SK-007 residual)
 
 ---
 
@@ -1237,6 +1236,7 @@ Internet
 | 23 | **SK-051** import endpoints: require `file.userId === me.id` | **DONE** |
 | 24 | **SK-052** private flash: enforce visibility on show/like | **DONE** |
 | 25 | **SK-053** admin emoji only own/unowned drive files | **DONE** |
+| 26 | **SK-054** Meili filter/sort injection | **DONE** |
 
 ### P3 — hygiene
 
@@ -1317,6 +1317,7 @@ Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings 
 | 1.0 | 2026-07-14 | **Pass 4 injection/crypto:** SK-054 Meili filter/sort injection; SK-055 zip-slip residual; SK-056 app permissions phishing; SQL/cmd/eval/XSS scan notes |
 | 0.9c | 2026-07-14 | **§8 Project optimization evaluation** (multi-pass code review): scores, chat perf/WS/escrow/algo, engineering process, residual backlog, production gate |
 | 1.0 | 2026-07-14 | **Pass 3 remediations + chat scroll:** SK-051/052/053 fixed; fling scroll anti-twitch; AMD matrix updated |
+| 1.1 | 2026-07-14 | **Pass 4 remediations:** SK-054 Meili escape/order/host; 055 residual (slacc); 056 accepted design |
 
 ---
 
