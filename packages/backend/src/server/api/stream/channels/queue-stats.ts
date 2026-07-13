@@ -9,18 +9,20 @@ import { isJsonObject } from '@/misc/json-value.js';
 import type { JsonValue } from '@/misc/json-value.js';
 import { InternalEventService, type InternalEventTypes } from '@/global/InternalEventService.js';
 import { QueueStatsService, QueueStatsLogSize } from '@/core/QueueStatsService.js';
+import { RoleService } from '@/core/RoleService.js';
 import { Channel, type MiChannelService } from '../channel.js';
-
-// TODO require auth
 
 class QueueStatsChannel extends Channel {
 	public readonly chName = 'queueStats';
 	public static shouldShare = true as const;
-	public static requireCredential = false as const;
+	// SK-2026-058: was unauthenticated (TODO require auth); match admin queue REST
+	public static requireCredential = true as const;
+	public static kind = 'read:admin:queue';
 
 	constructor(
 		private readonly internalEventService: InternalEventService,
 		private readonly queueStatsService: QueueStatsService,
+		private readonly roleService: RoleService,
 
 		id: string,
 		connection: Channel['connection'],
@@ -29,8 +31,13 @@ class QueueStatsChannel extends Channel {
 	}
 
 	@bindThis
-	public init(): void {
+	public async init(): Promise<boolean> {
+		// Session users may have no token.kind check — enforce moderator here
+		if (this.user == null) return false;
+		if (!await this.roleService.isModerator(this.user)) return false;
+
 		this.internalEventService.on('pushQueueCounts', this.onQueueCounts);
+		return true;
 	}
 
 	@bindThis
@@ -41,6 +48,9 @@ class QueueStatsChannel extends Channel {
 	@bindThis
 	public async onMessage(type: string, body: JsonValue): Promise<void> {
 		if (type === 'requestLog') {
+			if (this.user == null) return;
+			if (!await this.roleService.isModerator(this.user)) return;
+
 			const length = isJsonObject(body) && 'length' in body && typeof(body.length) === 'number'
 				? Math.min(Math.max(0, body.length), QueueStatsLogSize)
 				: QueueStatsLogSize;
@@ -57,7 +67,7 @@ class QueueStatsChannel extends Channel {
 }
 
 @Injectable()
-export class QueueStatsChannelService implements MiChannelService<false> {
+export class QueueStatsChannelService implements MiChannelService<true> {
 	public readonly shouldShare = QueueStatsChannel.shouldShare;
 	public readonly requireCredential = QueueStatsChannel.requireCredential;
 	public readonly kind = QueueStatsChannel.kind;
@@ -65,6 +75,7 @@ export class QueueStatsChannelService implements MiChannelService<false> {
 	public constructor(
 		private readonly internalEventService: InternalEventService,
 		private readonly queueStatsService: QueueStatsService,
+		private readonly roleService: RoleService,
 	) {}
 
 	@bindThis
@@ -72,6 +83,7 @@ export class QueueStatsChannelService implements MiChannelService<false> {
 		return new QueueStatsChannel(
 			this.internalEventService,
 			this.queueStatsService,
+			this.roleService,
 			id,
 			connection,
 		);

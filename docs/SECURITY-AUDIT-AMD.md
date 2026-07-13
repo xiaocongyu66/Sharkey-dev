@@ -52,7 +52,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **Critical / High** | 3–4 | Chat WS leak, non-prod SSRF disable, OAuth dummy tokens |
 | **Medium** | 15+ | CSS, invite entropy, SQL concat, blocks, escrow, push unregister, SSRF surfaces |
 | **Low / Info** | 20+ | Token length, DoS knobs, privacy, misconfig, TODOs |
-| **Total IDs** | **SK-2026-001 … 056** | Living document (pass 4: injection/crypto) |
+| **Total IDs** | **SK-2026-001 … 060** | Living document (pass 6: reverse API / inject / tamper) |
 
 ### 0.4 Remediation status matrix (code vs residual)
 
@@ -91,6 +91,8 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **052** | Private Flash visibility on show/like |
 | **053** | Admin emoji only own/unowned drive files |
 | **054** | Meili filter/sort: escape + order enum + host pattern |
+| **057** | WS `serverStats` gated by `enableServerMachineStats` |
+| **058** | WS `queueStats` requires login + moderator |
 
 #### Still open / residual (not “all clear”)
 
@@ -113,6 +115,9 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **050** | Site mod can mute/rate-limit any room (open-ops privilege — skip for product) |
 | **055** | ZIP extract zip-slip residual via `slacc` (L–M; library claims path-safe — residual) |
 | **056** | `app/create` free permission strings (L, accepted design) |
+
+| **059** | Token in query/WS `?i=` (L–M log/Referer leak) |
+| **060** | Public API catalog (`/api.json`, endpoints) — accepted open recon |
 
 #### Ops-only (not closed by code alone)
 
@@ -1163,6 +1168,194 @@ Allowlist known `kind` values; hard-warn on admin scopes.
 
 ---
 
+## 1e. Pass 5 (2026-07-14) — WS info leak, authz consistency
+
+### SK-2026-057 — WebSocket `serverStats` ignores `enableServerMachineStats` (info disclosure)
+
+| | |
+|--|--|
+| **Severity** | **M** (when admin disabled machine stats for privacy) |
+| **CWE** | CWE-200 / CWE-862 |
+| **Status** | **Fixed in tree** — tick + channel init/send gated on `enableServerMachineStats` |
+| **Components** | `stream/channels/server-stats.ts`; `ServerStatsService.tick` |
+
+**Description**  
+Prior: REST `server-info` respected the flag; WS `serverStats` always leaked live host metrics.
+
+**Fix summary**  
+`ServerStatsService.tick` no-ops when disabled; channel `init` returns false; live/log handlers re-check flag.
+
+---
+
+### SK-2026-058 — WebSocket `queueStats` unauthenticated (explicit TODO)
+
+| | |
+|--|--|
+| **Severity** | **L–M** |
+| **CWE** | CWE-200 |
+| **Status** | **Open** |
+| **Components** | `stream/channels/queue-stats.ts` — `// TODO require auth`, `requireCredential = false` |
+
+**Description**  
+Anyone who can open a streaming connection can subscribe to `queueStats` and receive queue job counts / active-since-prev-tick for all queue types. REST equivalent is under **admin** queue stats.
+
+**Impact**  
+Recon of federation/delivery backlog, import load, worker health — helps attackers time abuse or confirm DoS effectiveness. Not remote code execution.
+
+**Remediation**  
+`requireCredential = true` + moderator/admin kind (match admin API), as the TODO says.
+
+---
+
+### Pass 5 negatives (checked, no new high IDOR)
+
+| Area | Result |
+|------|--------|
+| `i/update` avatar/banner/background/page | Ownership checked (`userId === me`) |
+| Gallery/pages file attach | `userId: me.id` on drive lookup |
+| Invite delete | Creator or moderator |
+| Import endpoints | Ownership fixed (SK-051) |
+| Private flash | Fixed (SK-052) |
+| App secret | Only owner + secure client |
+| Registry | Scoped to `me.id`; app token domain forced to token id |
+
+---
+
+## 1f. Pass 6 — reverse-engineering the API + injection / tampering playbook
+
+This section maps how an attacker **reverses** Sharkey’s HTTP/WS surface (without source), then applies **classic** techniques: inject, tamper IDs/flags, escalate via wrong fields.  
+Open-ops public federation remains **expected**, not a defect.
+
+### 1f.1 What is publicly reverse-engineerable (by design)
+
+| Surface | Auth | What you learn |
+|---------|------|----------------|
+| `GET /api.json` | None | Full OpenAPI 3.1: paths, params, response shapes, credential yes/no, permission `kind`, **links to source files** |
+| `POST /api/endpoints` | None | Complete list of endpoint names |
+| `POST /api/endpoint` `{endpoint}` | None | Parameter **names + types** for any endpoint |
+| `GET /api-doc` | None | Human API explorer |
+| Built frontend JS | None | Call sites, `misskeyApi()`, channel names, feature flags |
+| ActivityPub / nodeinfo | None | Actor/note graph (public objects) |
+
+**Implication:** Hiding endpoint names is **not** a control. Security must be **server-side authz + validation**, not obscurity. This is normal for Misskey-class APIs.
+
+**Optional hardening (if you want less free recon):**  
+Rate-limit or auth-gate `/api.json` / `endpoints` / `endpoint` on hardened private instances (breaks third-party clients that rely on them).
+
+---
+
+### 1f.2 How clients authenticate (reverse of auth channel)
+
+| Transport | Where token appears | Reverse/leak risk |
+|-----------|---------------------|-------------------|
+| `Authorization: Bearer <token>` | Header (preferred in current frontend) | Lower (not in URL) |
+| JSON body field `i` | POST body | Browser extensions / XSS can read |
+| **Query `?i=`** | GET `allowGet` endpoints (`body = request.query`) and **WebSocket upgrade URL** | **High:** proxy logs, Referer, browser history, shoulder-surfing |
+
+Code (`ApiCallService`):
+
+```ts
+const token = request.headers.authorization?.startsWith('Bearer ')
+  ? request.headers.authorization.slice(7)
+  : body?.['i'];  // GET → query string
+```
+
+WS (`StreamingApiServerService`): same Bearer **or** `q.get('i')`.
+
+#### SK-2026-059 — Session token in query string (`i` / WS `?i=`)
+
+| | |
+|--|--|
+| **Severity** | **L–M** (token theft via logs / Referer / shared URLs) |
+| **CWE** | CWE-598 |
+| **Status** | **Open** (Misskey legacy; frontend prefers Bearer for POST) |
+| **Components** | `ApiCallService` GET + `body.i`; `StreamingApiServerService` `searchParams.i` |
+
+**Attack / reverse technique**  
+1. Intercept or log `wss://host/streaming?i=NATIVE_TOKEN`  
+2. Replay as `Authorization: Bearer` or POST `{ "i": "..." }`  
+
+**Remediation**  
+Deprecate query `i` (or only allow short-lived tickets); document “never put token in URL”; strip `i` from access logs; prefer Sec-WebSocket-Protocol or first-message auth for browsers.
+
+---
+
+### 1f.3 Injection techniques vs this codebase
+
+| Technique | Typical reverse step | Status on Sharkey-dev-continue |
+|-----------|----------------------|--------------------------------|
+| SQL injection | Fuzz string fields into filters | Mostly bound params; poll index integer-checked |
+| Meili filter injection | Fuzz `notes/search` host/order | **SK-054 fixed in tree** (escape + allowlist) |
+| Command injection | Find shell wrappers | Not found on user input |
+| XSS / HTML inject | Admin HTML, MFM | sanitize-html no style; MFM color/time validated |
+| SSTI | Template engines with user text | Not primary; pug is server templates |
+| Prototype pollution | JSON merge of untrusted objects | AP headers strip `__proto__` |
+| Path / zip inject | Import archives | Ownership fixed; zip-slip residual SK-055 |
+| Mass assignment | Extra JSON keys (`isAdmin`, `userId`) | AJV **does not** set `additionalProperties: false` globally — **extra keys accepted but ignored** unless handler spreads full object (handlers generally pick fields) |
+
+**AJV note (tamper-relevant):**  
+`endpoint-base` uses `new Ajv({ useDefaults: true })` without `removeAdditional`.  
+Sending `"isAdmin": true` on `notes/create` does **not** grant admin — create only reads known fields.  
+Risk appears only if a future endpoint does `repository.update(ps)` / `Object.assign(entity, ps)`.
+
+---
+
+### 1f.4 Request tampering checklist (IDOR / privilege)
+
+| Tamper | Example | Server behavior |
+|--------|---------|-----------------|
+| Swap resource id | Another user’s `fileId` / `noteId` / `flashId` | Imports: owner check (051); flash private: owner (052); drive show: owner/mod |
+| Elevate visibility | `visibility: "public"` on private content | Enum only; create path may **downgrade** public→home under silence policies — not attacker elevate |
+| Forge actor | `userId` of another user on write | Not taken from client for “who am I”; uses authenticated `me` |
+| App permission | App claims `write:admin:*` | Token still needs user accept; rank demotion for shared access |
+| Channel / room id | Subscribe foreign streams | Chat room gated (001); timelines public by design |
+| WS channel name | `admin`, `queueStats`, `serverStats` | admin needs credential+kind; **queueStats/serverStats still open (057/058)** |
+
+---
+
+### 1f.5 Reverse crypto / tokens (what “breaking” means)
+
+| Artifact | How obtained by reverse | Strength |
+|----------|-------------------------|----------|
+| Native user token (16 chars) | Login response, localStorage `$i.token`, WS URL | CSPRNG; short length residual (SK-017) |
+| App access token | OAuth/miauth | `sha256(token+secret)` stored; secret only to app owner |
+| Escrow chat key | Admin/meta/config | Server-side; not client-derivable without secret (SK-010 design) |
+| Password | Login brute | argon2 |
+| AP HTTP signatures | Outbound federation | Not a user API token |
+
+There is **no** client-side “hidden admin API key” in frontend env for core API (Bearer = user/app token only).
+
+---
+
+### 1f.6 Practical reverse-eng attack chain (authorized testing)
+
+```
+1. GET /api.json  →  map all ops + requireCredential + kind
+2. POST /api/endpoints + /api/endpoint  →  param names
+3. Capture browser Bearer / localStorage token (or WS ?i=)
+4. Replay with curl/mitm; fuzz:
+     - id fields (IDOR)
+     - free strings (inject)  → Meili only if enabled
+     - extra JSON keys (mass assign smoke)
+5. Open unauth WS: serverStats / queueStats  →  host load recon (057/058)
+6. Drive/import paths with stolen fileIds  →  should fail after 051
+```
+
+---
+
+### SK-2026-060 — Unauthenticated API catalog enables full capability mapping
+
+| | |
+|--|--|
+| **Severity** | **I** (information disclosure / recon; intentional for public APIs) |
+| **CWE** | CWE-200 |
+| **Status** | **Accepted for open instances**; optional lock-down for private |
+| **Components** | `/api.json`, `endpoints`, `endpoint`, openapi source links |
+
+Not a direct exploit; accelerates every other attack. Private/corp instances may want to disable or auth-wall.
+
+---
+
 ## 2. Attack surface map (abbreviated)
 
 ```
@@ -1179,12 +1372,13 @@ Internet
 ```
 
 **Highest residual ROI after remediation (for attackers / next hardening)**  
-1. Session/token theft (SK-017/020)  
-2. Authenticated SSRF-ish surfaces (`/proxy`, webhooks) if allowlists misconfigured  
-3. Escrow key compromise (SK-010) — design, not a crypto break  
-4. Import zip-slip residual (SK-055; slacc/rust zip claims path-safe)  
-5. Mis-deploy: `NODE_ENV=test`, gateway without API key  
-6. MFM UI abuse within clamps (SK-007 residual)
+1. **SK-057 / SK-058** — unauthenticated WS `serverStats` / `queueStats`  
+2. **SK-059** — token in `?i=` / WS query (steal via logs)  
+3. Session/token theft (SK-017/020); catalog recon **SK-060** (expected open)  
+4. Authenticated SSRF-ish surfaces (`/proxy`, webhooks)  
+5. Escrow key compromise (SK-010) — design  
+6. Import zip-slip residual (SK-055)  
+7. Mis-deploy: `NODE_ENV=test`, gateway without API key
 
 ---
 
@@ -1315,6 +1509,8 @@ Further work is **P2/P3 + ops + optional dynamic testing**, not “all findings 
 | 0.9 | 2026-07-14 | **Pass 2 remediations:** SK-043..049 fixed in code (invite ignore/join, re-invite, unreact auth, clip/favorite visibility, reaction race, x-algo); matrix + P2 plan updated |
 | 0.9b | 2026-07-14 | **Pass 3 real vulns (skip open-ops):** SK-051 import file IDOR (**H**); SK-052 private flash leak (**M**); SK-053 admin emoji file detach (L); residual matrix + ROI updated |
 | 1.0 | 2026-07-14 | **Pass 4 injection/crypto:** SK-054 Meili filter/sort injection; SK-055 zip-slip residual; SK-056 app permissions phishing; SQL/cmd/eval/XSS scan notes |
+| 1.1 | 2026-07-14 | **Pass 5:** SK-057 WS serverStats ignores enableServerMachineStats; SK-058 WS queueStats unauth (TODO); IDOR re-check clean on avatar/gallery/import |
+| 1.2 | 2026-07-14 | **Pass 6 reverse API:** §1f playbook; SK-059 query token `i`; SK-060 public OpenAPI catalog; inject/tamper matrix vs codebase |
 | 0.9c | 2026-07-14 | **§8 Project optimization evaluation** (multi-pass code review): scores, chat perf/WS/escrow/algo, engineering process, residual backlog, production gate |
 | 1.0 | 2026-07-14 | **Pass 3 remediations + chat scroll:** SK-051/052/053 fixed; fling scroll anti-twitch; AMD matrix updated |
 | 1.1 | 2026-07-14 | **Pass 4 remediations:** SK-054 Meili escape/order/host; 055 residual (slacc); 056 accepted design |

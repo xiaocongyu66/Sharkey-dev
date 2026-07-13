@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable, type OnModuleInit, type OnApplicationShutdown } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit, type OnApplicationShutdown } from '@nestjs/common';
 import si from 'systeminformation';
 import { InternalEventService } from '@/global/InternalEventService.js';
 import { bindThis } from '@/decorators.js';
 import { awaitAll } from '@/misc/prelude/await-all.js';
+import { DI } from '@/di-symbols.js';
+import type { MiMeta } from '@/models/Meta.js';
 import type * as Misskey from 'misskey-js';
 
 export const ServerStatsLogSize = 200;
@@ -18,6 +20,8 @@ export class ServerStatsService implements OnApplicationShutdown, OnModuleInit {
 
 	public constructor(
 		private readonly internalEventService: InternalEventService,
+		@Inject(DI.meta)
+		private readonly serverSettings: MiMeta,
 	) {
 	}
 
@@ -28,6 +32,11 @@ export class ServerStatsService implements OnApplicationShutdown, OnModuleInit {
 
 	@bindThis
 	public async tick(): Promise<void> {
+		// SK-2026-057: do not collect/broadcast host metrics when admin disabled them
+		if (!this.serverSettings.enableServerMachineStats) {
+			return;
+		}
+
 		// Create new snapshot
 		const stats = await awaitAll({
 			cpu: this.getCpu(),
