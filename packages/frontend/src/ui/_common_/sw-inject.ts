@@ -11,6 +11,15 @@ import { deepClone } from '@/utility/clone.js';
 import { mainRouter } from '@/router.js';
 import { login } from '@/accounts.js';
 
+/** SK-2026-089: only same-origin relative paths (reject //evil, absolute URLs). */
+function safeSwRedirectUrl(url: unknown): string | undefined {
+	if (typeof url !== 'string' || url.length === 0) return undefined;
+	if (!url.startsWith('/') || url.startsWith('//')) return undefined;
+	// Disallow scheme-like paths and backslash tricks
+	if (url.includes('\\') || /^\/[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url)) return undefined;
+	return url;
+}
+
 export function swInject() {
 	navigator.serviceWorker.addEventListener('message', async ev => {
 		if (_DEV_) {
@@ -19,10 +28,12 @@ export function swInject() {
 
 		if (ev.data.type !== 'order') return;
 
+		const safeUrl = safeSwRedirectUrl(ev.data.url);
+
 		if (ev.data.loginId && ev.data.loginId !== $i?.id) {
 			return getAccountFromId(ev.data.loginId).then(account => {
 				if (!account) return;
-				return login(account.token, ev.data.url);
+				return login(account.token, safeUrl);
 			});
 		}
 
@@ -40,10 +51,11 @@ export function swInject() {
 				return post(props);
 			}
 			case 'push':
-				if (mainRouter.currentRoute.value.path === ev.data.url) {
+				if (!safeUrl) return;
+				if (mainRouter.currentRoute.value.path === safeUrl) {
 					return window.scroll({ top: 0, behavior: 'smooth' });
 				}
-				return mainRouter.push(ev.data.url);
+				return mainRouter.push(safeUrl);
 			default:
 				return;
 		}

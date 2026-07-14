@@ -19,6 +19,7 @@ import { DI } from '@/di-symbols.js';
 import { isQuote, isRenote } from '@/misc/is-renote.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { TimeService } from '@/global/TimeService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -315,6 +316,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private noteEditService: NoteEditService,
 		private readonly timeService: TimeService,
 		private readonly userService: UserService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			if (ps.text && ps.text.length > this.config.maxNoteLength) {
@@ -357,6 +359,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw new ApiError(meta.errors.noSuchRenoteTarget);
 				}
 
+				// SK-2026-088: pre-check renote visibility at endpoint edge (same as create service)
+				if (renote.userId !== me.id) {
+					const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(renote, me);
+					if (!accessible) {
+						throw new ApiError(meta.errors.noSuchRenoteTarget);
+					}
+				}
+
 				if (renote.channelId && renote.channelId !== ps.channelId) {
 					// チャンネルのノートに対しリノート要求がきたとき、チャンネル外へのリノート可否をチェック
 					// リノートのユースケースのうち、チャンネル内→チャンネル外は少数だと考えられるため、JOINはせず必要な時に都度取得する
@@ -371,17 +381,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			let reply: MiNote | null = null;
-			if (ps.replyId != null) {
-				// Fetch reply
-				reply = await this.notesRepository.findOneBy({ id: ps.replyId });
-
-				if (reply == null) {
-					throw new ApiError(meta.errors.noSuchReplyTarget);
-				} else if (reply.visibility === 'specified' && ps.visibility !== 'specified') {
-					throw new ApiError(meta.errors.cannotReplyToSpecifiedVisibilityNoteWithExtendedVisibility);
-				}
-			}
+			// SK-2026-082: reply is immutable on edit (NoteEditService forces oldNote.replyId).
+			// Ignore client-supplied replyId so it cannot be used as an existence oracle.
+			const reply: MiNote | null = null;
 
 			if (ps.poll) {
 				if (typeof ps.poll.expiresAt === 'number') {

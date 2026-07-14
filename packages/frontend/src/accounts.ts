@@ -201,10 +201,16 @@ export async function login(token: AccountWithToken['token'], redirect?: string)
 	await addAccount(host, me, token);
 
 	if (redirect) {
+		// SK-2026-089: only allow same-origin relative paths (defense-in-depth for SW/login)
+		const safe =
+			typeof redirect === 'string'
+			&& redirect.startsWith('/')
+			&& !redirect.startsWith('//')
+			&& !redirect.includes('\\');
 		// 他のタブは再読み込みするだけ
 		reloadChannel.postMessage(null);
 		// このページはredirectで指定された先に移動
-		window.location.href = redirect;
+		window.location.href = safe ? redirect : '/';
 		return;
 	}
 

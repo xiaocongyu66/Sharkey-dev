@@ -25,6 +25,7 @@ import { IdService } from '@/core/IdService.js';
 import { MiScheduleNoteType } from '@/models/NoteSchedule.js';
 import { RoleService } from '@/core/RoleService.js';
 import { TimeService } from '@/global/TimeService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -216,6 +217,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private roleService: RoleService,
 		private idService: IdService,
 		private readonly timeService: TimeService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const scheduleNoteCount = await this.noteScheduleRepository.countBy({ userId: me.id });
@@ -258,8 +260,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw new ApiError(meta.errors.cannotReRenote);
 				}
 
-				// Check blocking
+				// Check blocking + visibility (align with NoteCreateService; no existence oracle)
 				if (renote.userId !== me.id) {
+					const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(renote, me);
+					if (!accessible) {
+						throw new ApiError(meta.errors.noSuchRenoteTarget);
+					}
+
 					const blockExist = await this.blockingsRepository.exist({
 						where: {
 							blockerId: renote.userId,
@@ -291,8 +298,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					throw new ApiError(meta.errors.cannotReplyToPureRenote);
 				}
 
-				// Check blocking
+				// SK-2026-081: same visibility gate as NoteCreateService (no existence oracle)
 				if (reply.userId !== me.id) {
+					const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(reply, me);
+					if (!accessible) {
+						throw new ApiError(meta.errors.noSuchReplyTarget);
+					}
+
 					const blockExist = await this.blockingsRepository.exists({
 						where: {
 							blockerId: reply.userId,

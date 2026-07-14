@@ -29,12 +29,14 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **Code: Pass 8 session / chat / webhook (SK-068…072)** | **Remediated in tree (2026-07-14, `2768c40`)** |
 | **Code: Pass 9 note visibility / social graph (SK-073…077)** | **Remediated in tree (2026-07-14)** |
 | **Code: Pass 10 poll / note-oracle (SK-078…080)** | **Remediated in tree (2026-07-14)** |
+| **Code: Pass 11 schedule/edit reply oracle (SK-081…083)** | **REMEDIATED in tree** |
+| **Code: Pass 12 bulk residual oracles (SK-084…090)** | **REMEDIATED in tree** (081–089) |
 | **Design / privacy / product honesty** | Residual open (escrow ≠ E2EE; AI LLM privacy) |
 | **Ops / deploy configuration** | Operator checklist still required |
 | **Dynamic pentest / full regression** | **Not completed** (audit was static) |
 
 **One-line conclusion (security):**  
-**“Pass 7–8 closed in code. Pass 9–10 note visibility/oracle gaps remediated (073–080).”**
+**“Pass 7–12 closed in tree. Note-id oracle family (SK-081…088) gated with NoteVisibilityService; SW redirect URL allowlist (SK-089). Residual design: SK-010 escrow, SK-017 tokens, SK-059 historical ?i=.”**
 
 **One-line conclusion (optimization / engineering — see §8):**  
 **“Performance and chat architecture investments are sound; Pass 7–8 code remediations landed — composite ~8.2/10 pending deploy verification.”**
@@ -52,14 +54,14 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 
 **Must verify on deploy:** the above commits (or equivalent) are present in production builds.
 
-### 0.3 Finding counts (through Pass 10)
+### 0.3 Finding counts (through Pass 12)
 
 | Severity | Count (approx.) | Themes |
 |----------|-----------------|--------|
 | **Critical / High** | 5–7 historical (mostly fixed); **0 new open High in Pass 8** | Prior: chat WS, SSRF, OAuth, AI/Mastodon (remediated) |
 | **Medium** | 25+ | Prior residuals + **session non-revocation, webhook URL gaps, chat room metadata** |
 | **Low / Info** | 25+ | Token length, join-by-code rate limit, privacy, misconfig |
-| **Total IDs** | **SK-2026-001 … 080** | Living document (pass 10: poll vote ACL / note oracles) |
+| **Total IDs** | **SK-2026-001 … 090** | Living document (pass 12: bulk residual oracles) |
 
 ### 0.4 Remediation status matrix (code vs residual)
 
@@ -168,6 +170,28 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **079** | `notes/clips` / `notes/renotes` seed via `getNote` without ACL (existence oracle; unauth) | **L–M** |
 | **080** | WS `admin` channel: `kind: read:admin:stream` only, no `isModerator` role check | **L** |
 
+
+#### Pass 11 — remediated in tree (2026-07-14)
+
+| ID | Topic | Severity | Status |
+|----|--------|----------|--------|
+| **081** | `notes/schedule/create` reply without visibility | **M** | **Fixed** — `checkNoteVisibilityAsync` on reply (+ renote) |
+| **082** | `notes/edit` optional `replyId` probe | **L–M** | **Fixed** — ignore client `replyId` (immutable) |
+| **083** | `promo/read` existence oracle | **L** | **Fixed** — visibility gate |
+
+
+#### Pass 12 — remediated in tree (2026-07-14 bulk)
+
+| ID | Topic | Severity | Status |
+|----|--------|----------|--------|
+| **084** | `notes/renotes` seed oracle | **L–M** | **Fixed** — seed visibility |
+| **085** | `notes/unrenote` existence oracle | **L** | **Fixed** — visibility when no own renotes |
+| **086** | `notes/favorites/delete` oracle | **L** | **Fixed** — visibility when not favorited |
+| **087** | `notes/thread-muting/delete` oracle | **L** | **Fixed** — visibility when no mute row |
+| **088** | `notes/edit` renoteId pre-ACL | **L** | **Fixed** — visibility before service |
+| **089** | SW / login redirect URL | **L** | **Fixed** — relative-path allowlist |
+| **090** | Bulk scan negatives | **I** | Info only |
+
 #### Ops-only (not closed by code alone)
 
 - [ ] Public nodes: `NODE_ENV=production`
@@ -179,7 +203,8 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 - [x] **Pass 8:** password change/reset auto-revokes tokens (verify on deploy)
 - [ ] **Pass 7 residual:** do not enable `aiAbuseControlConfig.autoSuspend` without human review (SK-063)
 - [ ] **Pass 9:** treat private-note ID as sensitive until SK-073/075 closed
-- [ ] **Pass 10:** do not share private poll note ids; fix vote ACL before public prod
+- [x] **Pass 9–10:** visibility remediations in tree (`574d0fc`, `db1deaa`) — verify deploy
+- [x] **Pass 11–12:** note-id oracle family (081–088) + SW URL (089) remediated in tree
 
 ---
 
@@ -2114,6 +2139,252 @@ Connection enforces token `permission` includes kind when using app token; nativ
 
 ---
 
+
+## 1k. Pass 11 (2026-07-14) — schedule/edit reply existence oracles
+
+**Verified fixed (not reopened):** Pass 9 (`574d0fc` conversation, frequent-reply, reactions list, state, thread-mute); Pass 10 (`db1deaa` poll vote/refresh, clips/renotes seed, admin WS moderator).
+
+**Focus:** write endpoints that load notes by id with incomplete ACL vs `NoteCreateService` (which checks visibility on fire/create).
+
+---
+
+### SK-2026-081 — Schedule note `replyId` without visibility (existence oracle)
+
+| | |
+|--|--|
+| **Severity** | **M** |
+| **CWE** | CWE-203 / CWE-639 |
+| **Status** | **FIXED in tree** (2026-07-14) — schedule reply/renote visibility|
+| **Components** | `endpoints/notes/schedule/create.ts`; fire path `ScheduleNotePostProcessorService` → `NoteCreateService.create` |
+
+**Description**  
+On schedule create, for `replyId`:
+
+```ts
+reply = await this.notesRepository.findOneBy({ id: ps.replyId });
+if (reply == null) throw noSuchReplyTarget;
+// block check only
+// NO checkNoteVisibilityAsync / followers check
+// stores schedule job
+```
+
+Contrast:
+
+- `renoteId` path rejects others' `followers`/`specified` renotes (partial).  
+- Immediate `notes/create` → `NoteCreateService` **does** `checkNoteVisibilityAsync` on reply.
+
+**Impact**
+
+1. **Existence oracle:** private/followers/DM note id → schedule succeeds; missing id → `NO_SUCH_REPLY_TARGET`.  
+2. At fire time, `NoteCreateService` may reject inaccessible reply → user gets `scheduledNoteFailed` notification (extra signal).  
+3. Does not by itself publish private text.
+
+**Remediation**  
+Before accepting schedule: same visibility as create (`checkNoteVisibilityAsync`). Map inaccessible → `NO_SUCH_REPLY_TARGET`. Optionally re-check at fire (already partially via create).
+
+---
+
+### SK-2026-082 — `notes/edit` optional `replyId` existence oracle
+
+| | |
+|--|--|
+| **Severity** | **L–M** |
+| **CWE** | CWE-203 |
+| **Status** | **FIXED in tree** (2026-07-14) — ignore client replyId on edit|
+| **Components** | `endpoints/notes/edit.ts` |
+
+**Description**  
+Edit endpoint, if `ps.replyId` is set:
+
+```ts
+reply = await this.notesRepository.findOneBy({ id: ps.replyId });
+if (reply == null) throw noSuchReplyTarget;
+// only specified→visibility rule; no accessibility check
+```
+
+`NoteEditService.edit` **forces** `data.reply` from `oldNote.replyId` (cannot reparent), but the endpoint still probes `ps.replyId` first → attacker editing **own** note can probe arbitrary note ids via `replyId`.
+
+**Remediation**  
+Ignore `replyId` on edit (reply immutable) or apply visibility / drop the param from API.
+
+---
+
+### SK-2026-083 — `promo/read` existence oracle
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **CWE** | CWE-203 |
+| **Status** | **FIXED in tree** (2026-07-14) — promo/read visibility|
+| **Components** | `endpoints/promo/read.ts` |
+
+**Description**  
+`getNote` without visibility; missing → error; existing private id → insert promo_reads row (or no-op if already read). Confirms note existence to any authenticated user.
+
+**Remediation**  
+Visibility gate or only allow promo-flagged public notes.
+
+---
+
+### Pass 11 — notes (checked OK / residual)
+
+| Check | Result |
+|-------|--------|
+| Pass 9/10 remediations present | **Yes** (`574d0fc`, `db1deaa`) |
+| Registry `domain` | Scoped by `userId`; cross-user N/A |
+| OAuth `body.clientId` typo | Misskey token path uses `appSecret` only — dead param (I) |
+| Note create reply | Visibility in `NoteCreateService` |
+| Clip addNote | SK-046 visibility |
+| Antenna/list WS ownership | OK |
+
+**Highest ROI after Pass 11**
+
+1. ~~**SK-081** schedule reply visibility~~ **DONE**  
+2. ~~**SK-082** drop/validate edit `replyId`~~ **DONE**  
+3. Residual design: SK-010 escrow, SK-017 tokens, SK-059 `?i=`  
+
+---
+
+
+## 1l. Pass 12 (2026-07-14) — bulk residual oracles & surface re-scan
+
+**Method:** Parallel static sweeps across backend endpoints (getNote without visibility), SQL concat, native fetch, frontend XSS/CSS, WS/auth, storage agents.  
+**Verified still fixed:** Pass 7–10 remediations (`5bfc08a`…`db1deaa`); conversation/polls/clips seed ACL present.
+
+### 12.1 Note-id existence oracle family (cluster)
+
+Many write/read helpers still call `GetterService.getNote` (existence only) and branch:
+
+| Endpoint | Auth | Behavior if private id exists | If missing |
+|----------|------|-------------------------------|------------|
+| `notes/schedule/create` replyId | login | schedule OK (SK-081) | `NO_SUCH_REPLY_TARGET` |
+| `notes/edit` replyId | login | continues (SK-082) | `NO_SUCH_REPLY_TARGET` |
+| `promo/read` | login | inserts read (SK-083) | `NO_SUCH_NOTE` |
+| `notes/renotes` | **none** | continues list (SK-084) | `NO_SUCH_NOTE` |
+| `notes/unrenote` | login | 200 + empty if no own renotes (SK-085) | `NO_SUCH_NOTE` |
+| `notes/favorites/delete` | login | `NOT_FAVORITED` vs exists (SK-086) | `NO_SUCH_NOTE` |
+| `notes/thread-muting/delete` | login | delete 0 rows / success (SK-087) | `NO_SUCH_NOTE` |
+
+**Shared remediation:**  
+```ts
+async function getAccessibleNote(id, me) {
+  const note = await getter.getNote(id);
+  const { accessible } = await noteVisibility.checkNoteVisibilityAsync(note, me);
+  if (!accessible) throw NO_SUCH_NOTE;
+  return note;
+}
+```
+Use on **all** seed note loads. Prefer identical error for missing and inaccessible.
+
+---
+
+### SK-2026-084 — `notes/renotes` seed still unauthenticated oracle
+
+| | |
+|--|--|
+| **Severity** | **L–M** |
+| **CWE** | CWE-203 |
+| **Status** | **FIXED in tree** (2026-07-14) — renotes seed visibility|
+| **Components** | `endpoints/notes/renotes.ts` |
+
+`getNote` then queries renotes with visibility on **renote rows**, not seed. Anonymous can tell private note ids exist.
+
+---
+
+### SK-2026-085 — `notes/unrenote` existence oracle
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **Status** | **FIXED in tree** (2026-07-14) — unrenote no empty-success oracle|
+| **Components** | `endpoints/notes/unrenote.ts` |
+
+Missing note → error. Private note id → success path (often empty renote list). Confirms existence.
+
+---
+
+### SK-2026-086 — `notes/favorites/delete` existence oracle
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **Status** | **FIXED in tree** (2026-07-14) — favorites/delete visibility when not favorited|
+| **Components** | `endpoints/notes/favorites/delete.ts` |
+
+Create path has SK-047 visibility; **delete** does not. Missing → `NO_SUCH_NOTE`; exists but not favorited → `NOT_FAVORITED`.
+
+---
+
+### SK-2026-087 — `notes/thread-muting/delete` existence oracle
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **Status** | **FIXED in tree** (2026-07-14) — thread-mute delete visibility when no row|
+| **Components** | `endpoints/notes/thread-muting/delete.ts` |
+
+Create fixed in Pass 9; **delete** still `getNote` only.
+
+---
+
+### SK-2026-088 — `notes/edit` renoteId without pre-ACL
+
+| | |
+|--|--|
+| **Severity** | **L** |
+| **Status** | **FIXED in tree** (2026-07-14) — edit renoteId pre-ACL|
+| **Components** | `endpoints/notes/edit.ts` + `NoteEditService` |
+
+Endpoint loads renote by id; `NoteEditService` checks renote visibility if renote applied. Error taxonomy may still distinguish missing vs inaccessible vs blocked. Align with create renote checks at endpoint edge.
+
+---
+
+### SK-2026-089 — Service Worker message URL navigation / login redirect
+
+| | |
+|--|--|
+| **Severity** | **L** (same-origin SW assumed) |
+| **CWE** | CWE-601 (conditional) |
+| **Status** | **FIXED in tree** (2026-07-14) — SW/login relative URL allowlist|
+| **Components** | `frontend/src/ui/_common_/sw-inject.ts`; `accounts.ts` `login(..., redirect)` |
+
+```ts
+login(account.token, ev.data.url);
+// …
+mainRouter.push(ev.data.url);
+// login: window.location.href = redirect
+```
+
+Trusts message payload from SW. Same-origin SW is normal; compromised SW registration or buggy push payload with absolute external URL could open-redirect after login.  
+
+**Remediation:** allow only relative paths (`url.startsWith('/') && !url.startsWith('//')`).
+
+---
+
+### SK-2026-090 — Bulk re-scan negative findings (Info)
+
+| Area | Result |
+|------|--------|
+| SQL `${}` concat | Poll index only (int); verifiedLinks in commented code; no new SQLi |
+| Native `fetch` AI path | Still on HttpRequestService post-Pass7 |
+| Bunny/S3 agents | `isLocalAddressAllowed=true` intentional for operator storage |
+| Frontend v-html | Mostly sanitizeHtml / i18n; MkAutocomplete uses sanitize-html on highlight |
+| Federation themeColor | `tinycolor(...).toHexString()` — hex only; statusbar CSS less critical |
+| Registry domain | userId-scoped |
+| Drive hash APIs | self only |
+| Write endpoints unauth | none critical found |
+| `test` / `server-info` | gated by design / meta flag |
+
+---
+
+### Pass 12 — highest ROI
+
+1. ~~**One helper** fixing SK-081…087 seed ACL~~ **DONE** (per-endpoint `NoteVisibilityService`)  
+2. ~~SK-089 relative URL allowlist for SW~~ **DONE**  
+3. Residual product: SK-010 escrow, SK-017 tokens, SK-059 `?i=`  
+
+---
+
 ## 2. Attack surface map (abbreviated)
 
 ```
@@ -2185,11 +2456,15 @@ Internet
 | **P1-S8** | **SK-068** revoke tokens on password change/reset | **Fixed** |
 | **P1-S8** | **SK-070/071** webhook test + system-webhook URL validation | **Fixed** |
 | **P1-S8** | **SK-069** chat rooms/show membership | **Fixed** |
-| **P1-S9** | **SK-073** notes/conversation seed+parent visibility | **OPEN** |
-| **P1-S9** | **SK-074** frequent-reply private graph | **OPEN** |
-| **P1-S9** | **SK-075** notes/reactions list seed ACL | **OPEN** |
-| **P1-S10** | **SK-078** poll vote/refresh visibility | **OPEN** |
-| **P1-S10** | **SK-079** notes/clips+renotes seed ACL | **OPEN** |
+| **P1-S9** | **SK-073** notes/conversation seed+parent visibility | **Fixed** |
+| **P1-S9** | **SK-074** frequent-reply private graph | **Fixed** |
+| **P1-S9** | **SK-075** notes/reactions list seed ACL | **Fixed** |
+| **P1-S10** | **SK-078** poll vote/refresh visibility | **Fixed** |
+| **P1-S10** | **SK-079** notes/clips+renotes seed ACL | **Fixed** |
+| **P1-S11** | **SK-081** schedule create reply visibility | **OPEN** |
+| **P1-S11** | **SK-082** notes/edit replyId probe | **OPEN** |
+| **P1-S12** | **SK-084…087** renotes/unrenote/fav-del/mute-del oracles | **OPEN** |
+| **P1-S12** | Shared `getAccessibleNote` helper for seed loads | **OPEN** |
 
 ### P2 — medium term (residual backlog)
 
@@ -2228,9 +2503,9 @@ Internet
 | 23 | Translator privacy documentation | **OPEN** (SK-038 / overlaps SK-066) |
 | 24 | Join-by-code tighter rate limit | **OPEN** (SK-072) |
 
-### P0/P1 code remediation: **Pass 7–8 complete; Pass 9–10 open**
+### P0/P1 code remediation: **Pass 7–12 complete in tree (SK-081…089)**
 
-Pre-AI + Pass 7–8 are **DONE**. Next code priority: **SK-078** (poll vote ACL), then **SK-073/074/075/079**.
+Next: **shared note ACL helper** closing SK-081…087 oracle family; then SW URL allowlist (089).
 
 ---
 
@@ -2310,7 +2585,10 @@ Pre-AI + Pass 7–8 are **DONE**. Next code priority: **SK-078** (poll vote ACL)
 | 1.6 | 2026-07-14 | **Pass 8:** verified Pass 7 live; SK-068 session non-revocation on password change/reset; SK-069 chat rooms/show metadata IDOR; SK-070 webhook test override URL; SK-071 system-webhook URL gap; SK-072 join-by-code rate residual |
 | 1.7 | 2026-07-14 | **Pass 8 remediation noted** (`2768c40`); **Pass 9:** SK-073 notes/conversation visibility; SK-074 frequent-reply graph; SK-075 reactions list oracle; SK-076 notes/state oracle; SK-077 thread-mute without ACL |
 | 1.8 | 2026-07-14 | **Pass 10:** SK-078 poll vote/refresh without visibility; SK-079 clips/renotes seed oracle; SK-080 admin WS kind-only |
-| 1.9 | 2026-07-14 | **Pass 9–10 remediation:** SK-073…080 visibility / oracles / admin WS |
+| 1.9 | 2026-07-14 | **Pass 9–10 remediation:** SK-073…080 visibility / oracles / admin WS (`574d0fc`, `db1deaa`) |
+| 1.10 | 2026-07-14 | **Pass 11:** SK-081 schedule create replyId existence oracle; SK-082 notes/edit replyId probe; SK-083 promo/read existence oracle |
+| 1.11 | 2026-07-14 | **Pass 12 bulk:** SK-084…090 residual note-id oracles (renotes/unrenote/fav-del/thread-mute-del); SW URL; negative SSRF/SQLi/XSS re-scan |
+| 1.12 | 2026-07-14 | **Pass 11–12 remediations:** SK-081…088 note visibility gates; SK-089 SW/login relative URL allowlist |
 
 ---
 
@@ -2571,4 +2849,4 @@ Performance and security **directions are correct**. Completeness is gated by un
 
 ---
 
-*End of AMD document (includes §8 optimization evaluation + Pass 7 SK-061…067 + Pass 8 SK-068…072 + Pass 9 SK-073…077 + Pass 10 SK-078…080). Continue appending findings as `SK-2026-0xx`; update §8 scores when major streams land.*
+*End of AMD document (includes §8 optimization evaluation + Pass 7 SK-061…067 + Pass 8 SK-068…072 + Pass 9 SK-073…077 + Pass 10 SK-078…080 + Pass 11 SK-081…083 + Pass 12 SK-084…090). Pass 11–12 remediations in tree. Continue appending findings as `SK-2026-0xx`; update §8 scores when major streams land.*

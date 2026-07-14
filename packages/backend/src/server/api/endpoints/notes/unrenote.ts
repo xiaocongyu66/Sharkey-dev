@@ -12,6 +12,7 @@ import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { UserService } from '@/core/UserService.js';
 import { QueryService } from '@/core/QueryService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { trackTask } from '@/misc/promise-tracker.js';
 import { ApiError } from '../../error.js';
 
@@ -58,6 +59,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private noteDeleteService: NoteDeleteService,
 		private readonly queryService: QueryService,
 		private readonly userService: UserService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.getterService.getNote(ps.noteId).catch(err => {
@@ -74,6 +76,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				});
 			this.queryService.andIsRenote(query, 'note');
 			const renotes = await query.getMany();
+
+			// SK-2026-085: if user has no renotes of this seed, do not confirm private note existence
+			if (renotes.length === 0) {
+				const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+				if (!accessible) {
+					throw new ApiError(meta.errors.noSuchNote);
+				}
+				return;
+			}
 
 			trackTask(async () => {
 				for (const note of renotes) {

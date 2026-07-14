@@ -9,6 +9,7 @@ import { IdService } from '@/core/IdService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -48,12 +49,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private idService: IdService,
 		private getterService: GetterService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.getterService.getNote(ps.noteId).catch(err => {
 				if (err.id === '9725d0ce-ba28-4dde-95a7-2cbb2c15de24') throw new ApiError(meta.errors.noSuchNote);
 				throw err;
 			});
+
+			// SK-2026-083: no existence oracle for inaccessible notes
+			const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+			if (!accessible) {
+				throw new ApiError(meta.errors.noSuchNote);
+			}
 
 			const exist = await this.promoReadsRepository.exists({
 				where: {

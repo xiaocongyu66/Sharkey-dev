@@ -66,12 +66,19 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private noteEntityService: NoteEntityService,
 		private queryService: QueryService,
 		private getterService: GetterService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.getterService.getNote(ps.noteId).catch(err => {
 				if (err.id === '9725d0ce-ba28-4dde-95a7-2cbb2c15de24') throw new ApiError(meta.errors.noSuchNote);
 				throw err;
 			});
+
+			// SK-2026-084: no existence oracle for inaccessible seed notes
+			const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+			if (!accessible) {
+				throw new ApiError(meta.errors.noSuchNote);
+			}
 
 			const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
 				.andWhere('note.renoteId = :renoteId', { renoteId: note.id })

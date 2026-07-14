@@ -10,6 +10,7 @@ import { GetterService } from '@/server/api/GetterService.js';
 import { UserService } from '@/core/UserService.js';
 import { DI } from '@/di-symbols.js';
 import type { NoteFavoritesRepository } from '@/models/_.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -56,6 +57,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private getterService: GetterService,
 		private readonly userService: UserService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Get favoritee
@@ -64,13 +66,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 
-			// if already favorited
+			// if already favorited — allow delete even if visibility later changed
 			const exist = await this.noteFavoritesRepository.findOneBy({
 				noteId: note.id,
 				userId: me.id,
 			});
 
 			if (exist == null) {
+				// SK-2026-086: inaccessible notes must not leak via NOT_FAVORITED vs NO_SUCH_NOTE
+				if (note.userId !== me.id) {
+					const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+					if (!accessible) {
+						throw new ApiError(meta.errors.noSuchNote);
+					}
+				}
 				throw new ApiError(meta.errors.notFavorited);
 			}
 

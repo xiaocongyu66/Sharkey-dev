@@ -9,6 +9,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { DI } from '@/di-symbols.js';
 import { CacheService } from '@/core/CacheService.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { ApiError } from '../../../error.js';
 
 export const meta = {
@@ -51,6 +52,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		private getterService: GetterService,
 		private readonly cacheService: CacheService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const note = await this.getterService.getNote(ps.noteId).catch(err => {
@@ -59,11 +61,22 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			});
 
 			const threadId = note.threadId ?? note.id;
-			await this.noteThreadMutingsRepository.delete({
+			const muteKey = {
 				threadId: ps.noteOnly ? note.id : threadId,
 				userId: me.id,
 				isPostMute: ps.noteOnly,
-			});
+			};
+
+			// SK-2026-087: allow unmute of existing rows; otherwise no existence oracle
+			const exist = await this.noteThreadMutingsRepository.exists({ where: muteKey });
+			if (!exist) {
+				const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+				if (!accessible) {
+					throw new ApiError(meta.errors.noSuchNote);
+				}
+			}
+
+			await this.noteThreadMutingsRepository.delete(muteKey);
 
 			await Promise.all([
 				this.cacheService.threadMutingsCache.refresh(me.id),
