@@ -7,6 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { MiMeta } from '@/models/Meta.js';
 import { defaultAiNoteModerationConfig, type AiNoteModerationConfig } from '@/models/Meta.js';
 import type { MiUser } from '@/models/User.js';
+import type { MiDriveFile } from '@/models/DriveFile.js';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { LoggerService } from '@/core/LoggerService.js';
@@ -19,6 +20,8 @@ export type AiNoteModerationInput = {
 	text?: string | null;
 	cw?: string | null;
 	pollChoices?: string[] | null;
+	/** Attached drive files (images used when includeImages is on) */
+	files?: MiDriveFile[] | null;
 	/** local user host === null */
 	isRemote: boolean;
 	userId: MiUser['id'];
@@ -37,10 +40,11 @@ export type AiNoteModerationResult = {
 };
 
 const DEFAULT_SYSTEM = `You are a content moderation classifier for a microblogging server.
-Decide if the user post should be flagged for violating community safety (spam, scams, severe harassment, CSAM, illegal weapons sales, etc.).
+Decide if the user post should be flagged for violating community safety (spam, scams, severe harassment, CSAM, illegal weapons sales, gore, explicit sexual content involving minors, etc.).
+When images are provided, review them as part of the post (text + images together).
 Reply with ONLY a single JSON object, no markdown:
 {"flagged":boolean,"reason":"short English reason or empty"}
-Be conservative: do not flag ordinary opinions, jokes, or mild language unless clearly abusive or illegal.`;
+Be conservative: do not flag ordinary opinions, jokes, memes, or mild language unless clearly abusive or illegal.`;
 
 @Injectable()
 export class AiNoteModerationService {
@@ -99,13 +103,15 @@ export class AiNoteModerationService {
 			return { flagged: false, skipped: true, error: true };
 		}
 
-		const content = this.buildUserContent(input);
-		if (!content.trim()) {
+		const textContent = this.buildUserContent(input);
+		const imageUrls = this.collectImageUrls(input);
+		// Skip empty text-only posts; image-only posts still moderated when vision is on
+		if (!textContent.trim() && imageUrls.length === 0) {
 			return { flagged: false, skipped: true };
 		}
 
 		try {
-			const raw = await this.callOpenAiCompatible(content);
+			const raw = await this.callOpenAiCompatible(textContent, imageUrls);
 			const parsed = this.parseDecision(raw);
 			return {
 				flagged: parsed.flagged,
@@ -188,17 +194,83 @@ export class AiNoteModerationService {
 		return parts.join('\n').slice(0, 12_000);
 	}
 
+	/**
+	 * Collect public image URLs only when includeImages is enabled and note has images.
+	 * Prefer webpublic (resized) over original for cost/latency.
+	 */
+	@bindThis
+	private collectImageUrls(input: AiNoteModerationInput): string[] {
+		const c = this.getConfig();
+		if (c.includeImages !== true) return [];
+		const files = input.files ?? [];
+		if (files.length === 0) return [];
+
+		const max = Math.max(1, Math.min(Number(c.maxImages) || 4, 8));
+		const urls: string[] = [];
+		for (const f of files) {
+			if (urls.length >= max) break;
+			if (!f?.type?.startsWith('image/')) continue;
+			// Skip SVG (often unsafe / not useful for vision APIs)
+			if (f.type === 'image/svg+xml') continue;
+			const url = (f.webpublicUrl || f.thumbnailUrl || f.url || '').trim();
+			if (!url) continue;
+			// Only https public URLs (providers need to fetch them)
+			if (!/^https:\/\//i.test(url)) continue;
+			urls.push(url);
+		}
+		return urls;
+	}
+
 	@bindThis
 	private normalizeBaseUrl(baseUrl: string): string {
 		assertSafeAiEndpointUrl(baseUrl);
 		return normalizeOpenAiV1Base(baseUrl);
 	}
 
+	/** OpenAI chat.completions multimodal user content parts */
 	@bindThis
-	private async callOpenAiCompatible(userContent: string): Promise<string> {
+	private buildChatUserContent(text: string, imageUrls: string[]): string | Array<Record<string, unknown>> {
+		const textPart = text.trim() || (imageUrls.length ? 'Post has no text; moderate the attached image(s).' : '');
+		if (imageUrls.length === 0) return textPart;
+		const parts: Array<Record<string, unknown>> = [
+			{ type: 'text', text: textPart },
+		];
+		for (const url of imageUrls) {
+			parts.push({
+				type: 'image_url',
+				image_url: { url, detail: 'low' },
+			});
+		}
+		return parts;
+	}
+
+	/** OpenAI responses API multimodal input content */
+	@bindThis
+	private buildResponsesUserContent(text: string, imageUrls: string[]): string | Array<Record<string, unknown>> {
+		const textPart = text.trim() || (imageUrls.length ? 'Post has no text; moderate the attached image(s).' : '');
+		if (imageUrls.length === 0) return textPart;
+		const parts: Array<Record<string, unknown>> = [
+			{ type: 'input_text', text: textPart },
+		];
+		for (const url of imageUrls) {
+			parts.push({
+				type: 'input_image',
+				image_url: url,
+			});
+		}
+		return parts;
+	}
+
+	@bindThis
+	private async callOpenAiCompatible(userContent: string, imageUrls: string[] = []): Promise<string> {
 		const c = this.getConfig();
 		const base = this.normalizeBaseUrl(c.baseUrl!);
-		const timeoutMs = Math.max(1000, Math.min(c.requestTimeoutMs || 8000, 60_000));
+		// Vision needs more time; bump cap slightly when images present
+		const baseTimeout = c.requestTimeoutMs || 8000;
+		const timeoutMs = Math.max(1000, Math.min(
+			imageUrls.length > 0 ? Math.max(baseTimeout, 15000) : baseTimeout,
+			90_000,
+		));
 		const system = (c.systemPrompt && c.systemPrompt.trim()) || DEFAULT_SYSTEM;
 		const style = c.apiStyle || 'auto';
 
@@ -209,7 +281,7 @@ export class AiNoteModerationService {
 				temperature: 0,
 				messages: [
 					{ role: 'system', content: system },
-					{ role: 'user', content: userContent },
+					{ role: 'user', content: this.buildChatUserContent(userContent, imageUrls) },
 				],
 				// Encourage JSON when provider supports it
 				response_format: { type: 'json_object' },
@@ -224,7 +296,7 @@ export class AiNoteModerationService {
 				temperature: 0,
 				input: [
 					{ role: 'system', content: system },
-					{ role: 'user', content: userContent },
+					{ role: 'user', content: this.buildResponsesUserContent(userContent, imageUrls) },
 				],
 			};
 			return await this.fetchText(url, body, c.apiKey!, timeoutMs);

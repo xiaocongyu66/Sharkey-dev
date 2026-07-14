@@ -294,6 +294,7 @@ export class NoteCreateService implements OnApplicationShutdown {
 			text: data.text,
 			cw: data.cw,
 			pollChoices: data.poll?.choices ?? null,
+			files: data.files ?? null,
 			isRemote: isRemoteNote,
 			userId: user.id,
 		});
