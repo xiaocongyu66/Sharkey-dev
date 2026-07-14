@@ -19,6 +19,7 @@ import { CacheService } from '@/core/CacheService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { trackPromise } from '@/misc/promise-tracker.js';
 import { ApiError } from '../../../error.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -106,6 +107,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private userBlockingService: UserBlockingService,
 		private readonly timeService: TimeService,
 		private readonly cacheService: CacheService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const createdAt = this.timeService.date;
@@ -118,6 +120,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (!note.hasPoll) {
 				throw new ApiError(meta.errors.noPoll);
+			}
+
+			// SK-2026-078: must be able to see the note to vote
+			if (note.userId !== me.id) {
+				const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+				if (!accessible) {
+					throw new ApiError(meta.errors.noSuchNote);
+				}
 			}
 
 			// Check blocking

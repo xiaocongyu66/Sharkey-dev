@@ -11,6 +11,7 @@ import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { DI } from '@/di-symbols.js';
 import { GetterService } from '@/server/api/GetterService.js';
 import { ApiError } from '../../error.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 
 export const meta = {
 	tags: ['notes'],

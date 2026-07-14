@@ -10,6 +10,7 @@ import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { ApQuestionService } from '@/core/activitypub/models/ApQuestionService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { ApiError } from '../../../error.js';
+import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -70,6 +71,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private userBlockingService: UserBlockingService,
 		private apQuestionService: ApQuestionService,
 		private noteEntityService: NoteEntityService,
+		private readonly noteVisibilityService: NoteVisibilityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			// Get note
@@ -80,6 +82,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (!note.hasPoll) {
 				throw new ApiError(meta.errors.noPoll);
+			}
+
+			// SK-2026-078: must be able to see the note to refresh poll
+			if (note.userId !== me.id) {
+				const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(note, me);
+				if (!accessible) {
+					throw new ApiError(meta.errors.noSuchNote);
+				}
 			}
 
 			// Check blocking

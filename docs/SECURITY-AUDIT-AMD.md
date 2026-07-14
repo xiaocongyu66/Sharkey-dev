@@ -28,13 +28,13 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **Code: Pass 7 AI / Mastodon SSRF (SK-061…067)** | **Remediated in tree (2026-07-14, `5bfc08a`)** |
 | **Code: Pass 8 session / chat / webhook (SK-068…072)** | **Remediated in tree (2026-07-14, `2768c40`)** |
 | **Code: Pass 9 note visibility / social graph (SK-073…077)** | **Remediated in tree (2026-07-14)** |
-| **Code: Pass 10 poll / note-oracle (SK-078…080)** | **OPEN** |
+| **Code: Pass 10 poll / note-oracle (SK-078…080)** | **Remediated in tree (2026-07-14)** |
 | **Design / privacy / product honesty** | Residual open (escrow ≠ E2EE; AI LLM privacy) |
 | **Ops / deploy configuration** | Operator checklist still required |
 | **Dynamic pentest / full regression** | **Not completed** (audit was static) |
 
 **One-line conclusion (security):**  
-**“Pass 7–8 closed in code. Pass 9 visibility/social-graph gaps remain (073–077). Pass 10: `notes/polls/vote` and `polls/refresh` lack note visibility (SK-078, M–H); unauthenticated `notes/clips` / `notes/renotes` seed existence oracles (SK-079); admin WS is kind-gated only (SK-080, L).”**
+**“Pass 7–8 closed in code. Pass 9–10 note visibility/oracle gaps remediated (073–080).”**
 
 **One-line conclusion (optimization / engineering — see §8):**  
 **“Performance and chat architecture investments are sound; Pass 7–8 code remediations landed — composite ~8.2/10 pending deploy verification.”**
@@ -160,7 +160,7 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **077** | `notes/thread-muting/create` no visibility check on seed note | **L** |
 
 
-#### Pass 10 — OPEN (2026-07-14)
+#### Pass 10 — remediated in tree (2026-07-14)
 
 | ID | Topic | Severity |
 |----|--------|----------|
@@ -2023,7 +2023,7 @@ Require accessible seed note before insert.
 |--|--|
 | **Severity** | **M–H** |
 | **CWE** | CWE-862 Missing Authorization |
-| **Status** | **OPEN** |
+| **Status** | **Fixed in tree** (visibility before vote/refresh)|
 | **Components** | `endpoints/notes/polls/vote.ts`; `endpoints/notes/polls/refresh.ts`; contrast `ReactionService.create` / `favorites/create` |
 
 **Description**  
@@ -2057,7 +2057,7 @@ Before vote/refresh: `checkNoteVisibilityAsync`; if `!accessible` throw `NO_SUCH
 |--|--|
 | **Severity** | **L–M** |
 | **CWE** | CWE-203 / CWE-639 |
-| **Status** | **OPEN** (related family to SK-075) |
+| **Status** | **Fixed in tree** (seed visibility on clips/renotes)|
 | **Components** | `endpoints/notes/clips.ts` (`requireCredential: false`); `endpoints/notes/renotes.ts` (`requireCredential: false`) |
 
 **Description**  
@@ -2078,7 +2078,7 @@ Seed ACL same as `notes/show` before further work; 404 if inaccessible.
 |--|--|
 | **Severity** | **L** |
 | **CWE** | CWE-862 |
-| **Status** | **OPEN** (defense-in-depth) |
+| **Status** | **Fixed in tree** (isModerator on admin WS init)|
 | **Components** | `stream/channels/admin.ts`; `stream/Connection.ts` (kind check only) |
 
 **Description**  
@@ -2310,6 +2310,7 @@ Pre-AI + Pass 7–8 are **DONE**. Next code priority: **SK-078** (poll vote ACL)
 | 1.6 | 2026-07-14 | **Pass 8:** verified Pass 7 live; SK-068 session non-revocation on password change/reset; SK-069 chat rooms/show metadata IDOR; SK-070 webhook test override URL; SK-071 system-webhook URL gap; SK-072 join-by-code rate residual |
 | 1.7 | 2026-07-14 | **Pass 8 remediation noted** (`2768c40`); **Pass 9:** SK-073 notes/conversation visibility; SK-074 frequent-reply graph; SK-075 reactions list oracle; SK-076 notes/state oracle; SK-077 thread-mute without ACL |
 | 1.8 | 2026-07-14 | **Pass 10:** SK-078 poll vote/refresh without visibility; SK-079 clips/renotes seed oracle; SK-080 admin WS kind-only |
+| 1.9 | 2026-07-14 | **Pass 9–10 remediation:** SK-073…080 visibility / oracles / admin WS |
 
 ---
 
