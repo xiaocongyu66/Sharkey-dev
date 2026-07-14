@@ -283,6 +283,7 @@ export const paramDef = {
 				checkOnSignin: { type: 'boolean' },
 				checkOnSignup: { type: 'boolean' },
 				minLinkedAccounts: { type: 'integer', minimum: 2, maximum: 100 },
+				requireIpAndFingerprint: { type: 'boolean' },
 				signinWindowMinutes: { type: 'integer', minimum: 1, maximum: 10080 },
 				maxSigninsInWindow: { type: 'integer', minimum: 1, maximum: 10000 },
 				autoSuspend: { type: 'boolean' },

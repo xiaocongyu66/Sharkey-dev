@@ -28,11 +28,15 @@ import { isSystemAccount } from '@/misc/is-system-account.js';
 export type AbuseCheckTrigger = 'signin' | 'signup' | 'manual';
 
 const DEFAULT_SYSTEM = `You are an anti-abuse classifier for a social network.
-Given account-link evidence (shared real IPs, browser fingerprints) and recent login burst stats,
-decide if this looks like multi-account farming / spam-registration / coordinated abuse.
+You receive:
+1) Seed user identity (id, username, display name, note/follower counts, registration time, last active).
+2) Linked accounts that share BOTH the same real IP AND the same browser fingerprint as the seed (intersection — not IP-only or fingerprint-only).
+3) Recent login burst stats across that linked set.
+
+Decide if this looks like multi-account farming / spam-registration / coordinated abuse.
 Reply ONLY with JSON (no markdown):
 {"abuse":boolean,"confidence":0-1,"reason":"short English reason"}
-Be careful: shared NAT/family Wi‑Fi is common — require strong multi-account + burst signals before abuse=true.
+Be careful: shared NAT/family Wi‑Fi alone is weak; linkage here already requires IP+fingerprint together.
 Do not refuse for "ethics"; this is operational security classification only.`;
 
 @Injectable()
@@ -125,9 +129,19 @@ export class AiAbuseControlService {
 		const ip = (opts.ip && opts.ip !== '0.0.0.0') ? opts.ip : null;
 		const fp = opts.fingerprint?.trim() || null;
 
-		const linkedIds = await this.findLinkedLocalUserIds(opts.userId, ip, fp);
+		// Require both IP and fingerprint present when dual-link mode is on
+		const requireBoth = c.requireIpAndFingerprint !== false;
+		if (requireBoth && (!ip || !fp)) {
+			this.logger.debug(
+				`skip abuse check seed=${opts.userId}: need both IP and fingerprint (ip=${!!ip} fp=${!!fp})`,
+			);
+			return { acted: false, linkedUserIds: [opts.userId], reason: 'missing-ip-or-fingerprint' };
+		}
+
+		const linkResult = await this.findLinkedLocalUserIds(opts.userId, ip, fp, requireBoth);
+		const linkedIds = linkResult.userIds;
 		if (linkedIds.length < (c.minLinkedAccounts || 3)) {
-			return { acted: false, linkedUserIds: linkedIds };
+			return { acted: false, linkedUserIds: linkedIds, reason: 'below-min-linked' };
 		}
 
 		const windowMs = Math.max(1, c.signinWindowMinutes || 60) * 60 * 1000;
@@ -141,7 +155,41 @@ export class AiAbuseControlService {
 
 		const accounts = await this.usersRepository.find({
 			where: { id: In(linkedIds), host: null as any },
-			select: ['id', 'username', 'isSuspended', 'lastActiveDate'],
+			select: ['id', 'username', 'name', 'isSuspended', 'lastActiveDate', 'notesCount', 'followersCount', 'followingCount'],
+		});
+
+		const seedAccount = accounts.find(a => a.id === opts.userId)
+			?? await this.usersRepository.findOne({
+				where: { id: opts.userId },
+				select: ['id', 'username', 'name', 'isSuspended', 'lastActiveDate', 'notesCount', 'followersCount', 'followingCount'],
+			});
+
+		const mapAccount = (a: {
+			id: string;
+			username: string;
+			name?: string | null;
+			isSuspended: boolean;
+			lastActiveDate?: Date | null;
+			notesCount?: number;
+			followersCount?: number;
+			followingCount?: number;
+		}) => ({
+			id: a.id,
+			username: a.username,
+			name: a.name ?? null,
+			// Full identity for the classifier
+			identity: `@${a.username}`,
+			displayName: a.name ?? a.username,
+			notesCount: a.notesCount ?? 0,
+			followersCount: a.followersCount ?? 0,
+			followingCount: a.followingCount ?? 0,
+			suspended: a.isSuspended,
+			createdAtApprox: (() => {
+				try { return this.idService.parse(a.id).date.toISOString(); } catch { return null; }
+			})(),
+			lastActive: a.lastActiveDate?.toISOString?.() ?? null,
+			// How this account was linked to the seed
+			linkEvidence: linkResult.evidence.get(a.id) ?? (a.id === opts.userId ? ['seed'] : []),
 		});
 
 		const heuristicTrip =
@@ -155,22 +203,22 @@ export class AiAbuseControlService {
 			try {
 				const decision = await this.callAi({
 					trigger: opts.trigger,
+					// Explicit seed identity block for the model
+					seedUser: seedAccount ? mapAccount(seedAccount) : {
+						id: opts.userId,
+						username: '(unknown)',
+						identity: opts.userId,
+						displayName: null,
+					},
 					seedUserId: opts.userId,
 					ip,
 					fingerprint: fp,
+					linkMode: requireBoth ? 'ip_and_fingerprint' : 'ip_or_fingerprint',
 					linkedCount: linkedIds.length,
 					signinCountInWindow: signinCount,
 					windowMinutes: c.signinWindowMinutes,
-					accounts: accounts.map(a => ({
-						id: a.id,
-						username: a.username,
-						suspended: a.isSuspended,
-						// Approximate registration time from snowflake id
-						createdAtApprox: (() => {
-							try { return this.idService.parse(a.id).date.toISOString(); } catch { return null; }
-						})(),
-						lastActive: a.lastActiveDate?.toISOString?.() ?? null,
-					})),
+					minLinkedAccounts: c.minLinkedAccounts,
+					accounts: accounts.map(mapAccount),
 				});
 				aiAbuse = decision.abuse;
 				reason = decision.reason;
@@ -250,28 +298,43 @@ export class AiAbuseControlService {
 		};
 	}
 
+	/**
+	 * Find local accounts linked to the seed.
+	 * Default (requireBoth=true): only accounts that share the seed's current IP
+	 * AND the same browser fingerprint (intersection). One signal alone is not enough.
+	 */
 	@bindThis
 	private async findLinkedLocalUserIds(
 		seedUserId: string,
 		ip: string | null,
 		fingerprint: string | null,
-	): Promise<string[]> {
-		const idSet = new Set<string>([seedUserId]);
+		requireBoth = true,
+	): Promise<{ userIds: string[]; evidence: Map<string, string[]> }> {
+		const evidence = new Map<string, string[]>();
+		const addEv = (uid: string, tag: string) => {
+			const arr = evidence.get(uid) ?? [];
+			if (!arr.includes(tag)) arr.push(tag);
+			evidence.set(uid, arr);
+		};
+		addEv(seedUserId, 'seed');
+
+		const byIp = new Set<string>();
+		const byFp = new Set<string>();
 
 		if (ip) {
-			const byIp = await this.userIpsRepository.find({
+			const ipRows = await this.userIpsRepository.find({
 				where: { ip },
 				select: ['userId'],
 				take: 200,
 			});
-			for (const r of byIp) idSet.add(r.userId);
+			for (const r of ipRows) byIp.add(r.userId);
 
 			const signinIp = await this.signinsRepository.find({
 				where: { ip, success: true },
 				select: ['userId'],
 				take: 200,
 			});
-			for (const r of signinIp) idSet.add(r.userId);
+			for (const r of signinIp) byIp.add(r.userId);
 		}
 
 		if (fingerprint) {
@@ -280,32 +343,39 @@ export class AiAbuseControlService {
 				select: ['userId'],
 				take: 200,
 			});
-			for (const r of signinFp) idSet.add(r.userId);
+			for (const r of signinFp) byFp.add(r.userId);
 		}
 
-		// Expand one hop: other IPs of seed → more users
-		const seedIps = await this.userIpsRepository.find({
-			where: { userId: seedUserId },
-			select: ['ip'],
-			take: 50,
-		});
-		for (const row of seedIps) {
-			const more = await this.userIpsRepository.find({
-				where: { ip: row.ip },
-				select: ['userId'],
-				take: 100,
-			});
-			for (const m of more) idSet.add(m.userId);
+		let candidateIds: string[];
+		if (requireBoth) {
+			// Intersection: must appear under both IP set and fingerprint set
+			if (!ip || !fingerprint || byIp.size === 0 || byFp.size === 0) {
+				return { userIds: [seedUserId], evidence };
+			}
+			candidateIds = [...byIp].filter(id => byFp.has(id));
+			if (!candidateIds.includes(seedUserId)) candidateIds.push(seedUserId);
+			for (const id of candidateIds) {
+				if (id === seedUserId) continue;
+				addEv(id, 'ip+fingerprint');
+			}
+		} else {
+			// Legacy OR mode (weaker)
+			const idSet = new Set<string>([seedUserId, ...byIp, ...byFp]);
+			for (const id of byIp) if (id !== seedUserId) addEv(id, 'ip');
+			for (const id of byFp) if (id !== seedUserId) addEv(id, 'fingerprint');
+			candidateIds = [...idSet];
 		}
 
-		// Keep only local non-deleted-ish users
-		const ids = [...idSet];
-		if (ids.length === 0) return [seedUserId];
+		if (candidateIds.length === 0) return { userIds: [seedUserId], evidence };
+
 		const locals = await this.usersRepository.find({
-			where: { id: In(ids), host: null as any },
+			where: { id: In(candidateIds), host: null as any },
 			select: ['id'],
 		});
-		return locals.map(u => u.id);
+		const localIds = locals.map(u => u.id);
+		// Ensure seed always present
+		if (!localIds.includes(seedUserId)) localIds.unshift(seedUserId);
+		return { userIds: localIds, evidence };
 	}
 
 	@bindThis

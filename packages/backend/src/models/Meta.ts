@@ -119,8 +119,17 @@ export type AiAbuseControlConfig = {
 	checkOnSignin: boolean;
 	/** Run check after registration completes */
 	checkOnSignup: boolean;
-	/** Minimum distinct local accounts sharing IP or fingerprint before AI/heuristic fires */
+	/**
+	 * Minimum distinct local accounts that share BOTH the same IP and the same
+	 * browser fingerprint as the seed (intersection), before AI/heuristic fires.
+	 * IP-only or fingerprint-only overlap is not enough.
+	 */
 	minLinkedAccounts: number;
+	/**
+	 * When true (default), only count accounts that match on both IP and fingerprint.
+	 * When false, legacy OR linkage (weaker — not recommended).
+	 */
+	requireIpAndFingerprint: boolean;
 	/** Sign-in success count window (minutes) for burst detection */
 	signinWindowMinutes: number;
 	/** Max successful sign-ins in window (across linked accounts) before risk */
@@ -145,6 +154,7 @@ export const defaultAiAbuseControlConfig: AiAbuseControlConfig = {
 	checkOnSignin: true,
 	checkOnSignup: true,
 	minLinkedAccounts: 3,
+	requireIpAndFingerprint: true,
 	signinWindowMinutes: 60,
 	maxSigninsInWindow: 20,
 	autoSuspend: false,
