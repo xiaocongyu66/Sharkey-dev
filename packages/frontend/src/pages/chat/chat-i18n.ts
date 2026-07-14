@@ -760,6 +760,24 @@ export const chatFb = {
 		'zh-TW': "原因（可選）",
 		ja: "理由（任意）",
 	},
+	hideTranslation: {
+		en: "Hide translation",
+		zh: "隐藏翻译",
+		'zh-TW': "隱藏翻譯",
+		ja: "翻訳を隠す",
+	},
+	translateFailed: {
+		en: "Translation failed",
+		zh: "翻译失败",
+		'zh-TW': "翻譯失敗",
+		ja: "翻訳に失敗しました",
+	},
+	translated: {
+		en: "Translation",
+		zh: "翻译",
+		'zh-TW': "翻譯",
+		ja: "翻訳",
+	},
 } as const satisfies Record<string, ChatFallback>;
 
 export type ChatFbKey = keyof typeof chatFb;

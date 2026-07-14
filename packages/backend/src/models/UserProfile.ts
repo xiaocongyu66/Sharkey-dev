@@ -310,6 +310,24 @@ export class MiUserProfile {
 	})
 	public defaultCWPriority: typeof defaultCWPriorities[number];
 
+	/**
+	 * Per-user AI translation prefs / optional own API credentials.
+	 * Secrets (apiKey) only returned to self with redaction on read.
+	 */
+	@Column('jsonb', {
+		nullable: true,
+		default: null,
+	})
+	public aiTranslationConfig: {
+		/** Prefer this target language (BCP-47 / short code); null = use UI lang */
+		targetLang?: string | null;
+		/** Only translate non-target-language segments */
+		selective?: boolean | null;
+		baseUrl?: string | null;
+		apiKey?: string | null;
+		model?: string | null;
+	} | null;
+
 	//#region Denormalized fields
 	@Index()
 	@Column('varchar', {

@@ -175,6 +175,17 @@ export const paramDef = {
 		birthday: { ...birthdaySchema, nullable: true },
 		listenbrainz: { ...listenbrainzSchema, nullable: true },
 		lang: { type: 'string', enum: [null, ...Object.keys(langmap)] as string[], nullable: true },
+		aiTranslationConfig: {
+			type: 'object',
+			nullable: true,
+			properties: {
+				targetLang: { type: 'string', nullable: true },
+				selective: { type: 'boolean', nullable: true },
+				baseUrl: { type: 'string', nullable: true },
+				apiKey: { type: 'string', nullable: true },
+				model: { type: 'string', nullable: true },
+			},
+		},
 		avatarId: { type: 'string', format: 'misskey:id', nullable: true },
 		avatarDecorations: { type: 'array', maxItems: 16, items: {
 			type: 'object',
@@ -354,6 +365,29 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			};
 			if (ps.followedMessage !== undefined) profileUpdates.followedMessage = ps.followedMessage;
 			if (ps.lang !== undefined) profileUpdates.lang = ps.lang;
+			if (ps.aiTranslationConfig !== undefined) {
+				const current = (await this.userProfilesRepository.findOneBy({ userId: me.id }))?.aiTranslationConfig ?? {};
+				const incoming = ps.aiTranslationConfig;
+				if (incoming === null) {
+					profileUpdates.aiTranslationConfig = null;
+				} else {
+					const next: NonNullable<MiUserProfile['aiTranslationConfig']> = {
+						...current,
+						...incoming,
+					};
+					const k = (incoming as any)?.apiKey;
+					if (k === '__clear__') {
+						next.apiKey = null;
+					} else if (k === '' || k === '<redacted>' || k == null) {
+						next.apiKey = current.apiKey ?? null;
+					}
+					// empty strings → null for optional fields
+					if (next.baseUrl === '') next.baseUrl = null;
+					if (next.model === '') next.model = null;
+					if (next.targetLang === '') next.targetLang = null;
+					profileUpdates.aiTranslationConfig = next;
+				}
+			}
 			if (ps.location !== undefined) profileUpdates.location = ps.location;
 			if (ps.birthday !== undefined) profileUpdates.birthday = ps.birthday;
 			if (ps.listenbrainz !== undefined) profileUpdates.listenbrainz = ps.listenbrainz;

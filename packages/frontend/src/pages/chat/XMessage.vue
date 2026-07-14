@@ -72,6 +72,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 					:enableEmojiMenu="true"
 					:enableEmojiMenuReaction="true"
 				/>
+				<div v-if="translation" :class="$style.translation">
+					<div :class="$style.translationLabel"><i class="ti ti-language"></i> {{ chatT('translated', chatFb.translated) }}</div>
+					<div class="_selectable">{{ translation }}</div>
+				</div>
 				<ChatAttachment v-if="message.file" :file="message.file" :class="$style.file"/>
 			</div>
 		</MkFukidashi>
@@ -130,6 +134,9 @@ import { DI } from '@/di.js';
 import { getHTMLElementOrNull } from '@/utility/get-dom-node-or-null.js';
 import SkTransitionGroup from '@/components/SkTransitionGroup.vue';
 import SkUrlPreviewGroup from '@/components/SkUrlPreviewGroup.vue';
+import { instance } from '@/instance.js';
+import { misskeyApi } from '@/utility/misskey-api.js';
+import { miLocalStorage } from '@/local-storage.js';
 
 const $i = ensureSignin();
 const chatWs = inject(chatWsKey, null);
@@ -151,6 +158,16 @@ const isMe = computed(() => props.message.fromUserId === $i.id);
 const decryptedText = ref<string | null>(null);
 const decrypting = ref(false);
 const e2eeFailLabel = chatT('e2eeDecryptFailed', chatFb.e2eeDecryptFailed);
+const translation = ref<string | null>(null);
+const translating = ref(false);
+const canTranslateChat = computed(() => {
+	// Backend sets chatTranslatorAvailable when chat AI is enabled and instance
+	// or user-key path can work; also allow if user already saved a personal key.
+	const inst = (instance as any).chatTranslatorAvailable === true;
+	const userKey = !!($i as any)?.aiTranslationConfig?.hasApiKey;
+	const enabled = (instance as any).aiTranslationPublic?.enableChat === true;
+	return enabled && (inst || userKey);
+});
 
 /** Server-revealed plaintext (escrow) or plain message */
 const serverText = computed(() => {
@@ -340,6 +357,36 @@ function onMenuClick(ev: MouseEvent) {
 	showMenu(ev, false);
 }
 
+async function translateMessage() {
+	if (translation.value) {
+		translation.value = null;
+		return;
+	}
+	if (translating.value || !displayText.value) return;
+	translating.value = true;
+	try {
+		const userLang = ($i as any)?.aiTranslationConfig?.targetLang;
+		const targetLang = (userLang && String(userLang).trim())
+			|| miLocalStorage.getItem('lang')
+			|| navigator.language;
+		const selective = ($i as any)?.aiTranslationConfig?.selective;
+		const res = await misskeyApi('chat/messages/translate', {
+			messageId: props.message.id,
+			targetLang,
+			...(typeof selective === 'boolean' ? { selective } : {}),
+		}) as { text?: string };
+		translation.value = res?.text ?? null;
+	} catch (err) {
+		console.error('Chat translation failed', err);
+		os.alert({
+			type: 'error',
+			text: chatT('translateFailed', chatFb.translateFailed),
+		});
+	} finally {
+		translating.value = false;
+	}
+}
+
 function buildMenu(): MenuItem[] {
 	const menu: MenuItem[] = [];
 
@@ -374,6 +421,18 @@ function buildMenu(): MenuItem[] {
 			copyToClipboard(displayText.value ?? '');
 		},
 	});
+
+	if (canTranslateChat.value && displayText.value && !translating.value) {
+		menu.push({
+			text: translation.value
+				? chatT('hideTranslation', chatFb.hideTranslation)
+				: (i18n.ts.translate as string),
+			icon: 'ti ti-language',
+			action: () => {
+				void translateMessage();
+			},
+		});
+	}
 
 	menu.push({
 		type: 'divider',
@@ -715,6 +774,25 @@ function showMenu(ev: MouseEvent, contextmenu = false) {
 	opacity: 0.75;
 	font-size: 0.92em;
 	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+}
+
+.translation {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: solid 1px var(--MI_THEME-divider);
+	font-size: 0.95em;
+	opacity: 0.92;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.translationLabel {
+	font-size: 0.85em;
+	opacity: 0.7;
+	margin-bottom: 4px;
+	display: flex;
 	align-items: center;
 	gap: 0.35em;
 }

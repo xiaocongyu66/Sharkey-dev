@@ -194,6 +194,10 @@ export const ROUTE_DEF = [{
 		name: 'other',
 		component: page(() => import('@/pages/settings/other.vue')),
 	}, {
+		path: '/ai-translation',
+		name: 'ai-translation',
+		component: page(() => import('@/pages/settings/ai-translation.vue')),
+	}, {
 		path: '/',
 		component: page(() => import('@/pages/_empty_.vue')),
 	}],
@@ -527,6 +531,10 @@ export const ROUTE_DEF = [{
 		path: '/ai-abuse-control',
 		name: 'ai-abuse-control',
 		component: page(() => import('@/pages/admin/ai-abuse-control.vue')),
+	}, {
+		path: '/ai-translation',
+		name: 'ai-translation',
+		component: page(() => import('@/pages/admin/ai-translation.vue')),
 	}, {
 		path: '/chat-escrow',
 		name: 'chat-escrow',

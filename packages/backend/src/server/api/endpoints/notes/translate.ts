@@ -6,11 +6,9 @@
 import { URLSearchParams } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
-import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { GetterService } from '@/server/api/GetterService.js';
-import { RoleService } from '@/core/RoleService.js';
-import type { MiMeta, MiNote } from '@/models/_.js';
+import type { MiMeta, MiNote, MiUserProfile } from '@/models/_.js';
 import { DI } from '@/di-symbols.js';
 import { hasText } from '@/models/Note.js';
 import { ApiLoggerService } from '@/server/api/ApiLoggerService.js';
@@ -18,6 +16,8 @@ import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { CacheManagementService, type ManagedRedisKVCache } from '@/global/CacheManagementService.js';
 import { ApiError } from '@/server/api/error.js';
 import { bindThis } from '@/decorators.js';
+import { AiTranslationService } from '@/core/AiTranslationService.js';
+import type { UserProfilesRepository } from '@/models/_.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -70,6 +70,10 @@ export const paramDef = {
 	properties: {
 		noteId: { type: 'string', format: 'misskey:id' },
 		targetLang: { type: 'string' },
+		/** Prefer AI path when available */
+		preferAi: { type: 'boolean' },
+		/** Selective mixed-language translation (AI only) */
+		selective: { type: 'boolean' },
 	},
 	required: ['noteId', 'targetLang'],
 } as const;
@@ -82,12 +86,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		@Inject(DI.meta)
 		private serverSettings: MiMeta,
 
-		private noteEntityService: NoteEntityService,
+		@Inject(DI.userProfilesRepository)
+		private userProfilesRepository: UserProfilesRepository,
+
 		private getterService: GetterService,
 		private httpRequestService: HttpRequestService,
-		private roleService: RoleService,
 		private readonly loggerService: ApiLoggerService,
 		private readonly noteVisibilityService: NoteVisibilityService,
+		private readonly aiTranslationService: AiTranslationService,
 
 		cacheManagementService: CacheManagementService,
 	) {
@@ -109,20 +115,49 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const canDeeplFree = this.serverSettings.deeplFreeMode && !!this.serverSettings.deeplFreeInstance;
 			const canDeepl = !!this.serverSettings.deeplAuthKey || canDeeplFree;
 			const canLibre = !!this.serverSettings.libreTranslateURL;
-			if (!canDeepl && !canLibre) throw new ApiError(meta.errors.unavailable);
+
+			let profile: MiUserProfile | null = null;
+			if (me) {
+				profile = await this.userProfilesRepository.findOneBy({ userId: me.id });
+			}
+			const userOverride = this.aiTranslationService.profileToOverride(profile);
+			const canAi = this.aiTranslationService.isAvailable('notes', userOverride);
+
+			if (!canDeepl && !canLibre && !canAi) throw new ApiError(meta.errors.unavailable);
 
 			let targetLang = ps.targetLang;
-			if (targetLang.includes('-')) targetLang = targetLang.split('-')[0];
+			if (userOverride?.targetLang) targetLang = userOverride.targetLang;
+			if (targetLang.includes('-')) {
+				// keep zh-CN/zh-TW for AI; classic engines often want short codes
+			}
+			const classicLang = targetLang.includes('-') ? targetLang.split('-')[0] : targetLang;
 
-			let response = await this.getCachedTranslation(note, targetLang);
+			const selective = ps.selective ?? userOverride?.selective ?? this.aiTranslationService.getConfig().selectiveByDefault;
+			const preferAi = ps.preferAi ?? this.aiTranslationService.getConfig().preferAiOverClassic;
+			// User key forces AI path
+			const forceAi = !!(userOverride?.apiKey && userOverride.apiKey.trim());
+
+			const cacheSuffix = canAi && (preferAi || forceAi || !canDeepl && !canLibre)
+				? `ai:${selective ? 's' : 'f'}`
+				: 'classic';
+			const cacheLang = canAi && (preferAi || forceAi || !canDeepl && !canLibre) ? targetLang : classicLang;
+
+			let response = await this.getCachedTranslation(note, `${cacheLang}@${cacheSuffix}`);
 			if (!response) {
 				this.loggerService.logger.debug(`Fetching new translation for note=${note.id} lang=${targetLang}`);
-				response = await this.fetchTranslation(note, targetLang);
+				response = await this.fetchTranslation(note, targetLang, classicLang, {
+					canAi,
+					preferAi: preferAi || forceAi,
+					canDeepl,
+					canLibre,
+					userOverride,
+					selective: selective === true,
+				});
 				if (!response) {
 					throw new ApiError(meta.errors.translationFailed);
 				}
 
-				await this.setCachedTranslation(note, targetLang, response);
+				await this.setCachedTranslation(note, `${cacheLang}@${cacheSuffix}`, response);
 			}
 			return response;
 		});
@@ -133,8 +168,60 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		});
 	}
 
-	private async fetchTranslation(note: MiNote & { text: string }, targetLang: string) {
-		// Load-bearing try/catch - removing this will shift indentation and cause ~80 lines of upstream merge conflicts
+	private async fetchTranslation(
+		note: MiNote & { text: string },
+		targetLang: string,
+		classicLang: string,
+		opts: {
+			canAi: boolean;
+			preferAi: boolean;
+			canDeepl: boolean;
+			canLibre: boolean;
+			userOverride: ReturnType<AiTranslationService['profileToOverride']>;
+			selective: boolean;
+		},
+	) {
+		const tryAi = async () => {
+			if (!opts.canAi) return null;
+			const r = await this.aiTranslationService.translate({
+				text: note.text,
+				targetLang,
+				scope: 'notes',
+				selective: opts.selective,
+				userOverride: opts.userOverride,
+			});
+			if (!r?.text) return null;
+			return {
+				sourceLang: r.sourceLang,
+				text: r.text,
+			};
+		};
+
+		const tryClassic = async () => {
+			return await this.fetchClassic(note, classicLang);
+		};
+
+		try {
+			if (opts.preferAi && opts.canAi) {
+				const ai = await tryAi();
+				if (ai) return ai;
+				// fallback classic
+				const classic = await tryClassic();
+				if (classic) return classic;
+			} else {
+				const classic = await tryClassic();
+				if (classic) return classic;
+				const ai = await tryAi();
+				if (ai) return ai;
+			}
+		} catch (e) {
+			this.loggerService.logger.error('Unhandled error from translation API: ', { e });
+		}
+
+		return null;
+	}
+
+	private async fetchClassic(note: MiNote & { text: string }, targetLang: string) {
 		try {
 			// Ignore deeplFreeInstance unless deeplFreeMode is set
 			const deeplFreeInstance = this.serverSettings.deeplFreeMode ? this.serverSettings.deeplFreeInstance : null;
@@ -224,7 +311,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				};
 			}
 		} catch (e) {
-			this.loggerService.logger.error('Unhandled error from translation API: ', { e });
+			this.loggerService.logger.error('Unhandled error from classic translation API: ', { e });
 		}
 
 		return null;

@@ -152,6 +152,76 @@ export const defaultAiAbuseControlConfig: AiAbuseControlConfig = {
 	cooldownSeconds: 300,
 };
 
+/**
+ * OpenAI-compatible endpoint credentials for AI translation.
+ */
+export type AiTranslationEndpointConfig = {
+	baseUrl: string | null;
+	apiKey: string | null;
+	model: string;
+	apiStyle: 'chat.completions' | 'responses' | 'auto';
+	systemPrompt: string | null;
+	requestTimeoutMs: number;
+};
+
+/**
+ * Instance AI translation: notes + chat, shared or separate credentials.
+ * Users may optionally supply their own API key (see UserProfile.aiTranslationConfig).
+ */
+export type AiTranslationConfig = {
+	/** Allow translating notes/posts via AI */
+	enableNotes: boolean;
+	/** Allow translating chat / room messages via AI */
+	enableChat: boolean;
+	/**
+	 * When true, notes and chat both use `shared`.
+	 * When false, notes use `notes` and chat uses `chat`.
+	 */
+	useSharedCredentials: boolean;
+	shared: AiTranslationEndpointConfig;
+	notes: AiTranslationEndpointConfig;
+	chat: AiTranslationEndpointConfig;
+	/** Let users store and use their own API key / base / model */
+	allowUserApiKey: boolean;
+	/**
+	 * When AI and classic (DeepL/Libre) are both available for notes,
+	 * prefer AI first.
+	 */
+	preferAiOverClassic: boolean;
+	/**
+	 * Use direct/uncensored translator system prompt (SillyTavern-style:
+	 * translate only, no moralizing refusals).
+	 */
+	uncensored: boolean;
+	/**
+	 * Default selective translation: only translate parts that are not already
+	 * in the target language (e.g. EN→ZH in mixed CN+EN text).
+	 */
+	selectiveByDefault: boolean;
+};
+
+export const defaultAiTranslationEndpointConfig: AiTranslationEndpointConfig = {
+	baseUrl: null,
+	apiKey: null,
+	model: 'gpt-4o-mini',
+	apiStyle: 'auto',
+	systemPrompt: null,
+	requestTimeoutMs: 20000,
+};
+
+export const defaultAiTranslationConfig: AiTranslationConfig = {
+	enableNotes: false,
+	enableChat: false,
+	useSharedCredentials: true,
+	shared: { ...defaultAiTranslationEndpointConfig },
+	notes: { ...defaultAiTranslationEndpointConfig },
+	chat: { ...defaultAiTranslationEndpointConfig },
+	allowUserApiKey: true,
+	preferAiOverClassic: true,
+	uncensored: true,
+	selectiveByDefault: true,
+};
+
 @Entity('meta')
 export class MiMeta {
 	@PrimaryColumn({
@@ -954,6 +1024,11 @@ export class MiMeta {
 		default: defaultAiAbuseControlConfig,
 	})
 	public aiAbuseControlConfig: AiAbuseControlConfig;
+
+	@Column('jsonb', {
+		default: defaultAiTranslationConfig,
+	})
+	public aiTranslationConfig: AiTranslationConfig;
 
 	/**
 	 * Chat escrow (DM + rooms only; never notes/posts).

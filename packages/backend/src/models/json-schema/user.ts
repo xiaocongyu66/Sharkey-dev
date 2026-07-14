@@ -727,6 +727,18 @@ export const packedMeDetailedOnlySchema = {
 				nullable: false, optional: false,
 			},
 		},
+		aiTranslationConfig: {
+			type: 'object',
+			nullable: true, optional: true,
+			properties: {
+				targetLang: { type: 'string', nullable: true, optional: true },
+				selective: { type: 'boolean', nullable: true, optional: true },
+				baseUrl: { type: 'string', nullable: true, optional: true },
+				apiKey: { type: 'string', nullable: true, optional: true },
+				model: { type: 'string', nullable: true, optional: true },
+				hasApiKey: { type: 'boolean', nullable: false, optional: true },
+			},
+		},
 		achievements: {
 			type: 'array',
 			nullable: false, optional: false,

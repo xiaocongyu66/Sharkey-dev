@@ -760,10 +760,15 @@ export async function translateNote(noteId: string, translation: Ref<Misskey.ent
 	if (translating.value || translation.value) return;
 	translating.value = true;
 	try {
-		const targetLang = miLocalStorage.getItem('lang') ?? navigator.language;
+		const userLang = ($i as any)?.aiTranslationConfig?.targetLang;
+		const targetLang = (userLang && String(userLang).trim())
+			|| miLocalStorage.getItem('lang')
+			|| navigator.language;
+		const selective = ($i as any)?.aiTranslationConfig?.selective;
 		translation.value = await misskeyApi('notes/translate', {
 			noteId,
 			targetLang,
+			...(typeof selective === 'boolean' ? { selective } : {}),
 		});
 	} catch (err) {
 		console.error(`Translation failed for ${noteId}: `, err);

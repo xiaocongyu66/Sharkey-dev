@@ -656,6 +656,10 @@ export const meta = {
 				type: 'object',
 				optional: false, nullable: false,
 			},
+			aiTranslationConfig: {
+				type: 'object',
+				optional: false, nullable: false,
+			},
 		},
 	},
 } as const;
@@ -835,6 +839,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					...instance.aiAbuseControlConfig,
 					apiKey: instance.aiAbuseControlConfig.apiKey == null ? null : '<redacted>',
 				},
+				aiTranslationConfig: instance.aiTranslationConfig == null ? undefined : (() => {
+					const redactEp = (ep: any) => ep == null ? ep : {
+						...ep,
+						apiKey: ep.apiKey == null ? null : '<redacted>',
+					};
+					return {
+						...instance.aiTranslationConfig,
+						shared: redactEp(instance.aiTranslationConfig.shared),
+						notes: redactEp(instance.aiTranslationConfig.notes),
+						chat: redactEp(instance.aiTranslationConfig.chat),
+					};
+				})(),
 			};
 		});
 	}

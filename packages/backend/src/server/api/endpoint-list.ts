@@ -444,6 +444,7 @@ export * as 'chat/e2ee/keys/get' from './endpoints/chat/e2ee/keys/get.js';
 export * as 'chat/messages/create-to-room' from './endpoints/chat/messages/create-to-room.js';
 export * as 'chat/messages/delete' from './endpoints/chat/messages/delete.js';
 export * as 'chat/messages/show' from './endpoints/chat/messages/show.js';
+export * as 'chat/messages/translate' from './endpoints/chat/messages/translate.js';
 export * as 'chat/messages/react' from './endpoints/chat/messages/react.js';
 export * as 'chat/messages/unreact' from './endpoints/chat/messages/unreact.js';
 export * as 'chat/messages/user-timeline' from './endpoints/chat/messages/user-timeline.js';

@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
-import { defaultXAlgorithmConfig, defaultAiNoteModerationConfig, defaultAiAbuseControlConfig, type MiMeta } from '@/models/Meta.js';
+import { defaultXAlgorithmConfig, defaultAiNoteModerationConfig, defaultAiAbuseControlConfig, defaultAiTranslationConfig, defaultAiTranslationEndpointConfig, type MiMeta } from '@/models/Meta.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { MetaService } from '@/core/MetaService.js';
@@ -288,6 +288,55 @@ export const paramDef = {
 				autoSuspend: { type: 'boolean' },
 				hideNotesOnSuspend: { type: 'boolean' },
 				cooldownSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
+			},
+		},
+		aiTranslationConfig: {
+			type: 'object',
+			nullable: true,
+			properties: {
+				enableNotes: { type: 'boolean' },
+				enableChat: { type: 'boolean' },
+				useSharedCredentials: { type: 'boolean' },
+				shared: {
+					type: 'object',
+					nullable: true,
+					properties: {
+						baseUrl: { type: 'string', nullable: true },
+						apiKey: { type: 'string', nullable: true },
+						model: { type: 'string' },
+						apiStyle: { type: 'string', enum: ['chat.completions', 'responses', 'auto'] },
+						systemPrompt: { type: 'string', nullable: true },
+						requestTimeoutMs: { type: 'integer', minimum: 1000, maximum: 120000 },
+					},
+				},
+				notes: {
+					type: 'object',
+					nullable: true,
+					properties: {
+						baseUrl: { type: 'string', nullable: true },
+						apiKey: { type: 'string', nullable: true },
+						model: { type: 'string' },
+						apiStyle: { type: 'string', enum: ['chat.completions', 'responses', 'auto'] },
+						systemPrompt: { type: 'string', nullable: true },
+						requestTimeoutMs: { type: 'integer', minimum: 1000, maximum: 120000 },
+					},
+				},
+				chat: {
+					type: 'object',
+					nullable: true,
+					properties: {
+						baseUrl: { type: 'string', nullable: true },
+						apiKey: { type: 'string', nullable: true },
+						model: { type: 'string' },
+						apiStyle: { type: 'string', enum: ['chat.completions', 'responses', 'auto'] },
+						systemPrompt: { type: 'string', nullable: true },
+						requestTimeoutMs: { type: 'integer', minimum: 1000, maximum: 120000 },
+					},
+				},
+				allowUserApiKey: { type: 'boolean' },
+				preferAiOverClassic: { type: 'boolean' },
+				uncensored: { type: 'boolean' },
+				selectiveByDefault: { type: 'boolean' },
 			},
 		},
 	},
@@ -891,6 +940,27 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				set.aiAbuseControlConfig = next;
 			}
 
+			if (ps.aiTranslationConfig !== undefined) {
+				const current = this.serverSettings.aiTranslationConfig ?? defaultAiTranslationConfig;
+				const incoming = (ps.aiTranslationConfig ?? {}) as any;
+				const mergeEp = (cur: any, inc: any) => {
+					const base = { ...defaultAiTranslationEndpointConfig, ...(cur ?? {}), ...(inc ?? {}) };
+					const k = inc?.apiKey;
+					if (k === '' || k === '<redacted>' || k == null) {
+						base.apiKey = cur?.apiKey ?? null;
+					}
+					return base;
+				};
+				set.aiTranslationConfig = {
+					...defaultAiTranslationConfig,
+					...current,
+					...incoming,
+					shared: mergeEp(current.shared, incoming.shared),
+					notes: mergeEp(current.notes, incoming.notes),
+					chat: mergeEp(current.chat, incoming.chat),
+				};
+			}
+
 			if (Array.isArray(ps.federationHosts)) {
 				set.federationHosts = ps.federationHosts.filter(Boolean).map(x => x.toLowerCase());
 			}
@@ -938,6 +1008,18 @@ function sanitize(meta: Partial<MiMeta & OnApplicationShutdown & OnApplicationBo
 			...meta.aiAbuseControlConfig,
 			apiKey: meta.aiAbuseControlConfig.apiKey == null ? null : '<redacted>',
 		},
+		aiTranslationConfig: meta.aiTranslationConfig == null ? undefined : (() => {
+			const redactEp = (ep: any) => ep == null ? ep : {
+				...ep,
+				apiKey: ep.apiKey == null ? null : '<redacted>',
+			};
+			return {
+				...meta.aiTranslationConfig,
+				shared: redactEp(meta.aiTranslationConfig.shared),
+				notes: redactEp(meta.aiTranslationConfig.notes),
+				chat: redactEp(meta.aiTranslationConfig.chat),
+			};
+		})(),
 		deeplAuthKey: '<redacted>',
 		libreTranslateKey: '<redacted>',
 		verifymailAuthKey: '<redacted>',

@@ -273,6 +273,20 @@ export const packedMetaLiteSchema = {
 			type: 'boolean',
 			optional: false, nullable: false,
 		},
+		chatTranslatorAvailable: {
+			type: 'boolean',
+			optional: true, nullable: false,
+		},
+		aiTranslationPublic: {
+			type: 'object',
+			optional: true, nullable: false,
+			properties: {
+				enableNotes: { type: 'boolean', optional: false, nullable: false },
+				enableChat: { type: 'boolean', optional: false, nullable: false },
+				allowUserApiKey: { type: 'boolean', optional: false, nullable: false },
+				selectiveByDefault: { type: 'boolean', optional: false, nullable: false },
+			},
+		},
 		sentryForFrontend: {
 			type: 'object',
 			optional: false, nullable: true,

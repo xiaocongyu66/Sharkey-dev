@@ -139,7 +139,14 @@ export class MetaEntityService {
 			enableEmail: instance.enableEmail,
 			enableServiceWorker: instance.enableServiceWorker,
 
-			translatorAvailable: instance.deeplAuthKey != null || instance.libreTranslateURL != null || instance.deeplFreeMode && instance.deeplFreeInstance != null,
+			translatorAvailable: instance.deeplAuthKey != null || instance.libreTranslateURL != null || (instance.deeplFreeMode && instance.deeplFreeInstance != null) || this.isAiNotesTranslatorAvailable(instance),
+			chatTranslatorAvailable: this.isAiChatTranslatorAvailable(instance),
+			aiTranslationPublic: {
+				enableNotes: instance.aiTranslationConfig?.enableNotes === true,
+				enableChat: instance.aiTranslationConfig?.enableChat === true,
+				allowUserApiKey: instance.aiTranslationConfig?.allowUserApiKey !== false,
+				selectiveByDefault: instance.aiTranslationConfig?.selectiveByDefault !== false,
+			},
 
 			serverRules: instance.serverRules,
 
@@ -191,6 +198,25 @@ export class MetaEntityService {
 		};
 
 		return packDetailed;
+	}
+
+	@bindThis
+	private isAiNotesTranslatorAvailable(instance: MiMeta): boolean {
+		const c = instance.aiTranslationConfig;
+		if (!c?.enableNotes) return false;
+		const ep = c.useSharedCredentials !== false ? c.shared : c.notes;
+		const hasInstance = !!(ep?.baseUrl?.trim() && ep?.apiKey?.trim() && ep?.model?.trim());
+		// Show UI when instance is ready OR users may bring their own key
+		return hasInstance || c.allowUserApiKey !== false;
+	}
+
+	@bindThis
+	private isAiChatTranslatorAvailable(instance: MiMeta): boolean {
+		const c = instance.aiTranslationConfig;
+		if (!c?.enableChat) return false;
+		const ep = c.useSharedCredentials !== false ? c.shared : c.chat;
+		const hasInstance = !!(ep?.baseUrl?.trim() && ep?.apiKey?.trim() && ep?.model?.trim());
+		return hasInstance || c.allowUserApiKey !== false;
 	}
 }
 
