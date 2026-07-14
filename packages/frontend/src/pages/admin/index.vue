@@ -51,7 +51,7 @@ import { miLocalStorage } from '@/local-storage.js';
 // Stale locale cache without new keys used to crash the control panel (undefined.title)
 try {
 	const ts = i18n.ts as any;
-	if (ts._adminNotes == null || ts._xAlgorithm == null) {
+	if (ts._adminNotes == null) {
 		miLocalStorage.removeItem('locale');
 		miLocalStorage.removeItem('localeVersion');
 	}
@@ -264,40 +264,15 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		to: '/admin/performance',
 		active: currentPage.value?.route.name === 'performance',
 	}, {
-		icon: 'ti ti-adjustments-bolt',
-		text: (i18n.ts as any)._xAlgorithm?.title ?? 'Algorithm',
-		to: '/admin/algorithm',
-		active: currentPage.value?.route.name === 'algorithm',
-	}, {
-		icon: 'ti ti-robot',
+		icon: 'ti ti-brain',
 		text: (() => {
 			const lang = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase();
-			if (lang.startsWith('zh')) return '帖子 AI 审核';
-			if (lang.startsWith('ja')) return 'ノートAI審査';
-			return 'AI note moderation';
+			if (lang.startsWith('zh')) return 'AI';
+			if (lang.startsWith('ja')) return 'AI';
+			return 'AI';
 		})(),
-		to: '/admin/ai-note-moderation',
-		active: currentPage.value?.route.name === 'ai-note-moderation',
-	}, {
-		icon: 'ti ti-shield-lock',
-		text: (() => {
-			const lang = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase();
-			if (lang.startsWith('zh')) return 'AI 刷号管控';
-			if (lang.startsWith('ja')) return 'AI多垢対策';
-			return 'AI multi-account control';
-		})(),
-		to: '/admin/ai-abuse-control',
-		active: currentPage.value?.route.name === 'ai-abuse-control',
-	}, {
-		icon: 'ti ti-language',
-		text: (() => {
-			const lang = (typeof navigator !== 'undefined' ? navigator.language : 'en').toLowerCase();
-			if (lang.startsWith('zh')) return 'AI 翻译';
-			if (lang.startsWith('ja')) return 'AI翻訳';
-			return 'AI translation';
-		})(),
-		to: '/admin/ai-translation',
-		active: currentPage.value?.route.name === 'ai-translation',
+		to: '/admin/ai',
+		active: ['ai', 'ai-note-moderation', 'ai-abuse-control', 'ai-translation'].includes(currentPage.value?.route.name ?? ''),
 	}, {
 		icon: 'ti ti-message-2-lock',
 		text: '聊天托管加密',

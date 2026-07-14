@@ -57,11 +57,8 @@ export class XAlgorithmService {
 
 	@bindThis
 	public isEnabled(): boolean {
-		const config = this.meta.xAlgorithmConfig;
-		if (config?.enabled !== true) return false;
-		// Toggle alone is not enough — without a mixer endpoint, never divert TL
-		// (avoids "I don't use Musk algo" black-hole when enabled but unconfigured).
-		return !!(config.homeMixerEndpoint || config.scoredPostsEndpoint);
+		// X/Musk algorithm permanently disabled — timelines always use native Sharkey path
+		return false;
 	}
 
 	@bindThis
@@ -72,23 +69,9 @@ export class XAlgorithmService {
 	}
 
 	@bindThis
-	public async getTimelineNoteIds(request: XAlgorithmTimelineRequest): Promise<string[]> {
-		const config = this.meta.xAlgorithmConfig;
-		const endpoint = config?.homeMixerEndpoint || config?.scoredPostsEndpoint;
-		if (!config?.enabled || !endpoint) {
-			return [];
-		}
-
-		const cacheKey = this.cacheKey(request);
-		const hit = this.cache.get(cacheKey);
-		if (hit && hit.expiresAt > Date.now()) {
-			return hit.ids.slice(0, request.limit);
-		}
-
-		const ids = await this.fetchTimelineNoteIds(request, config, endpoint);
-		const firstPage = !request.untilId && !request.sinceId;
-		this.setCache(cacheKey, ids, firstPage);
-		return ids.slice(0, request.limit);
+	public async getTimelineNoteIds(_request: XAlgorithmTimelineRequest): Promise<string[]> {
+		// Integration removed: never call external X algorithm gateway
+		return [];
 	}
 
 	@bindThis

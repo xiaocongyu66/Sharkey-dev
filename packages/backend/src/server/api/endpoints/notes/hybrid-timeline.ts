@@ -18,7 +18,6 @@ import { UserFollowingService } from '@/core/UserFollowingService.js';
 import { UserService } from '@/core/UserService.js';
 import { MiLocalUser } from '@/models/User.js';
 import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
-import { XAlgorithmService } from '@/core/XAlgorithmService.js';
 import { ApiError } from '../../error.js';
 
 export const meta = {
@@ -95,7 +94,6 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private userFollowingService: UserFollowingService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
 		private readonly userService: UserService,
-		private readonly xAlgorithmService: XAlgorithmService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const untilId = ps.untilId ?? (ps.untilDate ? this.idService.gen(ps.untilDate!) : null);
@@ -110,24 +108,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			this.userService.markUserActive(me);
 
-			if (this.xAlgorithmService.isEnabled()) {
-				try {
-					const timeline = await this.getFromXAlgorithm({
-						untilId,
-						sinceId,
-						limit: ps.limit,
-						withFiles: ps.withFiles,
-						withReplies: ps.withReplies,
-						withBots: ps.withBots,
-						withRenotes: ps.withRenotes,
-					}, me);
-
-					return await this.noteEntityService.packMany(timeline, me);
-				} catch (err) {
-					if (!this.xAlgorithmService.shouldFallbackToSharkeyTimeline()) throw err;
-				}
-			}
-
+			// X/Musk algorithm path removed — always use native Sharkey timeline
 			if (!this.serverSettings.enableFanoutTimeline) {
 				const timeline = await this.getFromDb({
 					untilId,
@@ -243,60 +224,5 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		//#endregion
 
 		return await query.getMany();
-	}
-
-	private async getFromXAlgorithm(ps: {
-		untilId: string | null,
-		sinceId: string | null,
-		limit: number,
-		withFiles: boolean,
-		withReplies: boolean,
-		withBots: boolean,
-		withRenotes: boolean,
-	}, me: MiLocalUser) {
-		const noteIds = await this.xAlgorithmService.getTimelineNoteIds({
-			user: me,
-			source: 'hybrid',
-			limit: ps.limit,
-			sinceId: ps.sinceId,
-			untilId: ps.untilId,
-			withFiles: ps.withFiles,
-			withRenotes: ps.withRenotes,
-			withReplies: ps.withReplies,
-			withBots: ps.withBots,
-		});
-		if (noteIds.length === 0) return [];
-
-		const query = this.notesRepository.createQueryBuilder('note')
-			.where('note.id IN (:...noteIds)', { noteIds })
-			.innerJoinAndSelect('note.user', 'user')
-			.leftJoinAndSelect('note.reply', 'reply')
-			.leftJoinAndSelect('note.renote', 'renote')
-			.leftJoinAndSelect('reply.user', 'replyUser')
-			.leftJoinAndSelect('renote.user', 'renoteUser');
-
-		if (!ps.withReplies) {
-			this.queryService.generateExcludedRepliesQueryForNotes(query, me);
-		}
-
-		await this.queryService.generateVisibilityQueryFor(query, me);
-		this.queryService.generateBlockedHostQueryForNote(query);
-		this.queryService.generateSuspendedUserQueryForNote(query);
-		this.queryService.generateSilencedUserQueryForNotes(query, me);
-		this.queryService.generateMutedUserQueryForNotes(query, me);
-		this.queryService.generateBlockedUserQueryForNotes(query, me);
-		this.queryService.generateMutedNoteThreadQuery(query, me);
-
-		if (ps.withFiles) query.andWhere('note.fileIds != \'{}\'');
-		if (!ps.withBots) query.andWhere('user.isBot = FALSE');
-		if (!ps.withRenotes) {
-			this.queryService.generateExcludedRenotesQueryForNotes(query);
-		} else {
-			this.queryService.generateMutedUserRenotesQueryForNotes(query, me);
-		}
-
-		const notes = await query.getMany();
-		const order = new Map(noteIds.map((id, index) => [id, index]));
-		return notes.sort((a, b) => (order.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.id) ?? Number.MAX_SAFE_INTEGER));
 	}
 }

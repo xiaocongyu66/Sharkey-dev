@@ -266,6 +266,8 @@ export const paramDef = {
 				systemPrompt: { type: 'string', nullable: true },
 				action: { type: 'string', enum: ['reject', 'cw', 'hide', 'home'] },
 				failOpen: { type: 'boolean' },
+				includeImages: { type: 'boolean' },
+				maxImages: { type: 'integer', minimum: 1, maximum: 8 },
 			},
 		},
 		aiAbuseControlConfig: {
@@ -908,10 +910,12 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			if (ps.xAlgorithmConfig !== undefined) {
 				const current = this.serverSettings.xAlgorithmConfig ?? defaultXAlgorithmConfig;
+				// X/Musk algorithm permanently disabled — ignore enable flag from clients
 				set.xAlgorithmConfig = {
 					...defaultXAlgorithmConfig,
 					...current,
 					...(ps.xAlgorithmConfig ?? {}),
+					enabled: false,
 				};
 			}
 

@@ -520,21 +520,22 @@ export const ROUTE_DEF = [{
 		name: 'performance',
 		component: page(() => import('@/pages/admin/performance.vue')),
 	}, {
-		path: '/algorithm',
-		name: 'algorithm',
-		component: page(() => import('@/pages/admin/algorithm.vue')),
+		path: '/ai',
+		name: 'ai',
+		component: page(() => import('@/pages/admin/ai.vue')),
 	}, {
+		// Legacy routes → unified AI page (tab via query / component mapping)
 		path: '/ai-note-moderation',
 		name: 'ai-note-moderation',
-		component: page(() => import('@/pages/admin/ai-note-moderation.vue')),
+		component: page(() => import('@/pages/admin/ai.vue')),
 	}, {
 		path: '/ai-abuse-control',
 		name: 'ai-abuse-control',
-		component: page(() => import('@/pages/admin/ai-abuse-control.vue')),
+		component: page(() => import('@/pages/admin/ai.vue')),
 	}, {
 		path: '/ai-translation',
 		name: 'ai-translation',
-		component: page(() => import('@/pages/admin/ai-translation.vue')),
+		component: page(() => import('@/pages/admin/ai.vue')),
 	}, {
 		path: '/chat-escrow',
 		name: 'chat-escrow',

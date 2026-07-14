@@ -28,6 +28,7 @@ export type XAlgorithmConfig = {
 };
 
 export const defaultXAlgorithmConfig: XAlgorithmConfig = {
+	// Permanently disabled — X/Musk algorithm integration removed from timelines
 	enabled: false,
 	strictOriginalExperience: true,
 	homeMixerEndpoint: null,
@@ -43,7 +44,6 @@ export const defaultXAlgorithmConfig: XAlgorithmConfig = {
 	enableGroxContentUnderstanding: true,
 	enableAdsBlending: false,
 	modelArtifactsPath: null,
-	// Default true: dead/misconfigured gateway must not break home/hybrid TL
 	fallbackToSharkeyTimeline: true,
 };
 
@@ -83,6 +83,14 @@ export type AiNoteModerationConfig = {
 	action: 'reject' | 'cw' | 'hide' | 'home';
 	/** If AI call fails, allow the note (true) or block (false) */
 	failOpen: boolean;
+	/**
+	 * When true, attach image URLs from the note to the moderation request
+	 * (OpenAI vision-style multimodal content). Only used when the note has
+	 * image attachments and the model supports vision.
+	 */
+	includeImages: boolean;
+	/** Max image URLs to send (1–8). Default 4. */
+	maxImages: number;
 };
 
 export const defaultAiNoteModerationConfig: AiNoteModerationConfig = {
@@ -96,6 +104,8 @@ export const defaultAiNoteModerationConfig: AiNoteModerationConfig = {
 	systemPrompt: null,
 	action: 'reject',
 	failOpen: true,
+	includeImages: false,
+	maxImages: 4,
 };
 
 /**
