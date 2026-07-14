@@ -49,6 +49,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 						<template #caption>{{ t('uncensoredCaption') }}</template>
 					</MkSwitch>
 
+					<MkTextarea v-if="form.state.uncensored" v-model="form.state.jailbreakPrompt">
+						<template #label>{{ t('jailbreakPrompt') }}<span v-if="form.modifiedStates.jailbreakPrompt" class="_modified">{{ i18n.ts.modified }}</span></template>
+						<template #caption>{{ t('jailbreakPromptCaption') }}</template>
+					</MkTextarea>
+
 					<MkSwitch v-model="form.state.selectiveByDefault">
 						<template #label>{{ t('selective') }}<span v-if="form.modifiedStates.selectiveByDefault" class="_modified">{{ i18n.ts.modified }}</span></template>
 						<template #caption>{{ t('selectiveCaption') }}</template>
@@ -164,10 +169,10 @@ const FB: Record<string, LangPack> = {
 	on: { en: 'On', zh: '开启', 'zh-TW': '開啟', ja: 'オン' },
 	off: { en: 'Off', zh: '关闭', 'zh-TW': '關閉', ja: 'オフ' },
 	info: {
-		en: 'OpenAI-compatible translation for notes and chat. Shared or separate API keys; optional user-owned keys. Direct-translate prompts reduce refusal/moralizing output.',
-		zh: '帖子与群聊/私信的 OpenAI 兼容 AI 翻译。可共用或分别配置密钥；可允许用户自带 Key。直译提示词减少拒译/说教。',
-		'zh-TW': '貼文與聊天的 OpenAI 相容 AI 翻譯。可共用或分別設定金鑰。',
-		ja: 'ノートとチャットのOpenAI互換AI翻訳。共有/個別キー、ユーザー独自キー対応。',
+		en: 'OpenAI-compatible translation for notes and chat. Shared or separate API keys; optional user keys. Uncensored mode uses a SillyTavern jailbreak stack (main + nsfw + post-history), not a polite translate request.',
+		zh: '帖子与群聊/私信的 OpenAI 兼容 AI 翻译。可共用或分别配置密钥；可允许用户自带 Key。破甲模式用 SillyTavern 多层 jailbreak（main + nsfw + 历史后指令），不是普通“请翻译”。',
+		'zh-TW': '貼文與聊天的 OpenAI 相容 AI 翻譯。破甲模式採 SillyTavern 分層 jailbreak。',
+		ja: 'ノートとチャットのOpenAI互換AI翻訳。アンセンサードはST式ジェイルブレイク層。',
 	},
 	enableNotes: { en: 'Enable note translation', zh: '启用帖子翻译', 'zh-TW': '啟用貼文翻譯', ja: 'ノート翻訳を有効' },
 	enableNotesCaption: {
@@ -204,12 +209,24 @@ const FB: Record<string, LangPack> = {
 		'zh-TW': 'AI 失敗時回退傳統翻譯。',
 		ja: 'AI失敗時は従来翻訳にフォールバック。',
 	},
-	uncensored: { en: 'Direct translate (reduce refusals)', zh: '直译模式（降低拒译/道德说教）', 'zh-TW': '直譯模式', ja: '直訳モード（拒否を抑制）' },
+	uncensored: { en: 'SillyTavern jailbreak stack', zh: 'SillyTavern 破甲栈', 'zh-TW': 'SillyTavern 破甲堆疊', ja: 'SillyTavernジェイルブレイク' },
 	uncensoredCaption: {
-		en: 'Uses a SillyTavern-style system prompt: translate only, no moralizing. Still depends on the model.',
-		zh: '使用类似 SillyTavern 的系统提示：只翻译、不说教。仍取决于模型本身。',
-		'zh-TW': '僅翻譯、不說教（仍取決於模型）。',
-		ja: '翻訳のみ・説教なし（モデル依存）。',
+		en: 'Uses ST-style layers: Main + NSFW/Auxiliary + Post-History Jailbreak (not a polite “please translate”). Retries once if the model still refuses.',
+		zh: '按 SillyTavern 结构叠层：Main 角色 + NSFW/辅助 + 历史后 Jailbreak（PHI），不是客气地“请翻译”。若仍拒译会再破甲重试一次。',
+		'zh-TW': '採用 ST 分層：Main + NSFW + Post-History Jailbreak；拒譯時再試一次。',
+		ja: 'ST方式: Main + NSFW + Post-History Jailbreak。拒否時は再試行。',
+	},
+	jailbreakPrompt: {
+		en: 'Custom jailbreak / PHI (optional)',
+		zh: '自定义破甲 / 历史后指令（可选）',
+		'zh-TW': '自訂破甲 / 歷史後指令（可選）',
+		ja: 'カスタムジェイルブレイク / PHI（任意）',
+	},
+	jailbreakPromptCaption: {
+		en: 'Overrides the built-in Post-History Instructions slot (SillyTavern “jailbreak”). Leave empty for the built-in PHI.',
+		zh: '覆盖内置的 Post-History Instructions（SillyTavern 的 jailbreak 槽）。留空使用内置破甲词。',
+		'zh-TW': '覆寫內建 PHI（ST jailbreak）。留空使用內建。',
+		ja: '内蔵の Post-History Instructions を上書き。空なら内蔵を使用。',
 	},
 	selective: { en: 'Selective translation by default', zh: '默认选择性翻译', 'zh-TW': '預設選擇性翻譯', ja: '選択的翻訳を既定に' },
 	selectiveCaption: {
@@ -241,10 +258,10 @@ const FB: Record<string, LangPack> = {
 	timeout: { en: 'Timeout (ms)', zh: '超时 (毫秒)', 'zh-TW': '逾時 (毫秒)', ja: 'タイムアウト (ms)' },
 	systemPrompt: { en: 'Custom system prompt (optional)', zh: '自定义系统提示（可选）', 'zh-TW': '自訂系統提示', ja: 'システムプロンプト（任意）' },
 	systemPromptCaption: {
-		en: 'Empty = built-in direct-translate prompt when uncensored is on.',
-		zh: '留空则在直译模式下使用内置提示词。',
-		'zh-TW': '留空使用內建直譯提示。',
-		ja: '空なら内蔵直訳プロンプト。',
+		en: 'If set, replaces the entire ST stack with this single system prompt. Leave empty to use Main+NSFW+Jailbreak layers.',
+		zh: '若填写，将用这一条 system 提示替换整套 ST 破甲栈。留空则使用 Main+NSFW+Jailbreak 分层。',
+		'zh-TW': '若填寫則覆寫整套 ST 堆疊。留空使用分層破甲。',
+		ja: '設定するとST層全体をこの1本に置換。空ならMain+NSFW+Jailbreak。',
 	},
 };
 
@@ -276,6 +293,7 @@ const form = useForm({
 	allowUserApiKey: cfg.allowUserApiKey !== false,
 	preferAiOverClassic: cfg.preferAiOverClassic !== false,
 	uncensored: cfg.uncensored !== false,
+	jailbreakPrompt: cfg.jailbreakPrompt ?? '',
 	selectiveByDefault: cfg.selectiveByDefault !== false,
 	sharedBaseUrl: shared.baseUrl ?? '',
 	sharedApiKey: '',
@@ -314,6 +332,7 @@ const form = useForm({
 		allowUserApiKey: state.allowUserApiKey,
 		preferAiOverClassic: state.preferAiOverClassic,
 		uncensored: state.uncensored,
+		jailbreakPrompt: state.jailbreakPrompt?.trim() ? state.jailbreakPrompt.trim() : null,
 		selectiveByDefault: state.selectiveByDefault,
 		shared: ep(state.sharedBaseUrl, state.sharedApiKey, state.sharedModel, state.sharedApiStyle, state.sharedTimeout, state.sharedSystemPrompt),
 		notes: ep(state.notesBaseUrl, state.notesApiKey, state.notesModel, state.notesApiStyle, state.notesTimeout, state.notesSystemPrompt),

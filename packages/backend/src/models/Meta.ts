@@ -189,10 +189,15 @@ export type AiTranslationConfig = {
 	 */
 	preferAiOverClassic: boolean;
 	/**
-	 * Use direct/uncensored translator system prompt (SillyTavern-style:
-	 * translate only, no moralizing refusals).
+	 * Use SillyTavern-style jailbreak stack (main + nsfw + post-history PHI)
+	 * instead of a single polite "please translate" system prompt.
 	 */
 	uncensored: boolean;
+	/**
+	 * Optional override for the ST "jailbreak" / post-history instructions slot.
+	 * Empty = built-in PHI jailbreak. Only used when uncensored is on.
+	 */
+	jailbreakPrompt: string | null;
 	/**
 	 * Default selective translation: only translate parts that are not already
 	 * in the target language (e.g. EN→ZH in mixed CN+EN text).
@@ -219,6 +224,7 @@ export const defaultAiTranslationConfig: AiTranslationConfig = {
 	allowUserApiKey: true,
 	preferAiOverClassic: true,
 	uncensored: true,
+	jailbreakPrompt: null,
 	selectiveByDefault: true,
 };
 

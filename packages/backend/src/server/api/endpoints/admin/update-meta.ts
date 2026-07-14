@@ -336,6 +336,7 @@ export const paramDef = {
 				allowUserApiKey: { type: 'boolean' },
 				preferAiOverClassic: { type: 'boolean' },
 				uncensored: { type: 'boolean' },
+				jailbreakPrompt: { type: 'string', nullable: true },
 				selectiveByDefault: { type: 'boolean' },
 			},
 		},
