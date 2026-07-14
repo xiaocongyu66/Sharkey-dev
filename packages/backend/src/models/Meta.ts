@@ -221,9 +221,10 @@ export const defaultAiTranslationConfig: AiTranslationConfig = {
 	shared: { ...defaultAiTranslationEndpointConfig },
 	notes: { ...defaultAiTranslationEndpointConfig },
 	chat: { ...defaultAiTranslationEndpointConfig },
-	allowUserApiKey: true,
+	allowUserApiKey: false,
 	preferAiOverClassic: true,
-	uncensored: true,
+	// Default off for public instances (SK-2026-066); admins may enable ST jailbreak stack
+	uncensored: false,
 	jailbreakPrompt: null,
 	selectiveByDefault: true,
 };

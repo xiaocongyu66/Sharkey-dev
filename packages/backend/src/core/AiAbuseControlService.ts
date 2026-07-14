@@ -17,6 +17,8 @@ import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { Logger } from '@/logger.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { assertSafeAiEndpointUrl, normalizeOpenAiV1Base } from '@/misc/ai-endpoint-url.js';
 import { RoleService } from '@/core/RoleService.js';
 import { UserSuspendService } from '@/core/UserSuspendService.js';
 import { IdService } from '@/core/IdService.js';
@@ -56,6 +58,7 @@ export class AiAbuseControlService {
 		private readonly userSuspendService: UserSuspendService,
 		private readonly idService: IdService,
 		private readonly timeService: TimeService,
+		private readonly httpRequestService: HttpRequestService,
 		loggerService: LoggerService,
 	) {
 		this.logger = loggerService.getLogger('ai-abuse');
@@ -210,8 +213,11 @@ export class AiAbuseControlService {
 			return { acted: false, linkedUserIds: linkedIds, reason: 'no-moderator' };
 		}
 
+		// SK-2026-063: never auto-suspend whole IP/fingerprint cohort — seed user only.
+		// Linked IDs are logged for moderator review; fingerprint headers are client-spoofable.
+		const suspendTargets = [opts.userId];
 		const suspended: string[] = [];
-		for (const id of linkedIds) {
+		for (const id of suspendTargets) {
 			const u = accounts.find(a => a.id === id) ?? await this.usersRepository.findOneBy({ id });
 			if (!u || u.host != null) continue;
 			if (u.isSuspended) continue;
@@ -226,6 +232,11 @@ export class AiAbuseControlService {
 			} catch (e) {
 				this.logger.warn(`suspend ${id} failed: ${e instanceof Error ? e.message : e}`);
 			}
+		}
+		if (linkedIds.length > 1) {
+			this.logger.warn(
+				`AI abuse linked cohort (not auto-suspended): seed=${opts.userId} linked=${linkedIds.slice(0, 30).join(',')}`,
+			);
 		}
 
 		this.logger.warn(
@@ -299,9 +310,8 @@ export class AiAbuseControlService {
 
 	@bindThis
 	private normalizeBaseUrl(baseUrl: string): string {
-		let u = baseUrl.trim().replace(/\/+$/, '');
-		if (!/\/v1$/i.test(u)) u = `${u}/v1`;
-		return u;
+		assertSafeAiEndpointUrl(baseUrl);
+		return normalizeOpenAiV1Base(baseUrl);
 	}
 
 	@bindThis
@@ -353,7 +363,8 @@ export class AiAbuseControlService {
 		const controller = new AbortController();
 		const t = setTimeout(() => controller.abort(), timeoutMs);
 		try {
-			const res = await fetch(url, {
+			assertSafeAiEndpointUrl(url);
+			const res = await this.httpRequestService.send(url, {
 				method: 'POST',
 				headers: {
 					'content-type': 'application/json',
@@ -361,10 +372,12 @@ export class AiAbuseControlService {
 					accept: 'application/json',
 				},
 				body: JSON.stringify(body),
-				signal: controller.signal,
-			});
+				timeout: timeoutMs,
+				isLocalAddressAllowed: false,
+				allowHttp: false,
+			}, { throwErrorWhenResponseNotOk: false, validators: [] });
 			const text = await res.text();
-			if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+			if (!res.ok) throw new Error(`AI endpoint HTTP ${res.status}`);
 			try { return JSON.parse(text); } catch { return { content: text }; }
 		} finally {
 			clearTimeout(t);

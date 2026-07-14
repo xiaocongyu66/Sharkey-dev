@@ -209,7 +209,8 @@ export class ChatCryptoService {
 		}
 
 		const ct = opts.ciphertext;
-		if (ct && this.isEscrowCiphertext(ct) && this.isEnabled) {
+		// SK-2026-067: decrypt for pack when keys exist; write preference only gates new seals
+		if (ct && this.isEscrowCiphertext(ct) && this.listKeyMaterials().length > 0) {
 			const plain = this.decrypt(opts.conversationId, ct);
 			return {
 				text: plain,

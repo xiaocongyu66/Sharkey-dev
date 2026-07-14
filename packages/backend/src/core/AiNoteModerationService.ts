@@ -11,6 +11,8 @@ import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { Logger } from '@/logger.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { assertSafeAiEndpointUrl, normalizeOpenAiV1Base } from '@/misc/ai-endpoint-url.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 
 export type AiNoteModerationInput = {
@@ -48,6 +50,7 @@ export class AiNoteModerationService {
 		@Inject(DI.meta)
 		private readonly meta: MiMeta,
 
+		private readonly httpRequestService: HttpRequestService,
 		loggerService: LoggerService,
 	) {
 		this.logger = loggerService.getLogger('ai-note-mod');
@@ -187,12 +190,8 @@ export class AiNoteModerationService {
 
 	@bindThis
 	private normalizeBaseUrl(baseUrl: string): string {
-		let u = baseUrl.trim().replace(/\/+$/, '');
-		// Accept both https://host and https://host/v1
-		if (!/\/v1$/i.test(u)) {
-			u = `${u}/v1`;
-		}
-		return u;
+		assertSafeAiEndpointUrl(baseUrl);
+		return normalizeOpenAiV1Base(baseUrl);
 	}
 
 	@bindThis
@@ -251,7 +250,8 @@ export class AiNoteModerationService {
 		const controller = new AbortController();
 		const t = setTimeout(() => controller.abort(), timeoutMs);
 		try {
-			const res = await fetch(url, {
+			assertSafeAiEndpointUrl(url);
+			const res = await this.httpRequestService.send(url, {
 				method: 'POST',
 				headers: {
 					'content-type': 'application/json',
@@ -259,11 +259,13 @@ export class AiNoteModerationService {
 					accept: 'application/json',
 				},
 				body: JSON.stringify(body),
-				signal: controller.signal,
-			});
+				timeout: timeoutMs,
+				isLocalAddressAllowed: false,
+				allowHttp: false,
+			}, { throwErrorWhenResponseNotOk: false, validators: [] });
 			const text = await res.text();
 			if (!res.ok) {
-				throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+				throw new Error(`AI endpoint HTTP ${res.status}`);
 			}
 			// Extract assistant text from common OpenAI v1 shapes
 			let json: any;

@@ -10,6 +10,8 @@ import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { Logger } from '@/logger.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { assertSafeAiEndpointUrl } from '@/misc/ai-endpoint-url.js';
 
 export type XAlgorithmTimelineSource = 'home' | 'hybrid';
 
@@ -47,6 +49,7 @@ export class XAlgorithmService {
 		@Inject(DI.meta)
 		private readonly meta: MiMeta,
 
+		private readonly httpRequestService: HttpRequestService,
 		loggerService: LoggerService,
 	) {
 		this.logger = loggerService.getLogger('x-algo');
@@ -136,18 +139,18 @@ export class XAlgorithmService {
 	@bindThis
 	private async fetchTimelineNoteIds(request: XAlgorithmTimelineRequest, config: NonNullable<MiMeta['xAlgorithmConfig']>, endpoint: string): Promise<string[]> {
 		const timeoutMs = Math.max(500, Math.min(config.requestTimeoutMs || 3000, 15_000));
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), timeoutMs);
 		const started = Date.now();
 
 		try {
+			// SK-2026-062: validate + private-IP agent (no native fetch SSRF bypass)
+			assertSafeAiEndpointUrl(endpoint);
 			const candidates = Math.min(
 				Math.max(config.candidatesPerRequest || request.limit, request.limit),
 				Math.max(request.limit, 50),
 				200,
 			);
 
-			const response = await fetch(endpoint, {
+			const response = await this.httpRequestService.send(endpoint, {
 				method: 'POST',
 				headers: {
 					'content-type': 'application/json',
@@ -179,12 +182,13 @@ export class XAlgorithmService {
 						modelArtifactsPath: config.modelArtifactsPath,
 					},
 				}),
-				signal: controller.signal,
-			});
+				timeout: timeoutMs,
+				isLocalAddressAllowed: false,
+				allowHttp: false,
+			}, { throwErrorWhenResponseNotOk: false, validators: [] });
 
 			if (!response.ok) {
-				const body = await response.text().catch(() => '');
-				throw new Error(`X Algorithm HTTP ${response.status}${body ? `: ${body.slice(0, 200)}` : ''}`);
+				throw new Error(`X Algorithm HTTP ${response.status}`);
 			}
 
 			const result = await response.json() as unknown;
@@ -196,8 +200,6 @@ export class XAlgorithmService {
 			const msg = err instanceof Error ? err.message : String(err);
 			this.logger.warn(`x-algo fail user=${request.user.id} ${name}: ${msg} (${Date.now() - started}ms)`);
 			throw err;
-		} finally {
-			clearTimeout(timeout);
 		}
 	}
 

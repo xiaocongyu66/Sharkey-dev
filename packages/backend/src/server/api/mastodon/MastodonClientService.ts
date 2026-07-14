@@ -4,14 +4,19 @@
  */
 
 import { Misskey } from 'megalodon';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { MiLocalUser } from '@/models/User.js';
 import { AuthenticateService } from '@/server/api/AuthenticateService.js';
 import type { FastifyRequest } from 'fastify';
+import type { Config } from '@/config.js';
+import { DI } from '@/di-symbols.js';
 
 @Injectable()
 export class MastodonClientService {
 	constructor(
+		@Inject(DI.config)
+		private readonly config: Config,
+
 		private readonly authenticateService: AuthenticateService,
 	) {}
 
@@ -51,14 +56,29 @@ export class MastodonClientService {
 		return new Misskey(baseUrl, accessToken, userAgent);
 	}
 
-	readonly getBaseUrl = getBaseUrl;
+	getBaseUrl(_request?: FastifyRequest): string {
+		return getBaseUrl(_request, this.config.url);
+	}
 }
 
 /**
- * Gets the base URL (origin) of the incoming request
+ * Instance origin for server-side Mastodon glue (SK-2026-064).
+ * Never derive outbound URLs from request Host / X-Forwarded-Host.
  */
-export function getBaseUrl(request: FastifyRequest): string {
-	return `${request.protocol}://${request.host}`;
+export function getBaseUrl(request?: FastifyRequest, configUrl?: string): string {
+	// Prefer explicit config origin for server-side outbound (SK-2026-064).
+	if (configUrl) {
+		try {
+			return new URL(configUrl).origin;
+		} catch {
+			/* fall through */
+		}
+	}
+	// Client-facing only (Link pagination / logging) — never used for server fetch.
+	if (request?.host) {
+		return `${request.protocol}://${request.host}`;
+	}
+	return 'http://127.0.0.1';
 }
 
 /**

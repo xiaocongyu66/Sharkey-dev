@@ -109,15 +109,16 @@ export class ApiSearchMastodon {
 
 		fastify.get<ApiSearchMastodonRoute>('/v1/trends/statuses', async (request, reply) => {
 			const baseUrl = this.clientService.getBaseUrl(request);
+			// SK-2026-064: fixed origin + minimal headers (no client header smuggling)
 			const res = await fetch(`${baseUrl}/api/notes/featured`,
 				{
 					method: 'POST',
 					headers: {
-						...request.headers as Record<string, string>,
 						'Accept': 'application/json',
 						'Content-Type': 'application/json',
 					},
 					body: '{}',
+					redirect: 'error',
 				});
 
 			await verifyResponse(res);
@@ -136,7 +137,6 @@ export class ApiSearchMastodon {
 				{
 					method: 'POST',
 					headers: {
-						...request.headers as Record<string, string>,
 						'Accept': 'application/json',
 						'Content-Type': 'application/json',
 					},
@@ -146,6 +146,7 @@ export class ApiSearchMastodon {
 						sort: '+follower',
 						state: 'alive',
 					}),
+					redirect: 'error',
 				});
 
 			await verifyResponse(res);

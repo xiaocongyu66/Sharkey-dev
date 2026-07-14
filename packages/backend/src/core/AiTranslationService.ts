@@ -16,6 +16,8 @@ import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { Logger } from '@/logger.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { assertSafeAiEndpointUrl, normalizeOpenAiV1Base } from '@/misc/ai-endpoint-url.js';
 
 export type AiTranslationScope = 'notes' | 'chat';
 
@@ -104,6 +106,7 @@ export class AiTranslationService {
 		@Inject(DI.meta)
 		private readonly meta: MiMeta,
 
+		private readonly httpRequestService: HttpRequestService,
 		loggerService: LoggerService,
 	) {
 		this.logger = loggerService.getLogger('ai-translate');
@@ -141,17 +144,21 @@ export class AiTranslationService {
 			? c.shared
 			: (scope === 'notes' ? c.notes : c.chat);
 
-		// User-supplied credentials take priority when allowed and complete enough
+		// User may supply API key only; baseUrl is ALWAYS instance-controlled (SK-2026-061).
+		// Optional user baseUrl is ignored unless it matches instance host (same origin).
 		if (c.allowUserApiKey && userOverride?.apiKey && userOverride.apiKey.trim()) {
-			const baseUrl = (userOverride.baseUrl && userOverride.baseUrl.trim())
-				? userOverride.baseUrl.trim()
-				: (inst.baseUrl?.trim() || null);
-			if (!baseUrl) {
-				// User key alone is not enough without a base URL
+			const instBase = inst.baseUrl?.trim() || null;
+			if (!instBase) {
+				// Without instance baseUrl, user key alone cannot aim arbitrary hosts
+				return null;
+			}
+			try {
+				assertSafeAiEndpointUrl(instBase);
+			} catch {
 				return null;
 			}
 			return {
-				baseUrl,
+				baseUrl: instBase,
 				apiKey: userOverride.apiKey.trim(),
 				model: (userOverride.model && userOverride.model.trim())
 					? userOverride.model.trim()
@@ -163,6 +170,11 @@ export class AiTranslationService {
 		}
 
 		if (inst.baseUrl && inst.baseUrl.trim() && inst.apiKey && inst.apiKey.trim() && inst.model) {
+			try {
+				assertSafeAiEndpointUrl(inst.baseUrl.trim());
+			} catch {
+				return null;
+			}
 			return inst;
 		}
 		return null;
@@ -387,11 +399,8 @@ export class AiTranslationService {
 
 	@bindThis
 	private normalizeBaseUrl(baseUrl: string): string {
-		let u = baseUrl.trim().replace(/\/+$/, '');
-		if (!/\/v1$/i.test(u)) {
-			u = `${u}/v1`;
-		}
-		return u;
+		assertSafeAiEndpointUrl(baseUrl);
+		return normalizeOpenAiV1Base(baseUrl);
 	}
 
 	@bindThis
@@ -437,52 +446,55 @@ export class AiTranslationService {
 
 	@bindThis
 	private async fetchText(url: string, body: unknown, apiKey: string, timeoutMs: number): Promise<string> {
-		const controller = new AbortController();
-		const t = setTimeout(() => controller.abort(), timeoutMs);
+		// HttpRequestService agents enforce private-IP deny (SK-2026-002/061)
+		assertSafeAiEndpointUrl(url);
+		const res = await this.httpRequestService.send(url, {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json',
+				authorization: `Bearer ${apiKey}`,
+				accept: 'application/json',
+			},
+			body: JSON.stringify(body),
+			timeout: timeoutMs,
+			// Never allow local/private for AI (SSRF)
+			isLocalAddressAllowed: false,
+			allowHttp: false,
+		}, {
+			throwErrorWhenResponseNotOk: false,
+			validators: [],
+		});
+		const text = await res.text();
+		if (!res.ok) {
+			// Do not echo internal response bodies (SK-061 remediation)
+			throw new Error(`AI endpoint HTTP ${res.status}`);
+		}
+		let json: any;
 		try {
-			const res = await fetch(url, {
-				method: 'POST',
-				headers: {
-					'content-type': 'application/json',
-					authorization: `Bearer ${apiKey}`,
-					accept: 'application/json',
-				},
-				body: JSON.stringify(body),
-				signal: controller.signal,
-			});
-			const text = await res.text();
-			if (!res.ok) {
-				throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
-			}
-			let json: any;
-			try {
-				json = JSON.parse(text);
-			} catch {
-				return text;
-			}
-			const chatContent = json?.choices?.[0]?.message?.content;
-			if (typeof chatContent === 'string') return chatContent;
-			if (Array.isArray(chatContent)) {
-				return chatContent.map((p: any) => p?.text ?? p?.content ?? '').join('');
-			}
-			if (typeof json?.output_text === 'string') return json.output_text;
-			if (Array.isArray(json?.output)) {
-				const bits: string[] = [];
-				for (const item of json.output) {
-					if (item?.type === 'message' && Array.isArray(item.content)) {
-						for (const c of item.content) {
-							if (typeof c?.text === 'string') bits.push(c.text);
-							else if (typeof c?.content === 'string') bits.push(c.content);
-						}
+			json = JSON.parse(text);
+		} catch {
+			return text;
+		}
+		const chatContent = json?.choices?.[0]?.message?.content;
+		if (typeof chatContent === 'string') return chatContent;
+		if (Array.isArray(chatContent)) {
+			return chatContent.map((p: any) => p?.text ?? p?.content ?? '').join('');
+		}
+		if (typeof json?.output_text === 'string') return json.output_text;
+		if (Array.isArray(json?.output)) {
+			const bits: string[] = [];
+			for (const item of json.output) {
+				if (item?.type === 'message' && Array.isArray(item.content)) {
+					for (const c of item.content) {
+						if (typeof c?.text === 'string') bits.push(c.text);
+						else if (typeof c?.content === 'string') bits.push(c.content);
 					}
 				}
-				if (bits.length) return bits.join('');
 			}
-			if (typeof json?.result === 'string') return json.result;
-			if (typeof json?.content === 'string') return json.content;
-			return text;
-		} finally {
-			clearTimeout(t);
+			if (bits.length) return bits.join('');
 		}
+		if (typeof json?.result === 'string') return json.result;
+		if (typeof json?.content === 'string') return json.content;
+		return text;
 	}
 }

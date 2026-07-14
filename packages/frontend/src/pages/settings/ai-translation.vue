@@ -27,9 +27,6 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<template #label>{{ t('ownKey') }}</template>
 			<div class="_gaps">
 				<MkInfo>{{ t('ownKeyInfo') }}</MkInfo>
-				<MkInput v-model="baseUrl" type="url">
-					<template #label>{{ t('baseUrl') }}</template>
-				</MkInput>
 				<MkInput v-model="apiKey" type="password">
 					<template #label>{{ t('apiKey') }}{{ hasApiKey ? ` (${t('keySaved')})` : '' }}</template>
 					<template #caption>{{ t('apiKeyCaption') }}</template>
@@ -96,12 +93,11 @@ const FB: Record<string, LangPack> = {
 	},
 	ownKey: { en: 'Your API key', zh: '我的 API Key', 'zh-TW': '我的 API 金鑰', ja: '自分のAPIキー' },
 	ownKeyInfo: {
-		en: 'When set, your key is used instead of the instance key (for your requests only).',
-		zh: '填写后，你的翻译请求将优先使用自己的 Key（仅你自己）。',
-		'zh-TW': '設定後優先使用你的金鑰。',
-		ja: '設定すると自分のリクエストで優先使用されます。',
+		en: 'When allowed by the instance, your API key is used with the instance AI base URL only (custom base URL is not accepted — SSRF protection).',
+		zh: '在实例允许时，你的 API Key 仅配合实例配置的 AI 基址使用（不允许自定义基址，防止 SSRF）。',
+		'zh-TW': '在站點允許時，你的 API 金鑰僅搭配站點 AI 基址（不可自訂基址）。',
+		ja: '許可時、APIキーはインスタンスのベースURLのみと組み合わせます（独自ベースURL不可）。',
 	},
-	baseUrl: { en: 'API base URL', zh: 'API 基址', 'zh-TW': 'API 基址', ja: 'APIベースURL' },
 	apiKey: { en: 'API key', zh: 'API 密钥', 'zh-TW': 'API 金鑰', ja: 'APIキー' },
 	apiKeyCaption: {
 		en: 'Leave blank to keep existing key. Never share this value.',
@@ -139,7 +135,6 @@ const selective = ref(
 		? cfg.selective
 		: ((instance as any).aiTranslationPublic?.selectiveByDefault !== false),
 );
-const baseUrl = ref(cfg.baseUrl ?? '');
 const apiKey = ref('');
 const model = ref(cfg.model ?? '');
 const hasApiKey = ref(!!cfg.hasApiKey);
@@ -150,7 +145,6 @@ function applyUpdated(updated: any) {
 	const next = updated.aiTranslationConfig ?? {};
 	hasApiKey.value = !!next.hasApiKey;
 	apiKey.value = '';
-	if (next.baseUrl !== undefined) baseUrl.value = next.baseUrl ?? '';
 	if (next.model !== undefined) model.value = next.model ?? '';
 	if (next.targetLang !== undefined) targetLang.value = next.targetLang ?? '';
 	if (typeof next.selective === 'boolean') selective.value = next.selective;
@@ -162,7 +156,6 @@ async function save() {
 		selective: selective.value,
 	};
 	if (allowUserKey.value) {
-		payload.baseUrl = baseUrl.value?.trim() ? baseUrl.value.trim() : null;
 		payload.model = model.value?.trim() ? model.value.trim() : null;
 		if (apiKey.value && apiKey.value !== '<redacted>') {
 			payload.apiKey = apiKey.value;
@@ -184,7 +177,6 @@ async function clearKey() {
 		aiTranslationConfig: {
 			targetLang: targetLang.value?.trim() ? targetLang.value.trim() : null,
 			selective: selective.value,
-			baseUrl: baseUrl.value?.trim() ? baseUrl.value.trim() : null,
 			model: model.value?.trim() ? model.value.trim() : null,
 			apiKey: '__clear__',
 		},

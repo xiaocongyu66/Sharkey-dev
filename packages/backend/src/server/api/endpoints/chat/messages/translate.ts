@@ -20,6 +20,8 @@ export const meta = {
 	requireCredential: true,
 
 	kind: 'read:chat',
+	// SK-2026-065: same translator gate as notes/translate
+	requiredRolePolicy: 'canUseTranslator',
 
 	limit: {
 		duration: 1000 * 5,

@@ -385,6 +385,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 					if (next.baseUrl === '') next.baseUrl = null;
 					if (next.model === '') next.model = null;
 					if (next.targetLang === '') next.targetLang = null;
+					// SK-2026-061: users may store API key/model only — never custom baseUrl
+					next.baseUrl = null;
 					profileUpdates.aiTranslationConfig = next;
 				}
 			}
