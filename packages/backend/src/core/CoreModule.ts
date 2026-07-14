@@ -85,6 +85,7 @@ import { FeaturedService } from './FeaturedService.js';
 import { FanoutTimelineService } from './FanoutTimelineService.js';
 import { XAlgorithmService } from './XAlgorithmService.js';
 import { AiNoteModerationService } from './AiNoteModerationService.js';
+import { AiAbuseControlService } from './AiAbuseControlService.js';
 import { ChannelFollowingService } from './ChannelFollowingService.js';
 import { ChatService } from './ChatService.js';
 import { ChatCryptoService } from './ChatCryptoService.js';
@@ -402,6 +403,7 @@ const $Imports = [
 		FanoutTimelineService,
 		XAlgorithmService,
 		AiNoteModerationService,
+		AiAbuseControlService,
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
 		ChatService,
@@ -723,6 +725,7 @@ const $Imports = [
 		FanoutTimelineService,
 		XAlgorithmService,
 		AiNoteModerationService,
+		AiAbuseControlService,
 		FanoutTimelineEndpointService,
 		ChannelFollowingService,
 		ChatService,

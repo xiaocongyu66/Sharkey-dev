@@ -18,6 +18,7 @@ import { EmailService } from '@/core/EmailService.js';
 import { NotificationService } from '@/core/NotificationService.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { extractClientFingerprint } from '@/misc/fingerprint.js';
+import { AiAbuseControlService } from '@/core/AiAbuseControlService.js';
 
 @Injectable()
 export class SigninService {
@@ -34,6 +35,7 @@ export class SigninService {
 		private idService: IdService,
 		private globalEventService: GlobalEventService,
 		private readonly cacheService: CacheService,
+		private readonly aiAbuseControlService: AiAbuseControlService,
 	) {
 	}
 
@@ -44,17 +46,27 @@ export class SigninService {
 				this.notificationService.createNotification(user.id, 'login', {});
 
 				const headers = request.headers as any;
+				const ip = (request.ip && String(request.ip)) || '0.0.0.0';
+				const fingerprint = extractClientFingerprint(headers);
 				const record = await this.signinsRepository.insertOne({
 					id: this.idService.gen(),
 					userId: user.id,
 					// Never null — DB column is NOT NULL (proxy misconfig can omit request.ip)
-					ip: (request.ip && String(request.ip)) || '0.0.0.0',
+					ip,
 					headers: headers ?? {},
-					fingerprint: extractClientFingerprint(headers),
+					fingerprint,
 					success: true,
 				});
 
 				await this.globalEventService.publishMainStream(user.id, 'signin', await this.signinEntityService.pack(record));
+
+				// AI multi-account / abuse control (async; never blocks login response)
+				this.aiAbuseControlService.scheduleCheck({
+					userId: user.id,
+					ip,
+					fingerprint,
+					trigger: 'signin',
+				});
 
 				const profile = await this.cacheService.userProfileCache.fetch(user.id);
 				if (profile.email && profile.emailVerified) {

@@ -98,6 +98,60 @@ export const defaultAiNoteModerationConfig: AiNoteModerationConfig = {
 	failOpen: true,
 };
 
+/**
+ * AI-assisted multi-account / abuse control (separate API key & switch from note mod).
+ * Links accounts by real IP + browser fingerprint; AI judges behavior patterns.
+ */
+export type AiAbuseControlConfig = {
+	/** Master switch for this feature */
+	enabled: boolean;
+	/** OpenAI-compatible base URL (/v1 optional) */
+	baseUrl: string | null;
+	/** Dedicated API key (not shared with note moderation) */
+	apiKey: string | null;
+	model: string;
+	apiStyle: 'chat.completions' | 'responses' | 'auto';
+	requestTimeoutMs: number;
+	systemPrompt: string | null;
+	/** If AI/API fails: true = do nothing; false = still apply heuristic-only suspend when over thresholds */
+	failOpen: boolean;
+	/** Run check after successful sign-in */
+	checkOnSignin: boolean;
+	/** Run check after registration completes */
+	checkOnSignup: boolean;
+	/** Minimum distinct local accounts sharing IP or fingerprint before AI/heuristic fires */
+	minLinkedAccounts: number;
+	/** Sign-in success count window (minutes) for burst detection */
+	signinWindowMinutes: number;
+	/** Max successful sign-ins in window (across linked accounts) before risk */
+	maxSigninsInWindow: number;
+	/** When true, auto-suspend all linked non-moderator local accounts if AI flags or heuristic hard-trip */
+	autoSuspend: boolean;
+	/** Pass hideNotes to UserSuspendService */
+	hideNotesOnSuspend: boolean;
+	/** Cooldown seconds before re-checking the same userId */
+	cooldownSeconds: number;
+};
+
+export const defaultAiAbuseControlConfig: AiAbuseControlConfig = {
+	enabled: false,
+	baseUrl: null,
+	apiKey: null,
+	model: 'gpt-4o-mini',
+	apiStyle: 'auto',
+	requestTimeoutMs: 10000,
+	systemPrompt: null,
+	failOpen: true,
+	checkOnSignin: true,
+	checkOnSignup: true,
+	minLinkedAccounts: 3,
+	signinWindowMinutes: 60,
+	maxSigninsInWindow: 20,
+	autoSuspend: false,
+	hideNotesOnSuspend: true,
+	cooldownSeconds: 300,
+};
+
 @Entity('meta')
 export class MiMeta {
 	@PrimaryColumn({
@@ -895,6 +949,11 @@ export class MiMeta {
 		default: defaultAiNoteModerationConfig,
 	})
 	public aiNoteModerationConfig: AiNoteModerationConfig;
+
+	@Column('jsonb', {
+		default: defaultAiAbuseControlConfig,
+	})
+	public aiAbuseControlConfig: AiAbuseControlConfig;
 
 	/**
 	 * Chat escrow (DM + rooms only; never notes/posts).

@@ -524,6 +524,10 @@ export const ROUTE_DEF = [{
 		name: 'ai-note-moderation',
 		component: page(() => import('@/pages/admin/ai-note-moderation.vue')),
 	}, {
+		path: '/ai-abuse-control',
+		name: 'ai-abuse-control',
+		component: page(() => import('@/pages/admin/ai-abuse-control.vue')),
+	}, {
 		path: '/chat-escrow',
 		name: 'chat-escrow',
 		component: page(() => import('@/pages/admin/chat-escrow.vue')),

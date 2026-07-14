@@ -652,6 +652,10 @@ export const meta = {
 				type: 'object',
 				optional: false, nullable: false,
 			},
+			aiAbuseControlConfig: {
+				type: 'object',
+				optional: false, nullable: false,
+			},
 		},
 	},
 } as const;
@@ -826,6 +830,10 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				aiNoteModerationConfig: instance.aiNoteModerationConfig == null ? undefined : {
 					...instance.aiNoteModerationConfig,
 					apiKey: instance.aiNoteModerationConfig.apiKey == null ? null : '<redacted>',
+				},
+				aiAbuseControlConfig: instance.aiAbuseControlConfig == null ? undefined : {
+					...instance.aiAbuseControlConfig,
+					apiKey: instance.aiAbuseControlConfig.apiKey == null ? null : '<redacted>',
 				},
 			};
 		});

@@ -4,7 +4,7 @@
  */
 
 import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
-import { defaultXAlgorithmConfig, defaultAiNoteModerationConfig, type MiMeta } from '@/models/Meta.js';
+import { defaultXAlgorithmConfig, defaultAiNoteModerationConfig, defaultAiAbuseControlConfig, type MiMeta } from '@/models/Meta.js';
 import { ModerationLogService } from '@/core/ModerationLogService.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { MetaService } from '@/core/MetaService.js';
@@ -266,6 +266,28 @@ export const paramDef = {
 				systemPrompt: { type: 'string', nullable: true },
 				action: { type: 'string', enum: ['reject', 'cw', 'hide', 'home'] },
 				failOpen: { type: 'boolean' },
+			},
+		},
+		aiAbuseControlConfig: {
+			type: 'object',
+			nullable: true,
+			properties: {
+				enabled: { type: 'boolean' },
+				baseUrl: { type: 'string', nullable: true },
+				apiKey: { type: 'string', nullable: true },
+				model: { type: 'string' },
+				apiStyle: { type: 'string', enum: ['chat.completions', 'responses', 'auto'] },
+				requestTimeoutMs: { type: 'integer', minimum: 1000, maximum: 60000 },
+				systemPrompt: { type: 'string', nullable: true },
+				failOpen: { type: 'boolean' },
+				checkOnSignin: { type: 'boolean' },
+				checkOnSignup: { type: 'boolean' },
+				minLinkedAccounts: { type: 'integer', minimum: 2, maximum: 100 },
+				signinWindowMinutes: { type: 'integer', minimum: 1, maximum: 10080 },
+				maxSigninsInWindow: { type: 'integer', minimum: 1, maximum: 10000 },
+				autoSuspend: { type: 'boolean' },
+				hideNotesOnSuspend: { type: 'boolean' },
+				cooldownSeconds: { type: 'integer', minimum: 0, maximum: 86400 },
 			},
 		},
 	},
@@ -855,6 +877,20 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				set.aiNoteModerationConfig = next;
 			}
 
+			if (ps.aiAbuseControlConfig !== undefined) {
+				const current = this.serverSettings.aiAbuseControlConfig ?? defaultAiAbuseControlConfig;
+				const next = {
+					...defaultAiAbuseControlConfig,
+					...current,
+					...(ps.aiAbuseControlConfig ?? {}),
+				};
+				const incomingKey = (ps.aiAbuseControlConfig as any)?.apiKey;
+				if (incomingKey === '' || incomingKey === '<redacted>' || incomingKey == null) {
+					next.apiKey = current.apiKey ?? null;
+				}
+				set.aiAbuseControlConfig = next;
+			}
+
 			if (Array.isArray(ps.federationHosts)) {
 				set.federationHosts = ps.federationHosts.filter(Boolean).map(x => x.toLowerCase());
 			}
@@ -897,6 +933,10 @@ function sanitize(meta: Partial<MiMeta & OnApplicationShutdown & OnApplicationBo
 		aiNoteModerationConfig: meta.aiNoteModerationConfig == null ? undefined : {
 			...meta.aiNoteModerationConfig,
 			apiKey: meta.aiNoteModerationConfig.apiKey == null ? null : '<redacted>',
+		},
+		aiAbuseControlConfig: meta.aiAbuseControlConfig == null ? undefined : {
+			...meta.aiAbuseControlConfig,
+			apiKey: meta.aiAbuseControlConfig.apiKey == null ? null : '<redacted>',
 		},
 		deeplAuthKey: '<redacted>',
 		libreTranslateKey: '<redacted>',

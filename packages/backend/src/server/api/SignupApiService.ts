@@ -25,6 +25,8 @@ import { UserAuthService } from '@/core/UserAuthService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { EnvService } from '@/global/EnvService.js';
 import { SigninService } from './SigninService.js';
+import { AiAbuseControlService } from '@/core/AiAbuseControlService.js';
+import { extractClientFingerprint } from '@/misc/fingerprint.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 @Injectable()
@@ -67,6 +69,7 @@ export class SignupApiService {
 		private readonly envService: EnvService,
 		private readonly internalEventService: InternalEventService,
 		private readonly userAuthService: UserAuthService,
+		private readonly aiAbuseControlService: AiAbuseControlService,
 	) {
 		this.logger = this.loggerService.getLogger('Signup');
 	}
@@ -365,6 +368,14 @@ export class SignupApiService {
 			if (this.meta.enableIpLogging) {
 				this.logIp(request.ip, null, account.id);
 			}
+
+			// AI multi-account control on new registration (async; never blocks response)
+			this.aiAbuseControlService.scheduleCheck({
+				userId: account.id,
+				ip: request.ip || pendingUser.requestOriginIp || null,
+				fingerprint: extractClientFingerprint(request.headers as any),
+				trigger: 'signup',
+			});
 
 			if (this.meta.approvalRequiredForSignup) {
 				if (pendingUser.email) {
