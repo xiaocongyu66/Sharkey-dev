@@ -160,8 +160,15 @@ export class JsonLd {
 	@bindThis
 	public async normalize(data: Document): Promise<string> {
 		const customLoader = this.getLoader();
+		// jsonld v8+ defaults safe:true on normalize/canonize and throws
+		// jsonld.ValidationError ("Safe mode validation error") for common
+		// ActivityPub edge cases (relative IRIs, free-floating scalars, etc.).
+		// That breaks LD-Signature verification for many real-world peers
+		// (e.g. fedibird) and floods the inbox queue with retries.
+		// Disable safe mode for federation crypto; HTTP signature path is unchanged.
 		return await (await import('jsonld')).default.normalize(data, {
 			documentLoader: customLoader,
+			safe: false,
 		});
 	}
 

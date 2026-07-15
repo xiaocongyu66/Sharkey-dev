@@ -233,9 +233,16 @@ export class InboxProcessorService {
 				} catch (error) {
 					if (error instanceof JsonLdError) {
 						throw new Bull.UnrecoverableError(`skip: encountered a JSON-LD error while verifying signature: ${error}`);
-					} else {
-						throw error;
 					}
+					// jsonld library ValidationError is not our JsonLdError — do not retry
+					const name = error && typeof error === 'object' && 'name' in error
+						? String((error as { name: unknown }).name)
+						: '';
+					const msg = error instanceof Error ? error.message : String(error);
+					if (name === 'jsonld.ValidationError' || msg.includes('Safe mode validation error')) {
+						throw new Bull.UnrecoverableError(`skip: JSON-LD validation failed during LD-Signature verify: ${msg}`);
+					}
+					throw error;
 				}
 
 				// もう一度actorチェック
