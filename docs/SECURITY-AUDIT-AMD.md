@@ -9,10 +9,11 @@
 | **Remediation status date** | 2026-07-14 |
 | **Optimization review date** | 2026-07-14 (multi-pass static code review) |
 | **Pass 7 (AI / Mastodon SSRF) date** | 2026-07-14 |
+| **Pass 13 (latency + residual) date** | 2026-07-16 — detail in `docs/SECURITY-AUDIT-PASS13.md` |
 | **Method** | Static code review only — no live exploitation, no PoC payloads, no load tests |
-| **Scope** | Backend API, chat, MFM/CSS rendering, media proxy, federation edges, OAuth/Mastodon glue, auth tokens; **chat performance, WebSocket expansion, escrow crypto, X-algorithm, engineering process**; **AI translation/moderation/abuse, Mastodon host-loopback** |
+| **Scope** | Backend API, chat, MFM/CSS rendering, media proxy, federation edges, OAuth/Mastodon glue, auth tokens; **chat performance, WebSocket expansion, escrow crypto, X-algorithm, engineering process**; **AI translation/moderation/abuse, Mastodon host-loopback**; **Pass 13: home/fanout latency, reaction oracle residual, broadcast, gateway body** |
 | **Out of scope** | Production traffic, third-party deps CVE enumeration, full ActivityPub protocol fuzz, production load benchmarks |
-| **Disposition** | **Private local report.** Pre-AI P0/P1 + Pass 7 High + Pass 8 Medium items largely remediated in tree. Prefer responsible disclosure via instance SECURITY.md / upstream for residual design items. |
+| **Disposition** | **Private local report.** Pre-AI P0/P1 + Pass 7 High + Pass 8 Medium items largely remediated in tree. Prefer responsible disclosure via instance SECURITY.md / upstream for residual design items. **Pass 13 full write-up:** [`docs/SECURITY-AUDIT-PASS13.md`](./SECURITY-AUDIT-PASS13.md). |
 
 ---
 
@@ -31,15 +32,16 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **Code: Pass 10 poll / note-oracle (SK-078…080)** | **Remediated in tree (2026-07-14)** |
 | **Code: Pass 11 schedule/edit reply oracle (SK-081…083)** | **REMEDIATED in tree** |
 | **Code: Pass 12 bulk residual oracles (SK-084…090)** | **REMEDIATED in tree** (081–089) |
+| **Code: Pass 13 residual + latency (SK-091…096, PERF-01…05)** | **Remediated in tree (2026-07-16)** — see [`SECURITY-AUDIT-PASS13.md`](./SECURITY-AUDIT-PASS13.md); PERF-03/06–08 residual engineering |
 | **Design / privacy / product honesty** | Residual open (escrow ≠ E2EE; AI LLM privacy) |
 | **Ops / deploy configuration** | Operator checklist still required |
 | **Dynamic pentest / full regression** | **Not completed** (audit was static) |
 
 **One-line conclusion (security):**  
-**“Pass 7–12 closed in tree. Note-id oracle family (SK-081…088) gated with NoteVisibilityService; SW redirect URL allowlist (SK-089). Residual design: SK-010 escrow, SK-017 tokens, SK-059 historical ?i=.”**
+**“Pass 7–13 closed in tree for actionable code items. Residual design: SK-010 escrow, SK-017 tokens, SK-014 proxy surface. Pass 13: reaction oracle mapping, slim broadcast, gateway body cap, timeline 503 on timeout, Mastodon in-process, Telegram scrub.”**
 
-**One-line conclusion (optimization / engineering — see §8):**  
-**“Performance and chat architecture investments are sound; Pass 7–8 code remediations landed — composite ~8.2/10 pending deploy verification.”**
+**One-line conclusion (optimization / engineering — see §8 + Pass 13):**  
+**“Fanout LRANGE bounded + always LTRIM (PERF-01); home DB timeout fails loud 503 (SK-096). packMany (PERF-03) and observability (PERF-08) still open engineering.”**
 
 ### 0.2 Remediation commits (this tree)
 
@@ -54,14 +56,15 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 
 **Must verify on deploy:** the above commits (or equivalent) are present in production builds.
 
-### 0.3 Finding counts (through Pass 12)
+### 0.3 Finding counts (through Pass 13)
 
 | Severity | Count (approx.) | Themes |
 |----------|-----------------|--------|
-| **Critical / High** | 5–7 historical (mostly fixed); **0 new open High in Pass 8** | Prior: chat WS, SSRF, OAuth, AI/Mastodon (remediated) |
-| **Medium** | 25+ | Prior residuals + **session non-revocation, webhook URL gaps, chat room metadata** |
-| **Low / Info** | 25+ | Token length, join-by-code rate limit, privacy, misconfig |
-| **Total IDs** | **SK-2026-001 … 090** | Living document (pass 12: bulk residual oracles) |
+| **Critical / High** | 5–7 historical (mostly fixed); **0 new open High in Pass 8–13** | Prior: chat WS, SSRF, OAuth, AI/Mastodon (remediated) |
+| **Medium** | 25+ | Prior residuals + **session non-revocation, webhook URL gaps, chat room metadata**; Pass 13: silent TL timeout, reaction oracle residual |
+| **Low / Info** | 30+ | Token length, join-by-code rate limit, privacy, misconfig; Pass 13 broadcast / Telegram / gateway body |
+| **Perf backlog** | **PERF-01…08** | Fanout LRANGE, packMany, DB fallback, self-fetch, metrics |
+| **Total IDs** | **SK-2026-001 … 096** | Living document; Pass 13 detail in `SECURITY-AUDIT-PASS13.md` |
 
 ### 0.4 Remediation status matrix (code vs residual)
 
@@ -191,6 +194,20 @@ Sharkey inherits a mature Misskey security baseline (private-IP SSRF guards, SVG
 | **088** | `notes/edit` renoteId pre-ACL | **L** | **Fixed** — visibility before service |
 | **089** | SW / login redirect URL | **L** | **Fixed** — relative-path allowlist |
 | **090** | Bulk scan negatives | **I** | Info only |
+
+#### Pass 13 — remediated in tree (2026-07-16); full text in `SECURITY-AUDIT-PASS13.md`
+
+| ID | Topic | Severity | Status |
+|----|--------|----------|--------|
+| **091** | `notes/reactions/create` + `notes/like` do not map inaccessible-note id → `NO_SUCH_NOTE` | **L–M** | **Fixed** — map `68e9d2d1-…` → `NO_SUCH_NOTE` |
+| **092** | Mastodon trends/suggestions still self-`fetch` loopback HTTP | **L** (+ latency M) | **Fixed** — in-process FeaturedService / users query |
+| **093** | Telegram sticker import native `fetch` + token in URL | **L** | **Mitigated** — HttpRequestService + error token scrub; file URL still path-token (Telegram API) |
+| **094** | `userUpdated` broadcast to all WS clients + room fan-out cost | **L–M** | **Mitigated** — slim description (120), async room fan-out; broadcast retained for live cache UX |
+| **095** | x-algorithm gateway `parseBody` unbounded | **L–M** | **Fixed** — 64 KiB cap + 413 |
+| **096** | Home TL DB timeout returns `[]` (false empty feed) | **M** | **Fixed** — `TEMPORARILY_UNAVAILABLE` 503 |
+| **PERF-01** | Fanout `LRANGE 0 -1` full list | **P0 latency** | **Fixed** — `LRANGE 0..999` + always `LTRIM` on push |
+| **PERF-02** | Home DB fallback cost + silent timeout | **P0 latency** | **Mitigated** — loud 503; IN-list already in tree |
+| **PERF-03** | `packMany` weight on timelines | **P0/P1** | **OPEN** (engineering) |
 
 #### Ops-only (not closed by code alone)
 
@@ -2385,6 +2402,47 @@ Trusts message payload from SW. Same-origin SW is normal; compromised SW registr
 
 ---
 
+## 1m. Pass 13 (2026-07-16) — residual oracles, broadcast, timeline latency
+
+> **Full document:** [`docs/SECURITY-AUDIT-PASS13.md`](./SECURITY-AUDIT-PASS13.md)  
+> Do not duplicate long write-ups here; AMD keeps status + ROI only.
+
+**Method:** Static re-scan after Pass 12 remediations + recent home TL / AI / `userUpdated` / X-algo disable work.
+
+### 13.1 New security / logic IDs (summary)
+
+| ID | Severity | One-line | Status |
+|----|----------|----------|--------|
+| **SK-091** | L–M | Reaction/like: inaccessible note error unmapped → oracle / 500 | OPEN |
+| **SK-092** | L | Mastodon self-HTTP to `/api/notes/featured`, `/api/users` | OPEN |
+| **SK-093** | L | Telegram sticker token-in-URL + native fetch | OPEN |
+| **SK-094** | L–M | Global `userUpdated` broadcast + room stream fan-out | OPEN |
+| **SK-095** | L–M | Gateway body parse unbounded | OPEN |
+| **SK-096** | M | Home TL statement timeout → empty array | OPEN |
+
+### 13.2 Performance backlog (summary)
+
+| ID | Pri | One-line |
+|----|-----|----------|
+| **PERF-01** | P0 | Fanout Redis `LRANGE 0 -1` unbounded |
+| **PERF-02** | P0 | Home DB fallback heavy + timeout→`[]` |
+| **PERF-03** | P0/P1 | `NoteEntityService.packMany` cost on TL |
+| **PERF-04** | P1 | Mastodon self-fetch (same as SK-092) |
+| **PERF-05** | P1 | `i/update` sync verify + broadcast |
+| **PERF-06** | P1 | X-algo if re-enabled (main path currently hard-off) |
+| **PERF-07** | P1 | AI translate/abuse outbound isolation |
+| **PERF-08** | P2 | Endpoint latency metrics |
+
+### Pass 13 — highest ROI
+
+1. **SK-091** — map `68e9d2d1-…` → `NO_SUCH_NOTE` on reaction/like  
+2. **PERF-01** — bound fanout Redis reads; deterministic LTRIM  
+3. **SK-096 / PERF-02** — do not present timeout as empty home  
+4. **SK-095** — gateway body cap  
+5. Then PERF-03 lite pack + SK-094 broadcast scope  
+
+---
+
 ## 2. Attack surface map (abbreviated)
 
 ```
@@ -2589,6 +2647,7 @@ Next: **shared note ACL helper** closing SK-081…087 oracle family; then SW URL
 | 1.10 | 2026-07-14 | **Pass 11:** SK-081 schedule create replyId existence oracle; SK-082 notes/edit replyId probe; SK-083 promo/read existence oracle |
 | 1.11 | 2026-07-14 | **Pass 12 bulk:** SK-084…090 residual note-id oracles (renotes/unrenote/fav-del/thread-mute-del); SW URL; negative SSRF/SQLi/XSS re-scan |
 | 1.12 | 2026-07-14 | **Pass 11–12 remediations:** SK-081…088 note visibility gates; SK-089 SW/login relative URL allowlist |
+| 1.13 | 2026-07-16 | **Pass 13:** SK-091…096 + PERF-01…08; timeline latency root cause (fanout LRANGE / packMany / DB timeout→[]); detail doc `SECURITY-AUDIT-PASS13.md`; §0 matrix + §1m summary |
 
 ---
 
@@ -2618,6 +2677,10 @@ Next: **shared note ACL helper** closing SK-081…087 oracle family; then SW URL
 | Roles/rank | `core/RoleService.ts` |
 | Poll SQL | `server/api/endpoints/notes/polls/vote.ts`, `core/PollService.ts` |
 | X-algorithm | `core/XAlgorithmService.ts`, `services/x-algorithm-gateway/server.mjs` |
+| Home / fanout latency (Pass 13) | `endpoints/notes/timeline.ts`, `core/FanoutTimelineService.ts`, `core/FanoutTimelineEndpointService.ts`, `core/entities/NoteEntityService.ts` |
+| Reaction oracle residual (Pass 13) | `core/ReactionService.ts`, `endpoints/notes/reactions/create.ts`, `endpoints/notes/like.ts` |
+| Live profile broadcast (Pass 13) | `endpoints/i/update.ts`, `frontend/src/utility/live-user-cache.ts` |
+| Pass 13 full report | `docs/SECURITY-AUDIT-PASS13.md` |
 
 ---
 
@@ -2849,4 +2912,4 @@ Performance and security **directions are correct**. Completeness is gated by un
 
 ---
 
-*End of AMD document (includes §8 optimization evaluation + Pass 7 SK-061…067 + Pass 8 SK-068…072 + Pass 9 SK-073…077 + Pass 10 SK-078…080 + Pass 11 SK-081…083 + Pass 12 SK-084…090). Pass 11–12 remediations in tree. Continue appending findings as `SK-2026-0xx`; update §8 scores when major streams land.*
+*End of AMD document (includes §8 optimization evaluation + Pass 7–12 + Pass 13 summary). Pass 11–12 remediations in tree. Pass 13 detail: `docs/SECURITY-AUDIT-PASS13.md` (SK-091…096, PERF-01…08). Continue appending findings as `SK-2026-0xx`; update §8 scores when major streams land.*

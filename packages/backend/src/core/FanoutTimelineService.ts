@@ -40,6 +40,12 @@ export type FanoutTimelineName = (
 	| `roleTimeline:${string}` // any notes are included
 );
 
+/**
+ * Never pull unbounded fanout lists (PERF-01 / SK Pass 13).
+ * Lists are newest-first (LPUSH); window covers normal pagination + filter churn.
+ */
+const FANOUT_READ_MAX = 1000;
+
 @Injectable()
 export class FanoutTimelineService {
 	constructor(
@@ -59,17 +65,15 @@ export class FanoutTimelineService {
 		// 3分以内に投稿されたものでない場合、Redisにある最古のIDより新しい場合のみ追加する
 		if (createdAt > this.timeService.now - 1000 * 60 * 3) {
 			pipeline.lpush('list:' + tl, id);
-
-			// TODO this needs a platform service for mocking
-			if (Math.random() < 0.1) { // 10%の確率でトリム
-				pipeline.ltrim('list:' + tl, 0, maxlen - 1);
-			}
+			// Always trim (was ~10% random) so lists cannot grow past maxlen
+			pipeline.ltrim('list:' + tl, 0, maxlen - 1);
 		} else {
 			// 末尾のIDを取得
 			const lastId = await this.redisForTimelines.lindex('list:' + tl, -1);
 			{
 				if (lastId == null || (createdAt > this.idService.parse(lastId).date.getTime())) {
 					pipeline.lpush('list:' + tl, id);
+					pipeline.ltrim('list:' + tl, 0, maxlen - 1);
 				}
 			}
 		}
@@ -77,17 +81,19 @@ export class FanoutTimelineService {
 
 	@bindThis
 	public get(name: FanoutTimelineName, untilId?: string | null, sinceId?: string | null) {
+		// Bound LRANGE — full 0..-1 was PERF-01 hotspot
+		const rangeEnd = FANOUT_READ_MAX - 1;
 		if (untilId && sinceId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, -1)
+			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
 				.then(ids => ids.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1));
 		} else if (untilId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, -1)
+			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
 				.then(ids => ids.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1));
 		} else if (sinceId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, -1)
+			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
 				.then(ids => ids.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1));
 		} else {
-			return this.redisForTimelines.lrange('list:' + name, 0, -1)
+			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
 				.then(ids => ids.sort((a, b) => a > b ? -1 : 1));
 		}
 	}
@@ -95,8 +101,9 @@ export class FanoutTimelineService {
 	@bindThis
 	public getMulti(name: FanoutTimelineName[], untilId?: string | null, sinceId?: string | null): Promise<string[][]> {
 		const pipeline = this.redisForTimelines.pipeline();
+		const rangeEnd = FANOUT_READ_MAX - 1;
 		for (const n of name) {
-			pipeline.lrange('list:' + n, 0, -1);
+			pipeline.lrange('list:' + n, 0, rangeEnd);
 		}
 		return pipeline.exec().then(res => {
 			if (res == null) return [];

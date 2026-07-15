@@ -3,13 +3,18 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { DI } from '@/di-symbols.js';
+import type { NotesRepository, UsersRepository } from '@/models/_.js';
+import { FeaturedService } from '@/core/FeaturedService.js';
+import { QueryService } from '@/core/QueryService.js';
+import { RoleService } from '@/core/RoleService.js';
+import { TimeService } from '@/global/TimeService.js';
 import { MastodonClientService } from '@/server/api/mastodon/MastodonClientService.js';
 import { attachMinMaxPagination, attachOffsetPagination } from '@/server/api/mastodon/pagination.js';
 import { promiseMap } from '@/misc/promise-map.js';
 import { MastodonConverters } from '../MastodonConverters.js';
 import { parseTimelineArgs, TimelineArgs, toBoolean, toInt } from '../argsUtils.js';
-import { ApiError } from '../../error.js';
 import type { FastifyInstance } from 'fastify';
 import type { Entity } from 'megalodon';
 
@@ -23,9 +28,22 @@ interface ApiSearchMastodonRoute {
 
 @Injectable()
 export class ApiSearchMastodon {
+	private globalNotesRankingCache: string[] = [];
+	private globalNotesRankingCacheLastFetchedAt = 0;
+
 	constructor(
+		@Inject(DI.notesRepository)
+		private readonly notesRepository: NotesRepository,
+
+		@Inject(DI.usersRepository)
+		private readonly usersRepository: UsersRepository,
+
 		private readonly mastoConverters: MastodonConverters,
 		private readonly clientService: MastodonClientService,
+		private readonly featuredService: FeaturedService,
+		private readonly queryService: QueryService,
+		private readonly roleService: RoleService,
+		private readonly timeService: TimeService,
 	) {}
 
 	public register(fastify: FastifyInstance): void {
@@ -107,52 +125,92 @@ export class ApiSearchMastodon {
 			return reply.send(response);
 		});
 
+		// SK-2026-092: in-process FeaturedService (no self-HTTP loopback)
 		fastify.get<ApiSearchMastodonRoute>('/v1/trends/statuses', async (request, reply) => {
-			const baseUrl = this.clientService.getBaseUrl(request);
-			// SK-2026-064: fixed origin + minimal headers (no client header smuggling)
-			const res = await fetch(`${baseUrl}/api/notes/featured`,
-				{
-					method: 'POST',
-					headers: {
-						'Accept': 'application/json',
-						'Content-Type': 'application/json',
-					},
-					body: '{}',
-					redirect: 'error',
-				});
-
-			await verifyResponse(res);
-
-			const data = await res.json() as Entity.Status[];
 			const me = await this.clientService.getAuth(request);
-			const response = await promiseMap(data, async status => await this.mastoConverters.convertStatus(status, me), { limiter: 4 });
+			const policies = await this.roleService.getUserPolicies(me ? me.id : null);
+			if (!policies.ltlAvailable) {
+				return reply.code(403).send({ error: 'LTL_DISABLED', error_description: 'Local timeline has been disabled.' });
+			}
+
+			let noteIds: string[];
+			if (this.globalNotesRankingCacheLastFetchedAt !== 0 && (this.timeService.now - this.globalNotesRankingCacheLastFetchedAt < 1000 * 60 * 30)) {
+				noteIds = this.globalNotesRankingCache;
+			} else {
+				noteIds = await this.featuredService.getGlobalNotesRanking(100);
+				this.globalNotesRankingCache = noteIds;
+				this.globalNotesRankingCacheLastFetchedAt = this.timeService.now;
+			}
+
+			noteIds = [...noteIds].sort((a, b) => a > b ? -1 : 1).slice(0, 10);
+			if (noteIds.length === 0) {
+				attachMinMaxPagination(request, reply, []);
+				return reply.send([]);
+			}
+
+			const query = this.notesRepository.createQueryBuilder('note')
+				.where('note.id IN (:...noteIds)', { noteIds })
+				.innerJoinAndSelect('note.user', 'user')
+				.leftJoinAndSelect('note.reply', 'reply')
+				.leftJoinAndSelect('note.renote', 'renote')
+				.leftJoinAndSelect('reply.user', 'replyUser')
+				.leftJoinAndSelect('renote.user', 'renoteUser')
+				.leftJoinAndSelect('note.channel', 'channel')
+				.andWhere('user.isExplorable = TRUE');
+
+			await this.queryService.generateVisibilityQueryFor(query, me);
+			this.queryService.generateBlockedHostQueryForNote(query);
+			this.queryService.generateSuspendedUserQueryForNote(query);
+			this.queryService.generateSilencedUserQueryForNotes(query, me);
+			if (me) {
+				this.queryService.generateMutedUserQueryForNotes(query, me);
+				this.queryService.generateBlockedUserQueryForNotes(query, me);
+				this.queryService.generateMutedNoteThreadQuery(query, me);
+			}
+
+			const notes = await query.getMany();
+			notes.sort((a, b) => a.id > b.id ? -1 : 1);
+			// Build minimal Status stubs + note hints (avoid self-HTTP pack round-trip)
+			const response = await promiseMap(notes, async (note) => {
+				const stub = {
+					id: note.id,
+					account: note.user as any,
+					created_at: note.createdAt instanceof Date
+						? note.createdAt.toISOString()
+						: String((note as any).createdAt ?? new Date().toISOString()),
+					favourites_count: 0,
+					favourited: false,
+					muted: false,
+					sensitive: false,
+					visibility: 'public',
+					media_attachments: [],
+					reblog: null,
+					poll: null,
+					emoji_reactions: [],
+				} as unknown as Entity.Status;
+				return await this.mastoConverters.convertStatus(stub, me, {
+					note,
+					user: note.user as any,
+				});
+			}, { limiter: 4 });
 
 			attachMinMaxPagination(request, reply, response);
 			return reply.send(response);
 		});
 
+		// SK-2026-092: in-process user listing (no self-HTTP loopback)
 		fastify.get<ApiSearchMastodonRoute>('/v2/suggestions', async (request, reply) => {
-			const baseUrl = this.clientService.getBaseUrl(request);
-			const res = await fetch(`${baseUrl}/api/users`,
-				{
-					method: 'POST',
-					headers: {
-						'Accept': 'application/json',
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						limit: parseTimelineArgs(request.query).limit ?? 20,
-						origin: 'local',
-						sort: '+follower',
-						state: 'alive',
-					}),
-					redirect: 'error',
-				});
+			const limit = Math.min(Math.max(1, parseTimelineArgs(request.query).limit ?? 20), 100);
+			const users = await this.usersRepository.createQueryBuilder('user')
+				.where('user.isExplorable = TRUE')
+				.andWhere('user.isSuspended = FALSE')
+				.andWhere('user.host IS NULL')
+				.andWhere('user.updatedAt > :date', { date: new Date(this.timeService.now - 1000 * 60 * 60 * 24 * 5) })
+				.orderBy('user.followersCount', 'DESC')
+				.take(limit)
+				.getMany();
 
-			await verifyResponse(res);
-
-			const data = await res.json() as Entity.Account[];
-			const response = await promiseMap(data, async entry => ({
+			const response = await promiseMap(users, async entry => ({
 				source: 'global',
 				account: await this.mastoConverters.convertAccount(entry),
 			}), {
@@ -163,30 +221,4 @@ export class ApiSearchMastodon {
 			return reply.send(response);
 		});
 	}
-}
-
-async function verifyResponse(res: Response): Promise<void> {
-	if (res.ok) return;
-
-	const text = await res.text();
-
-	if (res.headers.get('content-type') === 'application/json') {
-		try {
-			const json = JSON.parse(text);
-
-			if (json && typeof(json) === 'object') {
-				json.httpStatusCode = res.status;
-				return json;
-			}
-		} catch { /* ignore */ }
-	}
-
-	// Response is not a JSON object; treat as string
-	throw new ApiError({
-		code: 'INTERNAL_ERROR',
-		message: text || 'Internal error occurred. Please contact us if the error persists.',
-		id: '5d37dbcb-891e-41ca-a3d6-e690c97775ac',
-		kind: 'server',
-		httpStatusCode: res.status,
-	});
 }

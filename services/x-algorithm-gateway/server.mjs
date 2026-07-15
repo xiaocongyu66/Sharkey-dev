@@ -38,10 +38,27 @@ const pool = new pg.Pool({
 	max: 6,
 });
 
+/** SK-2026-095: cap body size (default bind is 127.0.0.1; still defend mis-bind) */
+const MAX_BODY_BYTES = 64 * 1024;
+
 function parseBody(req) {
 	return new Promise((resolve, reject) => {
 		const chunks = [];
-		req.on('data', (c) => chunks.push(c));
+		let total = 0;
+		const cl = req.headers['content-length'];
+		if (cl != null && Number(cl) > MAX_BODY_BYTES) {
+			reject(Object.assign(new Error('payload too large'), { statusCode: 413 }));
+			return;
+		}
+		req.on('data', (c) => {
+			total += c.length;
+			if (total > MAX_BODY_BYTES) {
+				reject(Object.assign(new Error('payload too large'), { statusCode: 413 }));
+				req.destroy();
+				return;
+			}
+			chunks.push(c);
+		});
 		req.on('end', () => {
 			try {
 				const raw = Buffer.concat(chunks).toString('utf8') || '{}';
@@ -277,8 +294,9 @@ const server = http.createServer(async (req, res) => {
 			debug: ranked.meta,
 		});
 	} catch (e) {
-		console.error(e);
-		return send(500, { error: String(e?.message || e) });
+		const code = e?.statusCode === 413 ? 413 : 500;
+		if (code !== 413) console.error(e);
+		return send(code, { error: String(e?.message || e) });
 	}
 });
 

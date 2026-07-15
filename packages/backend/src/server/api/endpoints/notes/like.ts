@@ -67,6 +67,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw err;
 			});
 			await this.reactionService.create(me, note, like).catch(async err => {
+				// SK-2026-091: inaccessible note must look like missing (no existence oracle)
+				if (err.id === '68e9d2d1-48bf-42c2-b90a-b20e09fd3d48') throw new ApiError(meta.errors.noSuchNote);
 				if (err.id === '51c42bb4-931a-456b-bff7-e5a8a70dd298') {
 					await this.reactionService.delete(me, note);
 					return;

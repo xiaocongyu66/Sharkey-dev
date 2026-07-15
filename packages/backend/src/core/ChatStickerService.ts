@@ -10,6 +10,7 @@ import { bindThis } from '@/decorators.js';
 import { IdService } from '@/core/IdService.js';
 import { DriveService } from '@/core/DriveService.js';
 import { DriveFileEntityService } from '@/core/entities/DriveFileEntityService.js';
+import { HttpRequestService } from '@/core/HttpRequestService.js';
 import type {
 	ChatStickerPacksRepository,
 	ChatStickersRepository,
@@ -46,7 +47,31 @@ export class ChatStickerService {
 		private idService: IdService,
 		private driveService: DriveService,
 		private driveFileEntityService: DriveFileEntityService,
+		private readonly httpRequestService: HttpRequestService,
 	) {
+	}
+
+	/** Telegram Bot API JSON call without putting the bot token in the URL (SK-2026-093). */
+	@bindThis
+	private async telegramApiJson(method: string, params: Record<string, string>): Promise<any> {
+		const token = this.getTelegramBotToken();
+		if (!token) throw new Error('telegram bot token not configured');
+		// Official Bot API still requires /bot{token}/ in path; keep token out of query string.
+		// Scrub token from any error message we rethrow.
+		const url = `https://api.telegram.org/bot${token}/${method}`;
+		try {
+			const res = await this.httpRequestService.send(url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: new URLSearchParams(params).toString(),
+				timeout: 15000,
+				size: 2 * 1024 * 1024,
+			});
+			return await res.json();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			throw new Error(msg.split(token).join('[redacted]'));
+		}
 	}
 
 	private getTelegramBotToken(): string | null {
@@ -149,11 +174,12 @@ export class ChatStickerService {
 			return existing;
 		}
 
-		const setRes = await fetch(`https://api.telegram.org/bot${token}/getStickerSet?name=${encodeURIComponent(name)}`);
-		if (!setRes.ok) {
-			throw new Error(`telegram http ${setRes.status}`);
-		}
-		const setJson = await setRes.json() as { ok: boolean; result?: TelegramStickerSet; description?: string };
+		// SK-2026-093: HttpRequestService + scrub token from errors; POST body params (token only in path)
+		const setJson = await this.telegramApiJson('getStickerSet', { name }) as {
+			ok: boolean;
+			result?: TelegramStickerSet;
+			description?: string;
+		};
 		if (!setJson.ok || !setJson.result) {
 			throw new Error(setJson.description || 'telegram getStickerSet failed');
 		}
@@ -173,16 +199,27 @@ export class ChatStickerService {
 		let order = 0;
 		for (const tg of candidates) {
 			try {
-				const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(tg.file_id)}`);
-				const fileJson = await fileRes.json() as { ok: boolean; result?: { file_path: string } };
+				const fileJson = await this.telegramApiJson('getFile', { file_id: tg.file_id }) as {
+					ok: boolean;
+					result?: { file_path: string };
+				};
 				if (!fileJson.ok || !fileJson.result?.file_path) continue;
-				const url = `https://api.telegram.org/file/bot${token}/${fileJson.result.file_path}`;
-				const driveFile = await this.driveService.uploadFromUrl({
-					url,
-					user: owner,
-					comment: `sticker:${name}`,
-					force: true,
-				});
+				// File download URL still requires token in path (Telegram API); uploadFromUrl uses HttpRequestService path.
+				// Avoid logging this URL; scrub token if upload throws.
+				const filePath = fileJson.result.file_path;
+				const url = `https://api.telegram.org/file/bot${token}/${filePath}`;
+				let driveFile;
+				try {
+					driveFile = await this.driveService.uploadFromUrl({
+						url,
+						user: owner,
+						comment: `sticker:${name}`,
+						force: true,
+					});
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : String(e);
+					throw new Error(msg.split(token).join('[redacted]'));
+				}
 				await this.chatStickersRepository.insertOne({
 					id: this.idService.gen(),
 					packId: pack.id,

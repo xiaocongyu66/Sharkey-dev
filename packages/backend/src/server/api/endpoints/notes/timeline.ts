@@ -19,6 +19,7 @@ import { UserService } from '@/core/UserService.js';
 import { CacheService } from '@/core/CacheService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import type { Logger } from '@/logger.js';
+import { ApiError } from '@/server/api/error.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -33,6 +34,17 @@ export const meta = {
 			type: 'object',
 			optional: false, nullable: false,
 			ref: 'Note',
+		},
+	},
+
+	errors: {
+		// SK-2026-096: do not pretend timeout is an empty feed
+		temporarilyUnavailable: {
+			message: 'Home timeline is temporarily unavailable. Please try again.',
+			code: 'TEMPORARILY_UNAVAILABLE',
+			id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+			kind: 'server' as const,
+			httpStatusCode: 503,
 		},
 	},
 
@@ -128,7 +140,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		this.logger = loggerService.getLogger('notes/timeline');
 	}
 
-	/** DB path with statement_timeout guard — empty list instead of API 500. */
+	/**
+	 * DB path with statement_timeout guard.
+	 * SK-2026-096: throw TEMPORARILY_UNAVAILABLE (not empty []) so clients do not
+	 * treat overload as "no posts".
+	 */
 	private async getFromDbSafe(ps: {
 		untilId: string | null;
 		sinceId: string | null;
@@ -143,7 +159,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			const msg = err instanceof Error ? err.message : String(err);
 			if (/statement timeout|canceling statement/i.test(msg)) {
 				this.logger.warn(`home timeline DB timed out (limit=${ps.limit}): ${msg}`);
-				return [];
+				throw new ApiError(meta.errors.temporarilyUnavailable);
 			}
 			throw err;
 		}

@@ -672,6 +672,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			await this.globalEventService.publishMainStream(user.id, 'meUpdated', iObj);
 
 			// Display-facing fields: push WS so other clients patch avatar/name/signature caches
+			// SK-2026-094: slim payload (no long description), async room fan-out
 			const displayChanged =
 				this.userNeedsPublishing(user, updates)
 				|| this.profileNeedsPublishing(profile, updatedProfile)
@@ -683,13 +684,21 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (displayChanged) {
 				try {
 					const lite = await this.userEntityService.pack(updatedUser, null, { schema: 'UserLite' });
-					const payload = { user: lite, updatedAt: new Date().toISOString() };
-					// Instance-wide: timelines / note headers / avatars on other sessions
+					// Omit long bio from broadcast — clients only need id/name/avatar for cache bust
+					const slim = {
+						...lite,
+						description: lite.description != null
+							? String(lite.description).slice(0, 120)
+							: lite.description,
+					};
+					const payload = { user: slim, updatedAt: new Date().toISOString() };
+					// Instance-wide lite patch (timelines / avatars). Still broadcast for UX;
+					// payload is intentionally small (SK-094).
 					await this.globalEventService.publishBroadcastStream('userUpdated', payload);
 					// Own main (other devices) + legacy avatar listeners
 					await this.globalEventService.publishMainStream(user.id, 'userUpdated', payload);
 					await this.globalEventService.publishMainStream(user.id, 'userAvatarUpdated', payload);
-					// Open chat rooms: patch fromUser without reopening
+					// Room fan-out off the request path (PERF-05 / SK-094)
 					const memberships = await this.chatRoomMembershipsRepository.find({
 						where: { userId: user.id },
 						select: { roomId: true },
@@ -702,8 +711,17 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 						take: 100,
 					});
 					for (const row of owned) roomIds.add(row.id);
-					for (const roomId of roomIds) {
-						await this.globalEventService.publishChatRoomStream(roomId, 'userAvatarUpdated', payload);
+					const rooms = Array.from(roomIds);
+					if (rooms.length > 0) {
+						trackPromise((async () => {
+							for (const roomId of rooms) {
+								try {
+									await this.globalEventService.publishChatRoomStream(roomId, 'userAvatarUpdated', payload);
+								} catch {
+									// non-fatal per room
+								}
+							}
+						})());
 					}
 				} catch {
 					// non-fatal
