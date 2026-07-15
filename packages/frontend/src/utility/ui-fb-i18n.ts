@@ -47,7 +47,11 @@ export function tI18nOrFb(keyPath: string, fb: UiFb): string {
 	return tFb(fb);
 }
 
-/** Shared labels used across admin / about / API pages */
+/**
+ * Shared labels used across admin / about / API pages.
+ * Canonical strings live in locales under `_uiCommon` (all major languages).
+ * This map is only a last-resort fallback when the locale pack is stale.
+ */
 export const commonFb = {
 	enabled: { en: 'Enabled', zh: '已启用', 'zh-TW': '已啟用', ja: '有効' },
 	disabled: { en: 'Disabled', zh: '已禁用', 'zh-TW': '已停用', ja: '無効' },
@@ -203,6 +207,13 @@ export const commonFb = {
 
 export type CommonFbKey = keyof typeof commonFb;
 
+/**
+ * Prefer locales `_uiCommon[key]`; fall back to commonFb for stale packs.
+ */
 export function tCommon(key: CommonFbKey): string {
+	const fromI18n = (i18n.ts as any)?._uiCommon?.[key];
+	if (typeof fromI18n === 'string' && fromI18n.length > 0) {
+		return fromI18n;
+	}
 	return tFb(commonFb[key]);
 }

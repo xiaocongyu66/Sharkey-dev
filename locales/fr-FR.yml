@@ -1279,67 +1279,133 @@ availableRoles: "Rôles disponibles"
 postForm: "Formulaire de publication"
 information: "Informations"
 _chat:
-  invitations: "Inviter"
-  noHistory: "Pas d'historique"
-  members: "Membres"
-  home: "Principal"
-  send: "Envoyer"
-  mutedAll: "Tous les membres sont en sourdine"
-  mutedAllHint: "Seuls le propriétaire, les admins et les modérateurs peuvent envoyer des messages."
-  mutedAllComposerDisabled: "Envoi de messages impossible pendant le mute général."
-  stickers: "Stickers"
-  joinPolicy: "Join policy"
-  joinPolicyPublic: "Public (anyone with the room link can join)"
-  joinPolicyLink: "Invite link / code"
-  joinPolicyInvite: "Invite only"
-  joinPolicyClosed: "Closed (no new joins)"
-  joinByInviteCode: "Join with invite code"
-  enterInviteCode: "Enter invite code"
-  inviteCode: "Invite code"
-  copyInviteCode: "Copy invite code"
-  regenerateInviteCode: "Regenerate invite code"
-  notAMember: "You are not a member of this room."
-  canJoinDirectly: "You can join directly."
-  needInviteCodeToJoin: "Enter an invite code to join."
-  needInvitationToJoin: "You need an invitation from the owner or an admin."
-  joiningClosed: "This room is not accepting new members."
-  joining: "Joining…"
-  joinRoom: "Join room"
-  joinFailed: "Failed to join"
-  signinToJoinRoom: "Sign in to join this room"
-  signinToJoinRoomHint: "You need an account to join and view messages."
-  noStickersYet: "No sticker packs yet. Import a Telegram pack (requires TELEGRAM_BOT_TOKEN) or create a pack and add images."
-  importTelegram: "Import"
-  roleOwner: "Owner"
-  roleAdmin: "Admin"
-  roleMember: "Member"
-  promoteToAdmin: "Make admin"
-  demoteToMember: "Remove admin"
-  mentionsOfYou: "Mentions de vous"
-  prevMention: "Previous mention"
-  nextMention: "Next mention"
-  manage: "Manage"
-  manageHint: "Room owner, room admins, and instance moderators can change these settings."
-  manageInManageTab: "Use the Manage tab for mute-all, announcement, clear messages, and delete room."
-  roomSettings: "Room settings"
-  dangerZone: "Danger zone"
-  clearMessages: "Clear all messages"
-  clearMessagesHint: "Permanently delete every message in this room for all members."
-  clearMessagesConfirm: "Clear all messages in this room? This cannot be undone."
-  about: "About"
-  e2eeOn: "Encrypted"
-  e2eeOff: "Not encrypted"
-  e2eePeerNoKey: "The other user has not enabled E2EE yet. Ask them to open this chat once."
-  e2eePlaceholder: "Encrypted message…"
-  e2eeEncryptFailed: "Failed to encrypt message."
-  e2eeDecryptFailed: "Unable to decrypt (missing keys)."
-  encryptedMessage: "🔒 Encrypted message"
-  recentStickers: "Récents"
-  wsSendFailed: "Échec de l’envoi. Vérifiez la connexion et réessayez."
-  loadFailed: "Échec du chargement"
-  roomOpenFailed: "Impossible d’ouvrir ce salon (introuvable ou accès refusé)."
-  wsConnected: "Realtime connected"
-  wsReconnecting: "Reconnecting…"
+  invitations: Inviter
+  noHistory: Pas d'historique
+  members: Membres
+  home: Principal
+  send: Envoyer
+  mutedAll: All members are muted
+  mutedAllHint: Only the owner, room admins, and instance moderators can send messages.
+  mutedAllComposerDisabled: You cannot send messages while this room is muted for all members.
+  stickers: Stickers
+  joinPolicy: Join policy
+  joinPolicyPublic: Public (anyone with the room link can join)
+  joinPolicyLink: Invite link / code
+  joinPolicyInvite: Invite only
+  joinPolicyClosed: Closed (no new joins)
+  joinByInviteCode: Join with invite code
+  enterInviteCode: Enter invite code
+  inviteCode: Invite code
+  copyInviteCode: Copy invite code
+  regenerateInviteCode: Regenerate invite code
+  notAMember: You are not a member of this room.
+  canJoinDirectly: You can join directly.
+  needInviteCodeToJoin: Enter an invite code to join.
+  needInvitationToJoin: You need an invitation from the owner or an admin.
+  joiningClosed: This room is not accepting new members.
+  joining: Joining…
+  joinRoom: Join room
+  joinFailed: Failed to join
+  signinToJoinRoom: Sign in to join this room
+  signinToJoinRoomHint: You need an account to join and view messages.
+  noStickersYet: No sticker packs yet. Import a Telegram pack (requires TELEGRAM_BOT_TOKEN) or create a pack and add images.
+  importTelegram: Import
+  roleOwner: Owner
+  roleAdmin: Admin
+  roleMember: Member
+  promoteToAdmin: Make admin
+  demoteToMember: Remove admin
+  mentionsOfYou: Mentions of you
+  prevMention: Previous mention
+  nextMention: Next mention
+  manage: Manage
+  manageHint: Room owner, room admins, and instance moderators can change these settings.
+  manageInManageTab: Use the Manage tab for mute-all, announcement, clear messages, and delete room.
+  roomSettings: Room settings
+  dangerZone: Danger zone
+  clearMessages: Clear all messages
+  clearMessagesHint: Permanently delete every message in this room for all members.
+  clearMessagesConfirm: Clear all messages in this room? This cannot be undone.
+  about: About
+  e2eeOn: Encrypted
+  e2eeOff: Not encrypted
+  e2eePeerNoKey: Encryption is always on. Ask the other person to open this chat once so keys can be exchanged. Text cannot be sent until then.
+  e2eePlaceholder: Encrypted message…
+  e2eeEncryptFailed: Failed to encrypt message.
+  e2eeDecryptFailed: Unable to decrypt (missing keys).
+  encryptedMessage: 🔒 Encrypted message
+  recentStickers: Recent
+  wsSendFailed: Failed to send. Check your connection and try again.
+  loadFailed: Failed to load
+  roomOpenFailed: Cannot open this room (missing or no access).
+  wsConnected: Realtime connected
+  wsReconnecting: Reconnecting…
+  roomAnnouncement: Announcement
+  e2eeAlwaysOn: End-to-end encryption
+  e2eeAlwaysOnHint: Chat messages are encrypted at rest (AES-GCM). Participants and the server operator can read them; others cannot. Public notes are never encrypted this way.
+  chatEscrowHint: "Encrypted chat (escrow): you, the peer/room members, and the server operator."
+  e2eeWaitingPeer: Waiting for peer key…
+  e2eeFingerprint: Key fingerprint
+  e2eeKeyRotated: Peer encryption key was updated. Messages re-sync with the new key.
+  e2eePlaintextRejected: Direct messages must be end-to-end encrypted.
+  wsCatchingUp: Refreshing messages…
+  searchPlaceholder: Search messages…
+  globalSearchHint: Search only in chats you already have (1:1 and rooms). Results open the conversation at that message.
+  filterBySpeaker: Speaker
+  replyVideo: "[Video]"
+  replyImage: "[Image]"
+  replyAudio: "[Audio]"
+  replyFile: "[File]"
+  replyE2ee: "[Encrypted]"
+  messageRateLimit: Message rate limit (seconds)
+  messageRateLimitHint: "0 = unlimited. Example: 5 means one message every 5 seconds. Owner, room admins, and instance moderators are exempt."
+  roomRateLimited: Sending too fast. Please wait a few seconds.
+  selectSpeaker: Choose speaker
+  clearSpeaker: Clear
+  jumpToMessage: Jump to message
+  recentFromSpeaker: Recent messages from this speaker
+  searchOrSpeakerHint: Enter keywords, and/or pick a speaker. With only a speaker selected, recent messages from them are listed. Tap a result to jump in the chat.
+  jumpingToMessage: Jumping to message…
+  staffReadonlyView: Staff view (not a member)
+  staffReadonlyViewHint: You can read this room for moderation. Sending requires membership.
+  sending: Sending…
+  sendingHint: Message is being sent. Please wait…
+  kickMember: Kick
+  kickMemberConfirm: Kick this member from the room? They can rejoin if the join policy allows.
+  banMember: Blacklist
+  banMemberConfirm: Add this user to the room blacklist and remove them? They cannot rejoin until unbanned.
+  unbanMember: Remove from blacklist
+  muteMember: Mute
+  unmuteMember: Unmute
+  muteDuration: Mute duration
+  mute10m: 10 minutes
+  mute30m: 30 minutes
+  mute1h: 1 hour
+  mute2h: 2 hours
+  mute1d: 1 day
+  mute1mo: 1 month
+  muteCustom: Custom…
+  muteCustomTitle: Custom mute duration
+  muteUnit: Unit
+  muteUnitSeconds: Seconds
+  muteUnitMinutes: Minutes
+  muteUnitHours: Hours
+  muteUnitDays: Days
+  muteUnitMonths: Months
+  muteAmount: Amount
+  mutedUntil: Muted until
+  blacklist: Blacklist
+  blacklistEmpty: No banned users.
+  blacklistHint: Banned users cannot rejoin until removed from the blacklist.
+  modDeleteMessage: Delete message
+  modDeleteMessageConfirm: Delete this message for everyone?
+  memberActions: Member actions
+  youAreMuted: You are muted in this room and cannot send messages.
+  bannedFromRoom: You are banned from this room.
+  banReason: Reason (optional)
+  hideTranslation: Hide translation
+  translateFailed: Translation failed
+  translated: Translation
 _abuseUserReport:
   forward: "Transférer"
   forwardDescription: "Transférer le signalement vers une instance distante en tant qu'anonyme."
@@ -2669,3 +2735,104 @@ _performanceAdmin:
   perUserHomeTimelineCacheMax: "Home timeline cache size"
   perUserListTimelineCacheMax: "List timeline cache size"
   cacheMaxCaption: "Maximum number of notes kept in Redis per timeline. Higher values use more memory."
+
+_uiCommon:
+  enabled: Enabled
+  disabled: Disabled
+  enable: Enable
+  stats: Stats
+  activeUsers: Active users
+  heatmap: Heatmap
+  retentionRate: Retention rate
+  moderators: Moderators
+  federation: Federation
+  instances: Instances
+  apRequests: ActivityPub requests
+  newUsers: New users
+  deliverQueue: Deliver queue
+  inboxQueue: Inbox queue
+  users: Users
+  notes: Notes
+  customEmojis: Custom emojis
+  online: Online
+  read: Read
+  write: Write
+  process: Process
+  active: Active
+  waiting: Waiting
+  delayed: Delayed
+  top10: Top 10
+  overview: Overview
+  jobs: Jobs
+  latest: Latest
+  completed: Completed
+  failed: Failed
+  paused: Paused
+  deliver: Deliver
+  inbox: Inbox
+  info: Info
+  timeline: Timeline
+  data: Data
+  result: Result
+  error: Error
+  logs: Logs
+  options: Options
+  createdAt: Created at
+  processedAt: Processed at
+  finishedAt: Finished at
+  spent: Spent
+  failedReason: Failed reason
+  attempts: Attempts
+  progress: Progress
+  finished: Finished
+  processed: Processed
+  created: Created
+  clientsConnected: "Clients: Connected"
+  clientsBlocked: "Clients: Blocked"
+  memoryPeak: "Memory: Peak"
+  memoryTotal: "Memory: Total"
+  memoryUsed: "Memory: Used"
+  uptime: Uptime
+  apiConsole: API console
+  endpoint: Endpoint
+  paramsJson: Params (JSON or JSON5)
+  withCredential: With credential
+  send: Send
+  response: Response
+  sponsors: Our lovely Sponsors
+  wellKnown: Well-known resources
+  suspended: Suspended
+  blocked: Blocked
+  silenced: Silenced
+  alive: Alive
+  bubble: Bubble
+  activeEmailValidation: Active Email Validation
+  useVerifymail: Use Verifymail.io API
+  verifymailKey: Verifymail.io API Auth Key
+  useTruemail: Use TrueMail API
+  truemailInstance: TrueMail API Instance
+  truemailKey: TrueMail API Auth Key
+  bannedEmailDomains: Banned Email Domains
+  bannedEmailDomainsList: Banned Email Domains List
+  logIpAddress: Log IP address
+  apiDocs: API documentation
+  promoteAllJobs: Promote all jobs
+  emptyQueue: Empty queue
+  refreshView: Refresh view
+  removeJobs: Remove jobs
+  all: All
+  copyRaw: Copy raw
+  promote: Promote
+  moveTo: Move to
+  remove: Remove
+  update: Update
+  dataEdit: Data (edit)
+  attemptsOf: of
+  attemptN: Attempt
+  at: at
+  erroredInstances: Errored instances
+  overviewOf: Overview
+  jobsOf: Jobs
+  sub: Sub
+  pub: Pub
+  jobsCount: jobs

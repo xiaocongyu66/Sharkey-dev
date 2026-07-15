@@ -6007,7 +6007,7 @@ export interface Locale extends ILocale {
          */
         "e2eeOff": string;
         /**
-         * 相手が E2EE をまだ有効にしていません。相手にこのチャットを一度開いてもらってください。
+         * 暗号化は常時オンです。相手がこのチャットを一度開いて鍵交換するまで、テキストは送信できません。
          */
         "e2eePeerNoKey": string;
         /**
@@ -6082,6 +6082,22 @@ export interface Locale extends ILocale {
          * メッセージへ移動中…
          */
         "jumpingToMessage": string;
+        /**
+         * すでに参加している1:1・ルーム内のみ検索します。結果をタップすると該当メッセージへジャンプします。
+         */
+        "globalSearchHint": string;
+        /**
+         * 翻訳を隠す
+         */
+        "hideTranslation": string;
+        /**
+         * 翻訳に失敗しました
+         */
+        "translateFailed": string;
+        /**
+         * 翻訳
+         */
+        "translated": string;
     };
     "_emojiPalette": {
         /**
@@ -13581,6 +13597,404 @@ export interface Locale extends ILocale {
          * タイムラインごとに Redis に保持するノート数の上限。大きいほどメモリを使います。
          */
         "cacheMaxCaption": string;
+    };
+    "_uiCommon": {
+        /**
+         * 有効
+         */
+        "enabled": string;
+        /**
+         * 無効
+         */
+        "disabled": string;
+        /**
+         * 有効化
+         */
+        "enable": string;
+        /**
+         * 統計
+         */
+        "stats": string;
+        /**
+         * アクティブユーザー
+         */
+        "activeUsers": string;
+        /**
+         * ヒートマップ
+         */
+        "heatmap": string;
+        /**
+         * 定着率
+         */
+        "retentionRate": string;
+        /**
+         * モデレーター
+         */
+        "moderators": string;
+        /**
+         * 連合
+         */
+        "federation": string;
+        /**
+         * インスタンス
+         */
+        "instances": string;
+        /**
+         * ActivityPubリクエスト
+         */
+        "apRequests": string;
+        /**
+         * 新規ユーザー
+         */
+        "newUsers": string;
+        /**
+         * 配信キュー
+         */
+        "deliverQueue": string;
+        /**
+         * 受信キュー
+         */
+        "inboxQueue": string;
+        /**
+         * ユーザー
+         */
+        "users": string;
+        /**
+         * ノート
+         */
+        "notes": string;
+        /**
+         * カスタム絵文字
+         */
+        "customEmojis": string;
+        /**
+         * オンライン
+         */
+        "online": string;
+        /**
+         * 読み取り
+         */
+        "read": string;
+        /**
+         * 書き込み
+         */
+        "write": string;
+        /**
+         * 処理
+         */
+        "process": string;
+        /**
+         * 実行中
+         */
+        "active": string;
+        /**
+         * 待機
+         */
+        "waiting": string;
+        /**
+         * 遅延
+         */
+        "delayed": string;
+        /**
+         * トップ10
+         */
+        "top10": string;
+        /**
+         * 概要
+         */
+        "overview": string;
+        /**
+         * ジョブ
+         */
+        "jobs": string;
+        /**
+         * 最新
+         */
+        "latest": string;
+        /**
+         * 完了
+         */
+        "completed": string;
+        /**
+         * 失敗
+         */
+        "failed": string;
+        /**
+         * 一時停止
+         */
+        "paused": string;
+        /**
+         * 配信
+         */
+        "deliver": string;
+        /**
+         * 受信
+         */
+        "inbox": string;
+        /**
+         * 情報
+         */
+        "info": string;
+        /**
+         * タイムライン
+         */
+        "timeline": string;
+        /**
+         * データ
+         */
+        "data": string;
+        /**
+         * 結果
+         */
+        "result": string;
+        /**
+         * エラー
+         */
+        "error": string;
+        /**
+         * ログ
+         */
+        "logs": string;
+        /**
+         * オプション
+         */
+        "options": string;
+        /**
+         * 作成日時
+         */
+        "createdAt": string;
+        /**
+         * 処理日時
+         */
+        "processedAt": string;
+        /**
+         * 完了日時
+         */
+        "finishedAt": string;
+        /**
+         * 所要時間
+         */
+        "spent": string;
+        /**
+         * 失敗理由
+         */
+        "failedReason": string;
+        /**
+         * 試行回数
+         */
+        "attempts": string;
+        /**
+         * 進捗
+         */
+        "progress": string;
+        /**
+         * 終了
+         */
+        "finished": string;
+        /**
+         * 処理済み
+         */
+        "processed": string;
+        /**
+         * 作成
+         */
+        "created": string;
+        /**
+         * クライアント: 接続中
+         */
+        "clientsConnected": string;
+        /**
+         * クライアント: ブロック
+         */
+        "clientsBlocked": string;
+        /**
+         * メモリ: ピーク
+         */
+        "memoryPeak": string;
+        /**
+         * メモリ: 合計
+         */
+        "memoryTotal": string;
+        /**
+         * メモリ: 使用中
+         */
+        "memoryUsed": string;
+        /**
+         * 稼働時間
+         */
+        "uptime": string;
+        /**
+         * APIコンソール
+         */
+        "apiConsole": string;
+        /**
+         * エンドポイント
+         */
+        "endpoint": string;
+        /**
+         * パラメータ (JSON / JSON5)
+         */
+        "paramsJson": string;
+        /**
+         * 認証情報を付ける
+         */
+        "withCredential": string;
+        /**
+         * 送信
+         */
+        "send": string;
+        /**
+         * レスポンス
+         */
+        "response": string;
+        /**
+         * スポンサーの皆さん
+         */
+        "sponsors": string;
+        /**
+         * よく使うリソース
+         */
+        "wellKnown": string;
+        /**
+         * 停止中
+         */
+        "suspended": string;
+        /**
+         * ブロック
+         */
+        "blocked": string;
+        /**
+         * サイレンス
+         */
+        "silenced": string;
+        /**
+         * 正常
+         */
+        "alive": string;
+        /**
+         * バブル
+         */
+        "bubble": string;
+        /**
+         * アクティブメール検証
+         */
+        "activeEmailValidation": string;
+        /**
+         * Verifymail.io API を使用
+         */
+        "useVerifymail": string;
+        /**
+         * Verifymail.io API 認証キー
+         */
+        "verifymailKey": string;
+        /**
+         * TrueMail API を使用
+         */
+        "useTruemail": string;
+        /**
+         * TrueMail API インスタンス
+         */
+        "truemailInstance": string;
+        /**
+         * TrueMail API 認証キー
+         */
+        "truemailKey": string;
+        /**
+         * 禁止メールドメイン
+         */
+        "bannedEmailDomains": string;
+        /**
+         * 禁止メールドメイン一覧
+         */
+        "bannedEmailDomainsList": string;
+        /**
+         * IPアドレスを記録
+         */
+        "logIpAddress": string;
+        /**
+         * APIドキュメント
+         */
+        "apiDocs": string;
+        /**
+         * 全ジョブを優先
+         */
+        "promoteAllJobs": string;
+        /**
+         * キューを空にする
+         */
+        "emptyQueue": string;
+        /**
+         * 表示を更新
+         */
+        "refreshView": string;
+        /**
+         * ジョブを削除
+         */
+        "removeJobs": string;
+        /**
+         * すべて
+         */
+        "all": string;
+        /**
+         * 生データをコピー
+         */
+        "copyRaw": string;
+        /**
+         * 優先
+         */
+        "promote": string;
+        /**
+         * 移動
+         */
+        "moveTo": string;
+        /**
+         * 削除
+         */
+        "remove": string;
+        /**
+         * 更新
+         */
+        "update": string;
+        /**
+         * データ（編集）
+         */
+        "dataEdit": string;
+        /**
+         * /
+         */
+        "attemptsOf": string;
+        /**
+         * 試行
+         */
+        "attemptN": string;
+        /**
+         * at
+         */
+        "at": string;
+        /**
+         * エラーのあるインスタンス
+         */
+        "erroredInstances": string;
+        /**
+         * 概要
+         */
+        "overviewOf": string;
+        /**
+         * ジョブ
+         */
+        "jobsOf": string;
+        /**
+         * 購読
+         */
+        "sub": string;
+        /**
+         * 配信
+         */
+        "pub": string;
+        /**
+         * 件
+         */
+        "jobsCount": string;
     };
     /**
      * Approvals

@@ -6,7 +6,7 @@
 import { i18n } from '@/i18n.js';
 import { miLocalStorage } from '@/local-storage.js';
 
-/** Thin fallbacks when locale pack / cache lacks a _chat key. */
+/** Optional multi-lang fallback when locale pack / cache is stale. */
 export type ChatFallback = {
 	en: string;
 	zh: string;
@@ -14,23 +14,31 @@ export type ChatFallback = {
 	'zh-TW'?: string;
 };
 
+function pickFb(fb: ChatFallback): string {
+	const lang = (
+		miLocalStorage.getItem('lang')
+		|| (typeof navigator !== 'undefined' ? navigator.language : 'en-US')
+		|| 'en-US'
+	).replace('_', '-').toLowerCase();
+	if (lang.startsWith('zh-tw') || lang.startsWith('zh-hk') || lang.startsWith('zh-hant')) {
+		return fb['zh-TW'] || fb.zh;
+	}
+	if (lang.startsWith('zh')) return fb.zh;
+	if (lang.startsWith('ja') && fb.ja) return fb.ja;
+	return fb.en;
+}
+
 /**
- * Prefer i18n.ts._chat[key]; fall back to thin chatFb for stale locale caches.
+ * Resolve chat UI string from locales `_chat` first.
+ * Optional `fb` is only used when the locale pack is missing the key (stale cache).
  */
-export function chatT(key: string, fb: ChatFallback): string {
+export function chatT(key: string, fb?: ChatFallback): string {
 	const fromI18n = (i18n.ts as any)?._chat?.[key];
 	if (typeof fromI18n === 'string' && fromI18n.length > 0 && !fromI18n.includes(key)) {
 		return fromI18n;
 	}
-
-	const lang = (miLocalStorage.getItem('lang') || (typeof navigator !== 'undefined' ? navigator.language : 'en-US') || 'en-US').replace('_', '-');
-	const lower = lang.toLowerCase();
-	if (lower.startsWith('zh-tw') || lower.startsWith('zh-hk') || lower.startsWith('zh-hant')) {
-		return fb['zh-TW'] || fb.zh;
-	}
-	if (lower.startsWith('zh')) return fb.zh;
-	if (lower.startsWith('ja') && fb.ja) return fb.ja;
-	return fb.en;
+	if (fb) return pickFb(fb);
+	return key;
 }
 
 /** Drop cached locale once if core chat keys are missing so next load re-fetches packs. */
@@ -44,6 +52,9 @@ export function ensureChatLocaleFresh(): void {
 		// ignore
 	}
 }
+
+// Re-export key list for TypeScript; values live in locales/_chat.
+// Kept as ChatFallback map only as last-resort offline fallback (not primary source).
 
 export const chatFb = {
 	mutedAll: {

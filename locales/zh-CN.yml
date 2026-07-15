@@ -1352,169 +1352,175 @@ goToDeck: "返回至 Deck"
 federationJobs: "联合作业"
 driveAboutTip: "网盘可以显示以前上传的文件。<br>\n也可以在发布帖子时重复使用文件，或在发布帖子前预先上传文件。<br>\n<b>删除文件时，其将从至今为止所有用到该文件的地方（如帖子、页面、头像、横幅）消失。</b><br>\n也可以新建文件夹来整理文件。"
 _chat:
-  roomAnnouncement: "公告"
-  e2eeAlwaysOn: "端到端加密"
-  e2eeAlwaysOnHint: "聊天消息落库加密（AES-GCM）。会话双方与持有服务端密钥的运营方可读；他人不可。公开帖子不加密，搜索引擎仍可抓取。"
-  chatEscrowHint: "托管加密聊天：你、对方/群成员、以及服务端运营方可读。"
-  e2eeWaitingPeer: "等待对方密钥…"
-  e2eeFingerprint: "密钥指纹"
-  e2eeKeyRotated: "对方加密密钥已更新，将使用新密钥同步。"
-  e2eePlaintextRejected: "私聊文字必须使用端到端加密。"
-  wsCatchingUp: "正在同步消息…"
+  roomAnnouncement: 公告
+  e2eeAlwaysOn: 端到端加密
+  e2eeAlwaysOnHint: 聊天消息落库加密（AES-GCM）。会话双方与持有服务端密钥的运营方可读；他人不可。公开帖子不加密，搜索引擎仍可抓取。
+  chatEscrowHint: 托管加密聊天：你、对方/群成员、以及服务端运营方可读。
+  e2eeWaitingPeer: 等待对方密钥…
+  e2eeFingerprint: 密钥指纹
+  e2eeKeyRotated: 对方加密密钥已更新，将使用新密钥同步。
+  e2eePlaintextRejected: 私聊文字必须使用端到端加密。
+  wsCatchingUp: 正在同步消息…
   replyVideo: "[视频]"
   replyImage: "[图片]"
   replyAudio: "[音频]"
   replyFile: "[文件]"
   replyE2ee: "[加密消息]"
-  messageRateLimit: "聊天限速（秒）"
-  messageRateLimitHint: "设为 0 不限制。例如设为 5 表示每 5 秒只能发 1 条。群主、群管理员、站长与管理员不受限。"
-  roomRateLimited: "发言过快，请稍后再发。"
-  staffReadonlyView: "管理员只读查看（非群成员）"
-  staffReadonlyViewHint: "可查看群聊消息以便处理举报；发送消息仍需加入该群。"
-  sending: "发送中…"
-  sendingHint: "消息发送中，请稍候…"
-  kickMember: "踢出"
-  kickMemberConfirm: "确定将此人踢出群聊？若加入策略允许，对方仍可再次加入。"
-  banMember: "拉黑"
-  banMemberConfirm: "将此人加入群聊黑名单并移出？解除前无法再加入。"
-  unbanMember: "移出黑名单"
-  muteMember: "禁言"
-  unmuteMember: "解除禁言"
-  muteDuration: "禁言时长"
-  mute10m: "10 分钟"
-  mute30m: "30 分钟"
-  mute1h: "1 小时"
-  mute2h: "2 小时"
-  mute1d: "1 天"
-  mute1mo: "1 个月"
-  muteCustom: "自定义…"
-  muteCustomTitle: "自定义禁言时长"
-  muteUnit: "单位"
-  muteUnitSeconds: "秒"
-  muteUnitMinutes: "分钟"
-  muteUnitHours: "小时"
-  muteUnitDays: "天"
-  muteUnitMonths: "月"
-  muteAmount: "数量"
-  mutedUntil: "禁言至"
-  blacklist: "黑名单"
-  blacklistEmpty: "黑名单为空。"
-  blacklistHint: "被拉黑用户在移出黑名单前无法再次加入本群。"
-  modDeleteMessage: "删除消息"
-  modDeleteMessageConfirm: "确定为所有人删除这条消息？"
-  memberActions: "成员操作"
-  youAreMuted: "你已被禁言，暂时无法发言。"
-  bannedFromRoom: "你已被本群拉黑，无法加入。"
-  banReason: "原因（可选）"
-  mentionsOfYou: "有人 @ 了你"
-  prevMention: "上一条 @"
-  nextMention: "下一条 @"
-  noMessagesYet: "还没有消息"
-  newMessage: "新消息"
-  individualChat: "私聊"
-  individualChat_description: "可以与特定用户进行一对一聊天。"
-  roomChat: "群聊"
-  roomChat_description: "可以进行多人聊天。\n就算用户未允许私聊，只要接受了邀请，仍可以聊天。"
-  createRoom: "创建房间"
-  inviteUserToChat: "邀请用户来开始聊天"
-  yourRooms: "已创建的房间"
-  joiningRooms: "已加入的房间"
-  invitations: "邀请"
-  noInvitations: "没有邀请"
-  history: "历史"
-  noHistory: "没有历史记录"
-  noRooms: "没有房间"
-  inviteUser: "邀请用户"
-  sentInvitations: "已发送的邀请"
-  join: "加入"
-  ignore: "忽略"
-  leave: "退出房间"
-  members: "成员"
-  searchMessages: "搜索消息"
-  home: "首页"
-  send: "发送"
-  newline: "换行"
-  muteThisRoom: "静音此房间"
-  deleteRoom: "删除房间"
-  mutedAll: "全体禁言中"
-  mutedAllHint: "仅群主、群管理员和实例管理员可以发言。"
-  mutedAllComposerDisabled: "全体禁言中，无法输入或发送消息。"
-  joinPolicy: "加入策略"
-  joinPolicyPublic: "公开加入（知道房间链接即可）"
-  joinPolicyLink: "链接/邀请码加入"
-  joinPolicyInvite: "邀请加入"
-  joinPolicyClosed: "禁止加入"
-  joinByInviteCode: "通过邀请码加入"
-  enterInviteCode: "输入邀请码"
-  inviteCode: "邀请码"
-  copyInviteCode: "复制邀请码"
-  regenerateInviteCode: "重新生成邀请码"
-  notAMember: "你还不是该群成员。"
-  canJoinDirectly: "可直接加入。"
-  needInviteCodeToJoin: "请输入邀请码后加入。"
-  needInvitationToJoin: "需要群主/管理员邀请。"
-  joiningClosed: "该群当前禁止加入。"
-  joining: "加入中…"
-  joinRoom: "加入群聊"
-  joinFailed: "加入失败"
-  signinToJoinRoom: "需要登录后进入群聊"
-  signinToJoinRoomHint: "打开此链接需要账号。登录后可加入并查看消息。"
-  stickers: "表情包"
-  noStickersYet: "暂无表情包。可导入 Telegram 贴纸包（需服务器配置 TELEGRAM_BOT_TOKEN），或创建后添加图片。"
-  importTelegram: "导入"
-  roleOwner: "群主"
-  roleAdmin: "管理员"
-  roleMember: "成员"
-  promoteToAdmin: "设为管理员"
-  demoteToMember: "降为成员"
-  chatNotAvailableForThisAccountOrServer: "此服务器或者账户还未开启聊天功能。"
-  chatIsReadOnlyForThisAccountOrServer: "此服务器或者账户内的聊天为只读。无法发布新信息或创建及加入群聊。"
-  chatNotAvailableInOtherAccount: "对方账户目前处于无法使用聊天的状态。"
-  cannotChatWithTheUser: "无法与此用户聊天"
-  cannotChatWithTheUser_description: "可能现在无法使用聊天，或者对方未开启聊天。"
-  chatWithThisUser: "聊天"
-  thisUserAllowsChatOnlyFromFollowers: "此用户仅接受关注者发起的聊天。"
-  thisUserAllowsChatOnlyFromFollowing: "此用户仅接受关注的人发起的聊天。"
-  thisUserAllowsChatOnlyFromMutualFollowing: "此用户仅接受互相关注的人发起的聊天。"
-  thisUserNotAllowedChatAnyone: "此用户不接受任何人发起的聊天。"
-  chatAllowedUsers: "谁可以发起聊天"
-  chatAllowedUsers_note: "主动发起聊天时，对方将不受此设置限制。"
+  messageRateLimit: 聊天限速（秒）
+  messageRateLimitHint: 设为 0 不限制。例如设为 5 表示每 5 秒只能发 1 条。群主、群管理员、站长与管理员不受限。
+  roomRateLimited: 发言过快，请稍后再发。
+  staffReadonlyView: 管理员只读查看（非群成员）
+  staffReadonlyViewHint: 可查看群聊消息以便处理举报；发送消息仍需加入该群。
+  sending: 发送中…
+  sendingHint: 消息发送中，请稍候…
+  kickMember: 踢出
+  kickMemberConfirm: 确定将此人踢出群聊？若加入策略允许，对方仍可再次加入。
+  banMember: 拉黑
+  banMemberConfirm: 将此人加入群聊黑名单并移出？解除前无法再加入。
+  unbanMember: 移出黑名单
+  muteMember: 禁言
+  unmuteMember: 解除禁言
+  muteDuration: 禁言时长
+  mute10m: 10 分钟
+  mute30m: 30 分钟
+  mute1h: 1 小时
+  mute2h: 2 小时
+  mute1d: 1 天
+  mute1mo: 1 个月
+  muteCustom: 自定义…
+  muteCustomTitle: 自定义禁言时长
+  muteUnit: 单位
+  muteUnitSeconds: 秒
+  muteUnitMinutes: 分钟
+  muteUnitHours: 小时
+  muteUnitDays: 天
+  muteUnitMonths: 月
+  muteAmount: 数量
+  mutedUntil: 禁言至
+  blacklist: 黑名单
+  blacklistEmpty: 黑名单为空。
+  blacklistHint: 被拉黑用户在移出黑名单前无法再次加入本群。
+  modDeleteMessage: 删除消息
+  modDeleteMessageConfirm: 确定为所有人删除这条消息？
+  memberActions: 成员操作
+  youAreMuted: 你已被禁言，暂时无法发言。
+  bannedFromRoom: 你已被本群拉黑，无法加入。
+  banReason: 原因（可选）
+  mentionsOfYou: 有人 @ 了你
+  prevMention: 上一条 @
+  nextMention: 下一条 @
+  noMessagesYet: 还没有消息
+  newMessage: 新消息
+  individualChat: 私聊
+  individualChat_description: 可以与特定用户进行一对一聊天。
+  roomChat: 群聊
+  roomChat_description: |-
+    可以进行多人聊天。
+    就算用户未允许私聊，只要接受了邀请，仍可以聊天。
+  createRoom: 创建房间
+  inviteUserToChat: 邀请用户来开始聊天
+  yourRooms: 已创建的房间
+  joiningRooms: 已加入的房间
+  invitations: 邀请
+  noInvitations: 没有邀请
+  history: 历史
+  noHistory: 没有历史记录
+  noRooms: 没有房间
+  inviteUser: 邀请用户
+  sentInvitations: 已发送的邀请
+  join: 加入
+  ignore: 忽略
+  leave: 退出房间
+  members: 成员
+  searchMessages: 搜索消息
+  home: 首页
+  send: 发送
+  newline: 换行
+  muteThisRoom: 静音此房间
+  deleteRoom: 删除房间
+  mutedAll: 全体禁言中
+  mutedAllHint: 仅群主、群管理员和实例管理员可以发言。
+  mutedAllComposerDisabled: 全体禁言中，无法输入或发送消息。
+  joinPolicy: 加入策略
+  joinPolicyPublic: 公开加入（知道房间链接即可）
+  joinPolicyLink: 链接/邀请码加入
+  joinPolicyInvite: 邀请加入
+  joinPolicyClosed: 禁止加入
+  joinByInviteCode: 通过邀请码加入
+  enterInviteCode: 输入邀请码
+  inviteCode: 邀请码
+  copyInviteCode: 复制邀请码
+  regenerateInviteCode: 重新生成邀请码
+  notAMember: 你还不是该群成员。
+  canJoinDirectly: 可直接加入。
+  needInviteCodeToJoin: 请输入邀请码后加入。
+  needInvitationToJoin: 需要群主/管理员邀请。
+  joiningClosed: 该群当前禁止加入。
+  joining: 加入中…
+  joinRoom: 加入群聊
+  joinFailed: 加入失败
+  signinToJoinRoom: 需要登录后进入群聊
+  signinToJoinRoomHint: 打开此链接需要账号。登录后可加入并查看消息。
+  stickers: 表情包
+  noStickersYet: 暂无表情包。可导入 Telegram 贴纸包（需服务器配置 TELEGRAM_BOT_TOKEN），或创建后添加图片。
+  importTelegram: 导入
+  roleOwner: 群主
+  roleAdmin: 管理员
+  roleMember: 成员
+  promoteToAdmin: 设为管理员
+  demoteToMember: 降为成员
+  chatNotAvailableForThisAccountOrServer: 此服务器或者账户还未开启聊天功能。
+  chatIsReadOnlyForThisAccountOrServer: 此服务器或者账户内的聊天为只读。无法发布新信息或创建及加入群聊。
+  chatNotAvailableInOtherAccount: 对方账户目前处于无法使用聊天的状态。
+  cannotChatWithTheUser: 无法与此用户聊天
+  cannotChatWithTheUser_description: 可能现在无法使用聊天，或者对方未开启聊天。
+  chatWithThisUser: 聊天
+  thisUserAllowsChatOnlyFromFollowers: 此用户仅接受关注者发起的聊天。
+  thisUserAllowsChatOnlyFromFollowing: 此用户仅接受关注的人发起的聊天。
+  thisUserAllowsChatOnlyFromMutualFollowing: 此用户仅接受互相关注的人发起的聊天。
+  thisUserNotAllowedChatAnyone: 此用户不接受任何人发起的聊天。
+  chatAllowedUsers: 谁可以发起聊天
+  chatAllowedUsers_note: 主动发起聊天时，对方将不受此设置限制。
   _chatAllowedUsers:
-    everyone: "任何人"
-    followers: "仅关注者"
-    following: "仅关注的人"
-    mutual: "仅相互关注"
-    none: "没有人"
-  manage: "管理"
-  manageHint: "群主、群管理员以及论坛管理员/站长可在此管理群聊。"
-  manageInManageTab: "全体禁言、公告、清理消息、删除房间请到「管理」页操作。"
-  roomSettings: "房间设置"
-  dangerZone: "危险操作"
-  clearMessages: "清理聊天消息"
-  clearMessagesHint: "永久删除本群全部消息，所有成员可见内容将被清空。"
-  clearMessagesConfirm: "确定清理本群全部聊天消息？此操作不可撤销。"
-  about: "关于"
-  e2eeOn: "端到端加密"
-  e2eeOff: "未加密"
-  e2eePeerNoKey: "对方尚未启用端到端加密。请对方先打开一次此私聊。"
-  e2eePlaceholder: "加密消息…"
-  e2eeEncryptFailed: "加密失败。"
-  e2eeDecryptFailed: "无法解密（缺少密钥）。"
-  encryptedMessage: "🔒 加密消息"
-  recentStickers: "最近使用"
-  wsSendFailed: "发送失败，请检查网络后重试。"
-  loadFailed: "加载失败"
-  roomOpenFailed: "无法打开该房间（不存在或无权访问）"
-  wsConnected: "实时连接已建立"
-  wsReconnecting: "实时连接重连中…"
-  searchPlaceholder: "搜索消息…"
-  filterBySpeaker: "发言人"
-  selectSpeaker: "选择发言人"
-  clearSpeaker: "清除"
-  jumpToMessage: "跳转到消息"
-  recentFromSpeaker: "该发言人的最近消息"
-  searchOrSpeakerHint: "可输入关键词搜索；也可指定发言人。仅选发言人时显示其最近消息。点击结果可跳转到聊天中的对应位置。"
-  jumpingToMessage: "正在跳转到消息…"
+    everyone: 任何人
+    followers: 仅关注者
+    following: 仅关注的人
+    mutual: 仅相互关注
+    none: 没有人
+  manage: 管理
+  manageHint: 群主、群管理员以及论坛管理员/站长可在此管理群聊。
+  manageInManageTab: 全体禁言、公告、清理消息、删除房间请到「管理」页操作。
+  roomSettings: 房间设置
+  dangerZone: 危险操作
+  clearMessages: 清理聊天消息
+  clearMessagesHint: 永久删除本群全部消息，所有成员可见内容将被清空。
+  clearMessagesConfirm: 确定清理本群全部聊天消息？此操作不可撤销。
+  about: 关于
+  e2eeOn: 端到端加密
+  e2eeOff: 未加密
+  e2eePeerNoKey: 加密始终开启。请对方先打开一次此私聊以完成密钥交换，在此之前无法发送文字。
+  e2eePlaceholder: 加密消息…
+  e2eeEncryptFailed: 加密失败。
+  e2eeDecryptFailed: 无法解密（缺少密钥）。
+  encryptedMessage: 🔒 加密消息
+  recentStickers: 最近使用
+  wsSendFailed: 发送失败，请检查网络后重试。
+  loadFailed: 加载失败
+  roomOpenFailed: 无法打开该房间（不存在或无权访问）
+  wsConnected: 实时连接已建立
+  wsReconnecting: 实时连接重连中…
+  searchPlaceholder: 搜索消息…
+  filterBySpeaker: 发言人
+  selectSpeaker: 选择发言人
+  clearSpeaker: 清除
+  jumpToMessage: 跳转到消息
+  recentFromSpeaker: 该发言人的最近消息
+  searchOrSpeakerHint: 可输入关键词搜索；也可指定发言人。仅选发言人时显示其最近消息。点击结果可跳转到聊天中的对应位置。
+  jumpingToMessage: 正在跳转到消息…
+  globalSearchHint: 仅搜索你已有的私信与群聊。点击结果会打开对应会话并定位到该消息。
+  hideTranslation: 隐藏翻译
+  translateFailed: 翻译失败
+  translated: 翻译
 _emojiPalette:
   palettes: "调色板"
   enableSyncBetweenDevicesForPalettes: "启用调色板的设备间同步"
@@ -3406,3 +3412,104 @@ _performanceAdmin:
   perUserHomeTimelineCacheMax: "首页时间线缓存上限"
   perUserListTimelineCacheMax: "列表时间线缓存上限"
   cacheMaxCaption: "每条时间线在 Redis 中保留的笔记上限。数值越大占用内存越多。"
+
+_uiCommon:
+  enabled: 已启用
+  disabled: 已禁用
+  enable: 启用
+  stats: 统计
+  activeUsers: 活跃用户
+  heatmap: 热力图
+  retentionRate: 留存率
+  moderators: 版主
+  federation: 联邦
+  instances: 实例
+  apRequests: ActivityPub 请求
+  newUsers: 新用户
+  deliverQueue: 投递队列
+  inboxQueue: 收件队列
+  users: 用户
+  notes: 帖子
+  customEmojis: 自定义表情
+  online: 在线
+  read: 读取
+  write: 写入
+  process: 处理
+  active: 进行中
+  waiting: 等待中
+  delayed: 延迟
+  top10: 前 10
+  overview: 概览
+  jobs: 任务
+  latest: 最新
+  completed: 已完成
+  failed: 失败
+  paused: 已暂停
+  deliver: 投递
+  inbox: 收件
+  info: 信息
+  timeline: 时间线
+  data: 数据
+  result: 结果
+  error: 错误
+  logs: 日志
+  options: 选项
+  createdAt: 创建时间
+  processedAt: 处理时间
+  finishedAt: 完成时间
+  spent: 耗时
+  failedReason: 失败原因
+  attempts: 尝试次数
+  progress: 进度
+  finished: 已结束
+  processed: 已处理
+  created: 已创建
+  clientsConnected: 客户端：已连接
+  clientsBlocked: 客户端：已阻塞
+  memoryPeak: 内存：峰值
+  memoryTotal: 内存：总量
+  memoryUsed: 内存：已用
+  uptime: 运行时间
+  apiConsole: API 控制台
+  endpoint: 接口
+  paramsJson: 参数 (JSON 或 JSON5)
+  withCredential: 附带凭证
+  send: 发送
+  response: 响应
+  sponsors: 赞助者
+  wellKnown: 常用资源
+  suspended: 已挂起
+  blocked: 已屏蔽
+  silenced: 已静音
+  alive: 正常
+  bubble: 气泡
+  activeEmailValidation: 主动邮箱验证
+  useVerifymail: 使用 Verifymail.io API
+  verifymailKey: Verifymail.io API 密钥
+  useTruemail: 使用 TrueMail API
+  truemailInstance: TrueMail API 实例地址
+  truemailKey: TrueMail API 密钥
+  bannedEmailDomains: 禁止的邮箱域名
+  bannedEmailDomainsList: 禁止邮箱域名列表
+  logIpAddress: 记录 IP 地址
+  apiDocs: API 文档
+  promoteAllJobs: 全部提升优先级
+  emptyQueue: 清空队列
+  refreshView: 刷新视图
+  removeJobs: 删除任务
+  all: 全部
+  copyRaw: 复制原始数据
+  promote: 提升
+  moveTo: 移动到
+  remove: 删除
+  update: 更新
+  dataEdit: 数据（编辑）
+  attemptsOf: /
+  attemptN: 尝试
+  at: 于
+  erroredInstances: 出错的实例
+  overviewOf: 概览
+  jobsOf: 任务
+  sub: 订阅
+  pub: 发布
+  jobsCount: 个任务

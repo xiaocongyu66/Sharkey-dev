@@ -1350,115 +1350,175 @@ readonly: "읽기 전용"
 goToDeck: "덱으로 돌아가기"
 federationJobs: "연합 작업"
 _chat:
-  noMessagesYet: "아직 메시지가 없습니다"
-  newMessage: "새로운 메시지"
-  individualChat: "개인 대화"
-  individualChat_description: "특정 유저와 일대일 채팅을 할 수 있습니다."
-  roomChat: "룸 채팅"
-  roomChat_description: "여러 명이 함께 채팅할 수 있습니다.\n또한, 개인 채팅을 허용하지 않은 유저와도 상대방이 수락하면 채팅을 할 수 있습니다."
-  createRoom: "룸을 생성"
-  inviteUserToChat: "유저를 초대하여 채팅을 시작하세요"
-  yourRooms: "생성한 룸"
-  joiningRooms: "참가 중인 룸"
-  invitations: "초대"
-  noInvitations: "초대장이 없습니다"
-  history: "이력"
-  noHistory: "기록이 없습니다"
-  noRooms: "룸이 없습니다"
-  inviteUser: "유저를 초대"
-  sentInvitations: "초대를 보내기"
-  join: "참여"
-  ignore: "무시"
-  leave: "룸을 떠나기"
-  members: "멤버"
-  searchMessages: "메시지 검색"
-  home: "홈"
-  send: "전송"
-  newline: "줄바꿈"
-  muteThisRoom: "이 룸을 뮤트"
-  deleteRoom: "룸을 삭제"
-  chatNotAvailableForThisAccountOrServer: "이 서버 또는 이 계정에서 채팅이 활성화되어 있지 않습니다."
-  chatIsReadOnlyForThisAccountOrServer: "이 서버 또는 이 계정에서 채팅은 읽기 전용입니다. 새로 쓰거나 채팅 룸을 만들거나 참가할 수 없습니다."
-  chatNotAvailableInOtherAccount: "상대방 계정에서 채팅 기능을 사용할 수 없는 상태입니다."
-  cannotChatWithTheUser: "이 유저와 채팅을 시작할 수 없습니다"
-  cannotChatWithTheUser_description: "채팅을 사용할 수 없는 상태이거나 상대방이 채팅을 열지 않은 상태입니다."
-  chatWithThisUser: "채팅하기"
-  thisUserAllowsChatOnlyFromFollowers: "이 유저는 팔로워만 채팅을 할 수 있습니다."
-  thisUserAllowsChatOnlyFromFollowing: "이 유저는 이 유저가 팔로우하는 유저만 채팅을 허용합니다."
-  thisUserAllowsChatOnlyFromMutualFollowing: "이 유저는 상호 팔로우하는 유저만 채팅을 허용합니다."
-  thisUserNotAllowedChatAnyone: "이 유저는 다른 사람의 채팅을 받지 않습니다."
-  chatAllowedUsers: "채팅을 허용한 상대"
-  chatAllowedUsers_note: "내가 채팅 메시지를 보낸 상대와는 이 설정과 상관없이 채팅이 가능합니다."
+  noMessagesYet: 아직 메시지가 없습니다
+  newMessage: 새로운 메시지
+  individualChat: 개인 대화
+  individualChat_description: 특정 유저와 일대일 채팅을 할 수 있습니다.
+  roomChat: 룸 채팅
+  roomChat_description: |-
+    여러 명이 함께 채팅할 수 있습니다.
+    또한, 개인 채팅을 허용하지 않은 유저와도 상대방이 수락하면 채팅을 할 수 있습니다.
+  createRoom: 룸을 생성
+  inviteUserToChat: 유저를 초대하여 채팅을 시작하세요
+  yourRooms: 생성한 룸
+  joiningRooms: 참가 중인 룸
+  invitations: 초대
+  noInvitations: 초대장이 없습니다
+  history: 이력
+  noHistory: 기록이 없습니다
+  noRooms: 룸이 없습니다
+  inviteUser: 유저를 초대
+  sentInvitations: 초대를 보내기
+  join: 참여
+  ignore: 무시
+  leave: 룸을 떠나기
+  members: 멤버
+  searchMessages: 메시지 검색
+  home: 홈
+  send: 전송
+  newline: 줄바꿈
+  muteThisRoom: 이 룸을 뮤트
+  deleteRoom: 룸을 삭제
+  chatNotAvailableForThisAccountOrServer: 이 서버 또는 이 계정에서 채팅이 활성화되어 있지 않습니다.
+  chatIsReadOnlyForThisAccountOrServer: 이 서버 또는 이 계정에서 채팅은 읽기 전용입니다. 새로 쓰거나 채팅 룸을 만들거나 참가할 수 없습니다.
+  chatNotAvailableInOtherAccount: 상대방 계정에서 채팅 기능을 사용할 수 없는 상태입니다.
+  cannotChatWithTheUser: 이 유저와 채팅을 시작할 수 없습니다
+  cannotChatWithTheUser_description: 채팅을 사용할 수 없는 상태이거나 상대방이 채팅을 열지 않은 상태입니다.
+  chatWithThisUser: 채팅하기
+  thisUserAllowsChatOnlyFromFollowers: 이 유저는 팔로워만 채팅을 할 수 있습니다.
+  thisUserAllowsChatOnlyFromFollowing: 이 유저는 이 유저가 팔로우하는 유저만 채팅을 허용합니다.
+  thisUserAllowsChatOnlyFromMutualFollowing: 이 유저는 상호 팔로우하는 유저만 채팅을 허용합니다.
+  thisUserNotAllowedChatAnyone: 이 유저는 다른 사람의 채팅을 받지 않습니다.
+  chatAllowedUsers: 채팅을 허용한 상대
+  chatAllowedUsers_note: 내가 채팅 메시지를 보낸 상대와는 이 설정과 상관없이 채팅이 가능합니다.
   _chatAllowedUsers:
-    everyone: "누구나"
-    followers: "자신의 팔로워만"
-    following: "자신이 팔로우한 유저만"
-    mutual: "상호 팔로우한 유저만"
-    none: "아무도 허락하지 않기"
-  mutedAll: "전체 뮤트 중"
-  mutedAllHint: "방장, 방 관리자, 인스턴스 모더레이터만 메시지를 보낼 수 있습니다."
-  mutedAllComposerDisabled: "전체 뮤트 중에는 메시지를 보내거나 입력할 수 없습니다."
-  stickers: "스티커"
-  joinPolicy: "Join policy"
-  joinPolicyPublic: "Public (anyone with the room link can join)"
-  joinPolicyLink: "Invite link / code"
-  joinPolicyInvite: "Invite only"
-  joinPolicyClosed: "Closed (no new joins)"
-  joinByInviteCode: "Join with invite code"
-  enterInviteCode: "Enter invite code"
-  inviteCode: "Invite code"
-  copyInviteCode: "Copy invite code"
-  regenerateInviteCode: "Regenerate invite code"
-  notAMember: "You are not a member of this room."
-  canJoinDirectly: "You can join directly."
-  needInviteCodeToJoin: "Enter an invite code to join."
-  needInvitationToJoin: "You need an invitation from the owner or an admin."
-  joiningClosed: "This room is not accepting new members."
-  joining: "Joining…"
-  joinRoom: "Join room"
-  joinFailed: "Failed to join"
-  signinToJoinRoom: "Sign in to join this room"
-  signinToJoinRoomHint: "You need an account to join and view messages."
-  noStickersYet: "No sticker packs yet. Import a Telegram pack (requires TELEGRAM_BOT_TOKEN) or create a pack and add images."
-  importTelegram: "Import"
-  roleOwner: "Owner"
-  roleAdmin: "Admin"
-  roleMember: "Member"
-  promoteToAdmin: "Make admin"
-  demoteToMember: "Remove admin"
-  mentionsOfYou: "나를 멘션"
-  prevMention: "Previous mention"
-  nextMention: "Next mention"
-  manage: "Manage"
-  manageHint: "Room owner, room admins, and instance moderators can change these settings."
-  manageInManageTab: "Use the Manage tab for mute-all, announcement, clear messages, and delete room."
-  roomSettings: "Room settings"
-  dangerZone: "Danger zone"
-  clearMessages: "Clear all messages"
-  clearMessagesHint: "Permanently delete every message in this room for all members."
-  clearMessagesConfirm: "Clear all messages in this room? This cannot be undone."
-  about: "About"
-  e2eeOn: "Encrypted"
-  e2eeOff: "Not encrypted"
-  e2eePeerNoKey: "The other user has not enabled E2EE yet. Ask them to open this chat once."
-  e2eePlaceholder: "Encrypted message…"
-  e2eeEncryptFailed: "Failed to encrypt message."
-  e2eeDecryptFailed: "Unable to decrypt (missing keys)."
-  encryptedMessage: "🔒 Encrypted message"
-  recentStickers: "최근"
-  wsSendFailed: "전송에 실패했습니다. 연결을 확인한 뒤 다시 시도하세요."
-  loadFailed: "불러오기 실패"
-  roomOpenFailed: "이 방을 열 수 없습니다(없거나 권한 없음)."
-  wsConnected: "Realtime connected"
-  wsReconnecting: "Reconnecting…"
-  searchPlaceholder: "메시지 검색…"
-  filterBySpeaker: "발언자"
-  selectSpeaker: "발언자 선택"
-  clearSpeaker: "지우기"
-  jumpToMessage: "메시지로 이동"
-  recentFromSpeaker: "이 발언자의 최근 메시지"
-  searchOrSpeakerHint: "키워드 검색 및/또는 발언자 지정. 발언자만 선택하면 해당 사용자의 최근 메시지가 표시됩니다. 결과를 탭하면 채팅으로 이동합니다."
-  jumpingToMessage: "메시지로 이동 중…"
+    everyone: 누구나
+    followers: 자신의 팔로워만
+    following: 자신이 팔로우한 유저만
+    mutual: 상호 팔로우한 유저만
+    none: 아무도 허락하지 않기
+  mutedAll: All members are muted
+  mutedAllHint: Only the owner, room admins, and instance moderators can send messages.
+  mutedAllComposerDisabled: You cannot send messages while this room is muted for all members.
+  stickers: Stickers
+  joinPolicy: Join policy
+  joinPolicyPublic: Public (anyone with the room link can join)
+  joinPolicyLink: Invite link / code
+  joinPolicyInvite: Invite only
+  joinPolicyClosed: Closed (no new joins)
+  joinByInviteCode: Join with invite code
+  enterInviteCode: Enter invite code
+  inviteCode: Invite code
+  copyInviteCode: Copy invite code
+  regenerateInviteCode: Regenerate invite code
+  notAMember: You are not a member of this room.
+  canJoinDirectly: You can join directly.
+  needInviteCodeToJoin: Enter an invite code to join.
+  needInvitationToJoin: You need an invitation from the owner or an admin.
+  joiningClosed: This room is not accepting new members.
+  joining: Joining…
+  joinRoom: Join room
+  joinFailed: Failed to join
+  signinToJoinRoom: Sign in to join this room
+  signinToJoinRoomHint: You need an account to join and view messages.
+  noStickersYet: No sticker packs yet. Import a Telegram pack (requires TELEGRAM_BOT_TOKEN) or create a pack and add images.
+  importTelegram: Import
+  roleOwner: Owner
+  roleAdmin: Admin
+  roleMember: Member
+  promoteToAdmin: Make admin
+  demoteToMember: Remove admin
+  mentionsOfYou: Mentions of you
+  prevMention: Previous mention
+  nextMention: Next mention
+  manage: Manage
+  manageHint: Room owner, room admins, and instance moderators can change these settings.
+  manageInManageTab: Use the Manage tab for mute-all, announcement, clear messages, and delete room.
+  roomSettings: Room settings
+  dangerZone: Danger zone
+  clearMessages: Clear all messages
+  clearMessagesHint: Permanently delete every message in this room for all members.
+  clearMessagesConfirm: Clear all messages in this room? This cannot be undone.
+  about: About
+  e2eeOn: Encrypted
+  e2eeOff: Not encrypted
+  e2eePeerNoKey: Encryption is always on. Ask the other person to open this chat once so keys can be exchanged. Text cannot be sent until then.
+  e2eePlaceholder: Encrypted message…
+  e2eeEncryptFailed: Failed to encrypt message.
+  e2eeDecryptFailed: Unable to decrypt (missing keys).
+  encryptedMessage: 🔒 Encrypted message
+  recentStickers: Recent
+  wsSendFailed: Failed to send. Check your connection and try again.
+  loadFailed: Failed to load
+  roomOpenFailed: Cannot open this room (missing or no access).
+  wsConnected: Realtime connected
+  wsReconnecting: Reconnecting…
+  searchPlaceholder: Search messages…
+  filterBySpeaker: Speaker
+  selectSpeaker: Choose speaker
+  clearSpeaker: Clear
+  jumpToMessage: Jump to message
+  recentFromSpeaker: Recent messages from this speaker
+  searchOrSpeakerHint: Enter keywords, and/or pick a speaker. With only a speaker selected, recent messages from them are listed. Tap a result to jump in the chat.
+  jumpingToMessage: Jumping to message…
+  roomAnnouncement: Announcement
+  e2eeAlwaysOn: End-to-end encryption
+  e2eeAlwaysOnHint: Chat messages are encrypted at rest (AES-GCM). Participants and the server operator can read them; others cannot. Public notes are never encrypted this way.
+  chatEscrowHint: "Encrypted chat (escrow): you, the peer/room members, and the server operator."
+  e2eeWaitingPeer: Waiting for peer key…
+  e2eeFingerprint: Key fingerprint
+  e2eeKeyRotated: Peer encryption key was updated. Messages re-sync with the new key.
+  e2eePlaintextRejected: Direct messages must be end-to-end encrypted.
+  wsCatchingUp: Refreshing messages…
+  globalSearchHint: Search only in chats you already have (1:1 and rooms). Results open the conversation at that message.
+  replyVideo: "[Video]"
+  replyImage: "[Image]"
+  replyAudio: "[Audio]"
+  replyFile: "[File]"
+  replyE2ee: "[Encrypted]"
+  messageRateLimit: Message rate limit (seconds)
+  messageRateLimitHint: "0 = unlimited. Example: 5 means one message every 5 seconds. Owner, room admins, and instance moderators are exempt."
+  roomRateLimited: Sending too fast. Please wait a few seconds.
+  staffReadonlyView: Staff view (not a member)
+  staffReadonlyViewHint: You can read this room for moderation. Sending requires membership.
+  sending: Sending…
+  sendingHint: Message is being sent. Please wait…
+  kickMember: Kick
+  kickMemberConfirm: Kick this member from the room? They can rejoin if the join policy allows.
+  banMember: Blacklist
+  banMemberConfirm: Add this user to the room blacklist and remove them? They cannot rejoin until unbanned.
+  unbanMember: Remove from blacklist
+  muteMember: Mute
+  unmuteMember: Unmute
+  muteDuration: Mute duration
+  mute10m: 10 minutes
+  mute30m: 30 minutes
+  mute1h: 1 hour
+  mute2h: 2 hours
+  mute1d: 1 day
+  mute1mo: 1 month
+  muteCustom: Custom…
+  muteCustomTitle: Custom mute duration
+  muteUnit: Unit
+  muteUnitSeconds: Seconds
+  muteUnitMinutes: Minutes
+  muteUnitHours: Hours
+  muteUnitDays: Days
+  muteUnitMonths: Months
+  muteAmount: Amount
+  mutedUntil: Muted until
+  blacklist: Blacklist
+  blacklistEmpty: No banned users.
+  blacklistHint: Banned users cannot rejoin until removed from the blacklist.
+  modDeleteMessage: Delete message
+  modDeleteMessageConfirm: Delete this message for everyone?
+  memberActions: Member actions
+  youAreMuted: You are muted in this room and cannot send messages.
+  bannedFromRoom: You are banned from this room.
+  banReason: Reason (optional)
+  hideTranslation: Hide translation
+  translateFailed: Translation failed
+  translated: Translation
 _emojiPalette:
   palettes: "팔레트"
   enableSyncBetweenDevicesForPalettes: "팔레트의 디바이스 간 동기화를 활성화"
@@ -3311,3 +3371,104 @@ _performanceAdmin:
   perUserHomeTimelineCacheMax: "Home timeline cache size"
   perUserListTimelineCacheMax: "List timeline cache size"
   cacheMaxCaption: "Maximum number of notes kept in Redis per timeline. Higher values use more memory."
+
+_uiCommon:
+  enabled: Enabled
+  disabled: Disabled
+  enable: Enable
+  stats: Stats
+  activeUsers: Active users
+  heatmap: Heatmap
+  retentionRate: Retention rate
+  moderators: Moderators
+  federation: Federation
+  instances: Instances
+  apRequests: ActivityPub requests
+  newUsers: New users
+  deliverQueue: Deliver queue
+  inboxQueue: Inbox queue
+  users: Users
+  notes: Notes
+  customEmojis: Custom emojis
+  online: Online
+  read: Read
+  write: Write
+  process: Process
+  active: Active
+  waiting: Waiting
+  delayed: Delayed
+  top10: Top 10
+  overview: Overview
+  jobs: Jobs
+  latest: Latest
+  completed: Completed
+  failed: Failed
+  paused: Paused
+  deliver: Deliver
+  inbox: Inbox
+  info: Info
+  timeline: Timeline
+  data: Data
+  result: Result
+  error: Error
+  logs: Logs
+  options: Options
+  createdAt: Created at
+  processedAt: Processed at
+  finishedAt: Finished at
+  spent: Spent
+  failedReason: Failed reason
+  attempts: Attempts
+  progress: Progress
+  finished: Finished
+  processed: Processed
+  created: Created
+  clientsConnected: "Clients: Connected"
+  clientsBlocked: "Clients: Blocked"
+  memoryPeak: "Memory: Peak"
+  memoryTotal: "Memory: Total"
+  memoryUsed: "Memory: Used"
+  uptime: Uptime
+  apiConsole: API console
+  endpoint: Endpoint
+  paramsJson: Params (JSON or JSON5)
+  withCredential: With credential
+  send: Send
+  response: Response
+  sponsors: Our lovely Sponsors
+  wellKnown: Well-known resources
+  suspended: Suspended
+  blocked: Blocked
+  silenced: Silenced
+  alive: Alive
+  bubble: Bubble
+  activeEmailValidation: Active Email Validation
+  useVerifymail: Use Verifymail.io API
+  verifymailKey: Verifymail.io API Auth Key
+  useTruemail: Use TrueMail API
+  truemailInstance: TrueMail API Instance
+  truemailKey: TrueMail API Auth Key
+  bannedEmailDomains: Banned Email Domains
+  bannedEmailDomainsList: Banned Email Domains List
+  logIpAddress: Log IP address
+  apiDocs: API documentation
+  promoteAllJobs: Promote all jobs
+  emptyQueue: Empty queue
+  refreshView: Refresh view
+  removeJobs: Remove jobs
+  all: All
+  copyRaw: Copy raw
+  promote: Promote
+  moveTo: Move to
+  remove: Remove
+  update: Update
+  dataEdit: Data (edit)
+  attemptsOf: of
+  attemptN: Attempt
+  at: at
+  erroredInstances: Errored instances
+  overviewOf: Overview
+  jobsOf: Jobs
+  sub: Sub
+  pub: Pub
+  jobsCount: jobs

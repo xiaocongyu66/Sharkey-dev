@@ -1353,115 +1353,175 @@ federationJobs: "聯邦通訊作業"
 driveAboutTip: "在「雲端硬碟」中，會顯示過去上傳的檔案列表。<br>\n可以在附加到貼文時重新利用，或者事先上傳之後再用於發布。<br>\n<b>請注意，刪除檔案後，之前使用過該檔案的所有地方（貼文、頁面、大頭貼、橫幅等）也會一併無法顯示。</b><br>\n也可以建立資料夾來整理檔案。"
 scrollToClose: "用滾輪關閉"
 _chat:
-  mentionsOfYou: "有人 @ 了你"
-  prevMention: "上一則 @"
-  nextMention: "下一則 @"
-  noMessagesYet: "尚無訊息"
-  newMessage: "新訊息"
-  individualChat: "ㄧ對一聊天室"
-  individualChat_description: "可以與特定使用者進行一對一的聊天。"
-  roomChat: "多人聊天室"
-  roomChat_description: "可以進行多人聊天。\n此外，即使是未允許個人聊天的使用者，只要對方接受，也可以進行聊天。"
-  createRoom: "建立聊天室"
-  inviteUserToChat: "邀請使用者開始聊天"
-  yourRooms: "已建立的聊天室"
-  joiningRooms: "已加入的聊天室"
-  invitations: "邀請"
-  noInvitations: "沒有邀請"
-  history: "歷史紀錄"
-  noHistory: "沒有歷史紀錄"
-  noRooms: "沒有可用的聊天室"
-  inviteUser: "邀請使用者"
-  sentInvitations: "已傳送的邀請"
-  join: "加入"
-  ignore: "忽視"
-  leave: "退出聊天室"
-  members: "成員"
-  searchMessages: "搜尋聊天訊息"
-  home: "首頁"
-  send: "發送"
-  newline: "換行"
-  muteThisRoom: "此聊天室已靜音"
-  deleteRoom: "刪除聊天室"
-  mutedAll: "全體禁言中"
-  mutedAllHint: "僅群主、群管理員和實例管理員可以發言。"
-  mutedAllComposerDisabled: "全體禁言中，無法輸入或傳送訊息。"
-  joinPolicy: "加入策略"
-  joinPolicyPublic: "公開加入（知道房間連結即可）"
-  joinPolicyLink: "連結/邀請碼加入"
-  joinPolicyInvite: "邀請加入"
-  joinPolicyClosed: "禁止加入"
-  joinByInviteCode: "透過邀請碼加入"
-  enterInviteCode: "輸入邀請碼"
-  inviteCode: "邀請碼"
-  copyInviteCode: "複製邀請碼"
-  regenerateInviteCode: "重新產生邀請碼"
-  notAMember: "你還不是此群的成員。"
-  canJoinDirectly: "可直接加入。"
-  needInviteCodeToJoin: "請輸入邀請碼後加入。"
-  needInvitationToJoin: "需要群主/管理員邀請。"
-  joiningClosed: "此群目前禁止加入。"
-  joining: "加入中…"
-  joinRoom: "加入群聊"
-  joinFailed: "加入失敗"
-  signinToJoinRoom: "需要登入後進入群聊"
-  signinToJoinRoomHint: "開啟此連結需要帳號。登入後可加入並查看訊息。"
-  stickers: "貼圖"
-  noStickersYet: "尚無貼圖包。可匯入 Telegram 貼圖包（需伺服器設定 TELEGRAM_BOT_TOKEN），或建立後新增圖片。"
-  importTelegram: "匯入"
-  roleOwner: "群主"
-  roleAdmin: "管理員"
-  roleMember: "成員"
-  promoteToAdmin: "設為管理員"
-  demoteToMember: "降為成員"
-  chatNotAvailableForThisAccountOrServer: "這個伺服器或這個帳號的聊天功能尚未啟用。"
-  chatIsReadOnlyForThisAccountOrServer: "在此伺服器或此帳戶上的聊天是唯讀的。您無法發布新訊息、建立或加入聊天室。"
-  chatNotAvailableInOtherAccount: "對方的帳號無法使用聊天功能。"
-  cannotChatWithTheUser: "無法與此使用者聊天"
-  cannotChatWithTheUser_description: "聊天功能目前無法使用，或對方尚未開放聊天功能。"
-  chatWithThisUser: "聊天"
-  thisUserAllowsChatOnlyFromFollowers: "此使用者僅接受來自追隨者的聊天訊息。"
-  thisUserAllowsChatOnlyFromFollowing: "此使用者僅接受自己追隨的使用者傳送聊天訊息。"
-  thisUserAllowsChatOnlyFromMutualFollowing: "此使用者只接受互相追隨的使用者傳送聊天訊息。"
-  thisUserNotAllowedChatAnyone: "此使用者不接受來自任何人的聊天訊息。"
-  chatAllowedUsers: "允許聊天的對象"
-  chatAllowedUsers_note: "無論此設定為何，您仍可與自己曾發送過聊天訊息的對象進行聊天。"
+  mentionsOfYou: 有人 @ 了你
+  prevMention: 上一則 @
+  nextMention: 下一則 @
+  noMessagesYet: 尚無訊息
+  newMessage: 新訊息
+  individualChat: ㄧ對一聊天室
+  individualChat_description: 可以與特定使用者進行一對一的聊天。
+  roomChat: 多人聊天室
+  roomChat_description: |-
+    可以進行多人聊天。
+    此外，即使是未允許個人聊天的使用者，只要對方接受，也可以進行聊天。
+  createRoom: 建立聊天室
+  inviteUserToChat: 邀請使用者開始聊天
+  yourRooms: 已建立的聊天室
+  joiningRooms: 已加入的聊天室
+  invitations: 邀請
+  noInvitations: 沒有邀請
+  history: 歷史紀錄
+  noHistory: 沒有歷史紀錄
+  noRooms: 沒有可用的聊天室
+  inviteUser: 邀請使用者
+  sentInvitations: 已傳送的邀請
+  join: 加入
+  ignore: 忽視
+  leave: 退出聊天室
+  members: 成員
+  searchMessages: 搜尋聊天訊息
+  home: 首頁
+  send: 發送
+  newline: 換行
+  muteThisRoom: 此聊天室已靜音
+  deleteRoom: 刪除聊天室
+  mutedAll: 全體禁言中
+  mutedAllHint: 僅群主、群管理員和實例管理員可以發言。
+  mutedAllComposerDisabled: 全體禁言中，無法輸入或傳送訊息。
+  joinPolicy: 加入策略
+  joinPolicyPublic: 公開加入（知道房間連結即可）
+  joinPolicyLink: 連結/邀請碼加入
+  joinPolicyInvite: 邀請加入
+  joinPolicyClosed: 禁止加入
+  joinByInviteCode: 透過邀請碼加入
+  enterInviteCode: 輸入邀請碼
+  inviteCode: 邀請碼
+  copyInviteCode: 複製邀請碼
+  regenerateInviteCode: 重新產生邀請碼
+  notAMember: 你還不是此群的成員。
+  canJoinDirectly: 可直接加入。
+  needInviteCodeToJoin: 請輸入邀請碼後加入。
+  needInvitationToJoin: 需要群主/管理員邀請。
+  joiningClosed: 此群目前禁止加入。
+  joining: 加入中…
+  joinRoom: 加入群聊
+  joinFailed: 加入失敗
+  signinToJoinRoom: 需要登入後進入群聊
+  signinToJoinRoomHint: 開啟此連結需要帳號。登入後可加入並查看訊息。
+  stickers: 貼圖
+  noStickersYet: 尚無貼圖包。可匯入 Telegram 貼圖包（需伺服器設定 TELEGRAM_BOT_TOKEN），或建立後新增圖片。
+  importTelegram: 匯入
+  roleOwner: 群主
+  roleAdmin: 管理員
+  roleMember: 成員
+  promoteToAdmin: 設為管理員
+  demoteToMember: 降為成員
+  chatNotAvailableForThisAccountOrServer: 這個伺服器或這個帳號的聊天功能尚未啟用。
+  chatIsReadOnlyForThisAccountOrServer: 在此伺服器或此帳戶上的聊天是唯讀的。您無法發布新訊息、建立或加入聊天室。
+  chatNotAvailableInOtherAccount: 對方的帳號無法使用聊天功能。
+  cannotChatWithTheUser: 無法與此使用者聊天
+  cannotChatWithTheUser_description: 聊天功能目前無法使用，或對方尚未開放聊天功能。
+  chatWithThisUser: 聊天
+  thisUserAllowsChatOnlyFromFollowers: 此使用者僅接受來自追隨者的聊天訊息。
+  thisUserAllowsChatOnlyFromFollowing: 此使用者僅接受自己追隨的使用者傳送聊天訊息。
+  thisUserAllowsChatOnlyFromMutualFollowing: 此使用者只接受互相追隨的使用者傳送聊天訊息。
+  thisUserNotAllowedChatAnyone: 此使用者不接受來自任何人的聊天訊息。
+  chatAllowedUsers: 允許聊天的對象
+  chatAllowedUsers_note: 無論此設定為何，您仍可與自己曾發送過聊天訊息的對象進行聊天。
   _chatAllowedUsers:
-    everyone: "任何人"
-    followers: "追隨自己的使用者"
-    following: "只有您追隨的使用者"
-    mutual: "互相追隨"
-    none: "無"
-  manage: "管理"
-  manageHint: "群主、群管理員以及論壇管理員/站長可在此管理群聊。"
-  manageInManageTab: "全體禁言、公告、清理訊息、刪除房間請到「管理」頁操作。"
-  roomSettings: "房間設定"
-  dangerZone: "危險操作"
-  clearMessages: "清理聊天訊息"
-  clearMessagesHint: "永久刪除此群全部訊息，所有成員可見內容將被清空。"
-  clearMessagesConfirm: "確定清理此群全部聊天訊息？此操作無法復原。"
-  about: "關於"
-  e2eeOn: "端到端加密"
-  e2eeOff: "未加密"
-  e2eePeerNoKey: "對方尚未啟用端到端加密。請對方先打開一次此私聊。"
-  e2eePlaceholder: "加密訊息…"
-  e2eeEncryptFailed: "加密失敗。"
-  e2eeDecryptFailed: "無法解密（缺少金鑰）。"
-  encryptedMessage: "🔒 加密訊息"
-  recentStickers: "最近使用"
-  wsSendFailed: "傳送失敗，請檢查網路後重試。"
-  loadFailed: "載入失敗"
-  roomOpenFailed: "無法打開此房間（不存在或無權存取）"
-  wsConnected: "即時連線已建立"
-  wsReconnecting: "即時連線重連中…"
-  searchPlaceholder: "搜尋訊息…"
-  filterBySpeaker: "發言人"
-  selectSpeaker: "選擇發言人"
-  clearSpeaker: "清除"
-  jumpToMessage: "跳到訊息"
-  recentFromSpeaker: "此發言人的最近訊息"
-  searchOrSpeakerHint: "可輸入關鍵字搜尋；也可指定發言人。僅選發言人時顯示其最近訊息。點擊結果可跳到聊天中的對應位置。"
-  jumpingToMessage: "正在跳到訊息…"
+    everyone: 任何人
+    followers: 追隨自己的使用者
+    following: 只有您追隨的使用者
+    mutual: 互相追隨
+    none: 無
+  manage: 管理
+  manageHint: 群主、群管理員以及論壇管理員/站長可在此管理群聊。
+  manageInManageTab: 全體禁言、公告、清理訊息、刪除房間請到「管理」頁操作。
+  roomSettings: 房間設定
+  dangerZone: 危險操作
+  clearMessages: 清理聊天訊息
+  clearMessagesHint: 永久刪除此群全部訊息，所有成員可見內容將被清空。
+  clearMessagesConfirm: 確定清理此群全部聊天訊息？此操作無法復原。
+  about: 關於
+  e2eeOn: 端到端加密
+  e2eeOff: 未加密
+  e2eePeerNoKey: 加密始終開啟。請對方先打開一次此私聊以完成金鑰交換，在此之前無法傳送文字。
+  e2eePlaceholder: 加密訊息…
+  e2eeEncryptFailed: 加密失敗。
+  e2eeDecryptFailed: 無法解密（缺少金鑰）。
+  encryptedMessage: 🔒 加密訊息
+  recentStickers: 最近使用
+  wsSendFailed: 傳送失敗，請檢查網路後重試。
+  loadFailed: 載入失敗
+  roomOpenFailed: 無法打開此房間（不存在或無權存取）
+  wsConnected: 即時連線已建立
+  wsReconnecting: 即時連線重連中…
+  searchPlaceholder: 搜尋訊息…
+  filterBySpeaker: 發言人
+  selectSpeaker: 選擇發言人
+  clearSpeaker: 清除
+  jumpToMessage: 跳到訊息
+  recentFromSpeaker: 此發言人的最近訊息
+  searchOrSpeakerHint: 可輸入關鍵字搜尋；也可指定發言人。僅選發言人時顯示其最近訊息。點擊結果可跳到聊天中的對應位置。
+  jumpingToMessage: 正在跳到訊息…
+  roomAnnouncement: 公告
+  e2eeAlwaysOn: 端到端加密
+  e2eeAlwaysOnHint: 聊天訊息落庫加密（AES-GCM）。會話雙方與持有服務端金鑰的營運方可讀；他人不可。公開貼文不加密，搜尋引擎仍可抓取。
+  chatEscrowHint: 託管加密聊天：你、對方/群成員、以及服務端營運方可讀。
+  e2eeWaitingPeer: 等待對方金鑰…
+  e2eeFingerprint: 金鑰指紋
+  e2eeKeyRotated: 對方加密金鑰已更新，將使用新金鑰同步。
+  e2eePlaintextRejected: 私聊文字必須使用端到端加密。
+  wsCatchingUp: 正在同步訊息…
+  globalSearchHint: 僅搜尋你已有的私訊與群聊。點擊結果會開啟對應對話並定位到該訊息。
+  replyVideo: "[影片]"
+  replyImage: "[圖片]"
+  replyAudio: "[音訊]"
+  replyFile: "[檔案]"
+  replyE2ee: "[加密訊息]"
+  messageRateLimit: 聊天限速（秒）
+  messageRateLimitHint: 設為 0 不限制。例如設為 5 表示每 5 秒只能發 1 則。群主、群管理員、站長與管理員不受限。
+  roomRateLimited: 發言過快，請稍後再發。
+  staffReadonlyView: 管理員唯讀檢視（非群成員）
+  staffReadonlyViewHint: 可檢視群聊訊息以便處理檢舉；傳送訊息仍需加入此群。
+  sending: 傳送中…
+  sendingHint: 訊息傳送中，請稍候…
+  kickMember: 踢出
+  kickMemberConfirm: 確定將此人踢出群聊？若加入策略允許，對方仍可再次加入。
+  banMember: 拉黑
+  banMemberConfirm: 將此人加入群聊黑名單並移出？解除前無法再加入。
+  unbanMember: 移出黑名單
+  muteMember: 禁言
+  unmuteMember: 解除禁言
+  muteDuration: 禁言時長
+  mute10m: 10 分鐘
+  mute30m: 30 分鐘
+  mute1h: 1 小時
+  mute2h: 2 小時
+  mute1d: 1 天
+  mute1mo: 1 個月
+  muteCustom: 自訂…
+  muteCustomTitle: 自訂禁言時長
+  muteUnit: 單位
+  muteUnitSeconds: 秒
+  muteUnitMinutes: 分鐘
+  muteUnitHours: 小時
+  muteUnitDays: 天
+  muteUnitMonths: 月
+  muteAmount: 數量
+  mutedUntil: 禁言至
+  blacklist: 黑名單
+  blacklistEmpty: 黑名單為空。
+  blacklistHint: 被拉黑用戶在移出黑名單前無法再次加入此群。
+  modDeleteMessage: 刪除訊息
+  modDeleteMessageConfirm: 確定為所有人刪除這則訊息？
+  memberActions: 成員操作
+  youAreMuted: 你已被禁言，暫時無法發言。
+  bannedFromRoom: 你已被此群拉黑，無法加入。
+  banReason: 原因（可選）
+  hideTranslation: 隱藏翻譯
+  translateFailed: 翻譯失敗
+  translated: 翻譯
 _emojiPalette:
   palettes: "調色盤"
   enableSyncBetweenDevicesForPalettes: "啟用裝置與裝置之間的調色盤同步化"
@@ -3320,3 +3380,104 @@ _performanceAdmin:
   perUserHomeTimelineCacheMax: "首頁時間軸快取上限"
   perUserListTimelineCacheMax: "列表時間軸快取上限"
   cacheMaxCaption: "每條時間軸在 Redis 中保留的筆記上限。數值越大占用記憶體越多。"
+
+_uiCommon:
+  enabled: 已啟用
+  disabled: 已停用
+  enable: 啟用
+  stats: 統計
+  activeUsers: 活躍使用者
+  heatmap: 熱力圖
+  retentionRate: 留存率
+  moderators: 版主
+  federation: 聯邦
+  instances: 站點
+  apRequests: ActivityPub 請求
+  newUsers: 新使用者
+  deliverQueue: 投遞佇列
+  inboxQueue: 收件佇列
+  users: 使用者
+  notes: 貼文
+  customEmojis: 自訂表情
+  online: 線上
+  read: 讀取
+  write: 寫入
+  process: 處理
+  active: 進行中
+  waiting: 等待中
+  delayed: 延遲
+  top10: 前 10
+  overview: 概覽
+  jobs: 任務
+  latest: 最新
+  completed: 已完成
+  failed: 失敗
+  paused: 已暫停
+  deliver: 投遞
+  inbox: 收件
+  info: 資訊
+  timeline: 時間軸
+  data: 資料
+  result: 結果
+  error: 錯誤
+  logs: 日誌
+  options: 選項
+  createdAt: 建立時間
+  processedAt: 處理時間
+  finishedAt: 完成時間
+  spent: 耗時
+  failedReason: 失敗原因
+  attempts: 嘗試次數
+  progress: 進度
+  finished: 已結束
+  processed: 已處理
+  created: 已建立
+  clientsConnected: 用戶端：已連線
+  clientsBlocked: 用戶端：已阻塞
+  memoryPeak: 記憶體：峰值
+  memoryTotal: 記憶體：總量
+  memoryUsed: 記憶體：已用
+  uptime: 運行時間
+  apiConsole: API 控制台
+  endpoint: 端點
+  paramsJson: 參數 (JSON 或 JSON5)
+  withCredential: 附帶憑證
+  send: 傳送
+  response: 回應
+  sponsors: 贊助者
+  wellKnown: 常用資源
+  suspended: 已暫停
+  blocked: 已封鎖
+  silenced: 已靜音
+  alive: 正常
+  bubble: 氣泡
+  activeEmailValidation: 主動信箱驗證
+  useVerifymail: 使用 Verifymail.io API
+  verifymailKey: Verifymail.io API 金鑰
+  useTruemail: 使用 TrueMail API
+  truemailInstance: TrueMail API 實例
+  truemailKey: TrueMail API 金鑰
+  bannedEmailDomains: 禁止的信箱網域
+  bannedEmailDomainsList: 禁止信箱網域清單
+  logIpAddress: 記錄 IP 位址
+  apiDocs: API 文件
+  promoteAllJobs: 全部提升優先級
+  emptyQueue: 清空佇列
+  refreshView: 重新整理
+  removeJobs: 刪除任務
+  all: 全部
+  copyRaw: 複製原始資料
+  promote: 提升
+  moveTo: 移動到
+  remove: 刪除
+  update: 更新
+  dataEdit: 資料（編輯）
+  attemptsOf: /
+  attemptN: 嘗試
+  at: 於
+  erroredInstances: 出錯的站點
+  overviewOf: 概覽
+  jobsOf: 任務
+  sub: 訂閱
+  pub: 發佈
+  jobsCount: 個任務
