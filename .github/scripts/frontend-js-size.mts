@@ -414,6 +414,12 @@ function compareChunkComparisonRows(a: ReturnType<typeof getChunkComparisonRows>
 		|| a.name.localeCompare(b.name);
 }
 
+function chunkFileDisplay(row: ReturnType<typeof getChunkComparisonRows>[number]) {
+	if (row.beforeFile == null) return row.afterFile ?? '';
+	if (row.afterFile == null || row.beforeFile === row.afterFile) return row.beforeFile;
+	return `${row.beforeFile} → ${row.afterFile}`;
+}
+
 function chunkMarkdownTable(
 	rows: ReturnType<typeof getChunkComparisonRows>,
 	total?: { beforeSize: number; afterSize: number },
@@ -437,7 +443,7 @@ function chunkMarkdownTable(
 	if (hasSummaryRow && rows.length > 0) lines.push('| | | | | |');
 
 	for (const row of rows) {
-		const chunkFile = row.beforeFile ?? row.afterFile ?? '';
+		const chunkFile = chunkFileDisplay(row);
 		if (row.changeType === 'added') {
 			lines.push(`| <details><summary>\`${escapeCell(row.name)}\`</summary> \`${escapeCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | $\\color{orange}{\\text{( + )}}$ |`);
 		} else if (row.changeType === 'removed') {

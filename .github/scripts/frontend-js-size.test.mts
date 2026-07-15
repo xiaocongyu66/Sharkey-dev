@@ -83,3 +83,25 @@ test('groups generated chunks while preserving full and startup totals', async t
 	assert.match(report, /<summary>`src\/_boot_\.ts`<\/summary>/);
 	assert.match(report, /<summary>`vue`<\/summary>/);
 });
+
+test('fails instead of overwriting duplicate stable chunk keys', async t => {
+	const duplicateVue = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	duplicateVue.manifest._vueDuplicate = { file: 'scripts/vue-duplicate-before.js', name: 'vue' };
+	duplicateVue.sizes['scripts/vue-duplicate-before.js'] = 60;
+
+	await assert.rejects(
+		runReport(t, duplicateVue, fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 })),
+		/Duplicate stable chunk key "named:vue".*vue-before\.js.*vue-duplicate-before\.js/,
+	);
+});
+
+test('shows both filenames for an updated stable chunk', async t => {
+	const report = await runReport(
+		t,
+		fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 }),
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+	);
+
+	assert.match(report, /`ja-JP\/entry-before\.js → ja-JP\/entry-after\.js`/);
+	assert.match(report, /`ja-JP\/vue-before\.js → ja-JP\/vue-after\.js`/);
+});
