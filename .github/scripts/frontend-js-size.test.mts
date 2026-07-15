@@ -4,6 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,7 +34,7 @@ async function writeBuild(repo: string, manifest: Manifest, sizes: Record<string
 	}
 }
 
-async function runReport(t: TestContext, before: { manifest: Manifest; sizes: Record<string, number> }, after: { manifest: Manifest; sizes: Record<string, number> }) {
+async function runReport(t: TestContext, before: { manifest: Manifest; sizes: Record<string, number> }, after: { manifest: Manifest; sizes: Record<string, number> }, expectFailure = false) {
 	const root = await fs.mkdtemp(path.join(os.tmpdir(), 'frontend-js-size-'));
 	t.after(() => fs.rm(root, { recursive: true, force: true }));
 	const beforeDir = path.join(root, 'before');
@@ -45,7 +46,19 @@ async function runReport(t: TestContext, before: { manifest: Manifest; sizes: Re
 	await writeBuild(afterDir, after.manifest, after.sizes);
 	await fs.writeFile(beforeStats, '{}');
 	await fs.writeFile(afterStats, '{}');
-	await util.run(process.execPath, [reportScript, beforeDir, afterDir, beforeStats, afterStats, reportFile]);
+	const args = [reportScript, beforeDir, afterDir, beforeStats, afterStats, reportFile];
+	if (expectFailure) {
+		return new Promise<string>((resolve, reject) => {
+			execFile(process.execPath, args, (error, _stdout, stderr) => {
+				if (error == null) {
+					reject(new Error('Expected frontend report script to fail'));
+				} else {
+					resolve(stderr);
+				}
+			});
+		});
+	}
+	await util.run(process.execPath, args);
 	return fs.readFile(reportFile, 'utf8');
 }
 
@@ -89,10 +102,13 @@ test('fails instead of overwriting duplicate stable chunk keys', async t => {
 	duplicateVue.manifest._vueDuplicate = { file: 'scripts/vue-duplicate-before.js', name: 'vue' };
 	duplicateVue.sizes['scripts/vue-duplicate-before.js'] = 60;
 
-	await assert.rejects(
-		runReport(t, duplicateVue, fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 })),
-		/Duplicate stable chunk key "named:vue".*vue-before\.js.*vue-duplicate-before\.js/,
+	const diagnostic = await runReport(
+		t,
+		duplicateVue,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+		true,
 	);
+	assert.match(diagnostic, /Duplicate stable chunk key "named:vue".*vue-before\.js.*vue-duplicate-before\.js/);
 });
 
 test('shows both filenames for an updated stable chunk', async t => {
