@@ -335,7 +335,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </PageWithHeader>
 </template>
 
-<script lang="ts" setup><script lang="ts" setup>
+<script lang="ts" setup>
 import { computed, ref } from 'vue';
 import * as os from '@/os.js';
 import { misskeyApi } from '@/utility/misskey-api.js';
