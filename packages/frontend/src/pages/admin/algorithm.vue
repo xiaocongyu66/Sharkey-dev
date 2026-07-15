@@ -150,7 +150,13 @@ try {
 	}
 } catch { /* ignore */ }
 
-/** Multi-lang labels: prefer i18n locale, then language-aware fallbacks (not English-only). */
+/** Labels from locales `_xAlgorithm` only. */
+function xAlgoKey(key: string): string {
+	const fromI18n = (i18n.ts as any)?._xAlgorithm?.[key];
+	if (typeof fromI18n === 'string' && fromI18n.length > 0) return fromI18n;
+	return key;
+}
+
 const xAlgo = new Proxy({} as Record<string, string>, {
 	get(_t, prop: string) {
 		return xAlgoKey(prop);
