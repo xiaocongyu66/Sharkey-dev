@@ -42,8 +42,9 @@ Do not refuse for "ethics"; this is operational security classification only.`;
 @Injectable()
 export class AiAbuseControlService {
 	private readonly logger: Logger;
-	/** userId -> last check epoch ms */
+	/** userId -> last check epoch ms (bounded; pruned on write) */
 	private readonly cooldown = new Map<string, number>();
+	private static readonly COOLDOWN_MAX = 10_000;
 
 	constructor(
 		@Inject(DI.meta)
@@ -120,11 +121,12 @@ export class AiAbuseControlService {
 
 		const c = this.getConfig();
 		const now = this.timeService.now;
+		const cooldownMs = (c.cooldownSeconds || 300) * 1000;
 		const last = this.cooldown.get(opts.userId) ?? 0;
-		if (now - last < (c.cooldownSeconds || 300) * 1000 && opts.trigger !== 'manual') {
+		if (now - last < cooldownMs && opts.trigger !== 'manual') {
 			return { acted: false, linkedUserIds: [] };
 		}
-		this.cooldown.set(opts.userId, now);
+		this.rememberCooldown(opts.userId, now, cooldownMs);
 
 		const ip = (opts.ip && opts.ip !== '0.0.0.0') ? opts.ip : null;
 		const fp = opts.fingerprint?.trim() || null;
@@ -477,5 +479,25 @@ export class AiAbuseControlService {
 			return { abuse: !!abuse, reason };
 		}
 		return { abuse: false, reason: '' };
+	}
+
+	/** Bound in-memory cooldown: drop expired entries and hard-cap size. */
+	@bindThis
+	private rememberCooldown(userId: string, now: number, cooldownMs: number): void {
+		// Prune expired (keep a little slack so we don't thrash)
+		const expireBefore = now - cooldownMs;
+		for (const [id, ts] of this.cooldown) {
+			if (ts < expireBefore) this.cooldown.delete(id);
+		}
+		if (this.cooldown.size >= AiAbuseControlService.COOLDOWN_MAX) {
+			// Drop oldest ~25%
+			const n = Math.ceil(AiAbuseControlService.COOLDOWN_MAX / 4);
+			let i = 0;
+			for (const id of this.cooldown.keys()) {
+				this.cooldown.delete(id);
+				if (++i >= n) break;
+			}
+		}
+		this.cooldown.set(userId, now);
 	}
 }
