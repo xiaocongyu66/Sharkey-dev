@@ -41,6 +41,14 @@ export interface BroadcastEventTypes {
 	announcementCreated: {
 		announcement: Packed<'Announcement'>;
 	};
+	/**
+	 * Local user display profile changed (avatar / name / description / …).
+	 * Pushed to all connected clients so timeline/chat caches can patch without REST.
+	 */
+	userUpdated: {
+		user: Packed<'UserLite'>;
+		updatedAt: string;
+	};
 }
 
 export interface MainEventTypes {
@@ -97,6 +105,11 @@ export interface MainEventTypes {
 	};
 	/** Own avatar refreshed (other tabs / cache bust) */
 	userAvatarUpdated: {
+		user: Packed<'UserLite'>;
+		updatedAt: string;
+	};
+	/** Own profile display fields (alias of broadcast userUpdated for main listeners) */
+	userUpdated: {
 		user: Packed<'UserLite'>;
 		updatedAt: string;
 	};

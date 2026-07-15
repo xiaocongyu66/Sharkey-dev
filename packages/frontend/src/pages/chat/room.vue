@@ -885,6 +885,10 @@ function bindChatChannelEvents() {
 		const u = body?.user;
 		if (!u?.id) return;
 		const patched = patchAvatarUrls(u, body?.updatedAt);
+		// Also feed global live cache (timeline avatars elsewhere)
+		import('@/utility/live-user-cache.js').then(({ applyUserUpdated }) => {
+			applyUserUpdated({ user: patched, updatedAt: body?.updatedAt ?? new Date().toISOString() });
+		}).catch(() => { /* ignore */ });
 		for (const m of messages.value) {
 			if (m.fromUserId === u.id && m.fromUser) {
 				m.fromUser = { ...m.fromUser, ...patched };

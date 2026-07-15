@@ -4,10 +4,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<component :is="link ? MkA : 'span'" v-user-preview="preview ? user.id : undefined" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.animation]: animation, [$style.cat]: user.isCat, [$style.square]: squareAvatars }]" :style="{ color }" :title="acct(user)" @click="onClick">
-	<MkImgWithBlurhash :class="$style.inner" :src="url" :hash="user.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
-	<MkUserOnlineIndicator v-if="indicator" :class="$style.indicator" :user="user"/>
-	<div v-if="user.isCat" :class="[$style.ears]">
+<component :is="link ? MkA : 'span'" v-user-preview="preview ? liveUser.id : undefined" v-bind="bound" class="_noSelect" :class="[$style.root, { [$style.animation]: animation, [$style.cat]: liveUser.isCat, [$style.square]: squareAvatars }]" :style="{ color }" :title="acct(liveUser)" @click="onClick">
+	<MkImgWithBlurhash :class="$style.inner" :src="url" :hash="liveUser.avatarBlurhash" :cover="true" :onlyAvgColor="true"/>
+	<MkUserOnlineIndicator v-if="indicator" :class="$style.indicator" :user="liveUser"/>
+	<div v-if="liveUser.isCat" :class="[$style.ears]">
 		<div :class="$style.earLeft">
 			<div v-if="false" :class="$style.layer">
 				<div :class="$style.plot" :style="{ backgroundImage: `url(${JSON.stringify(url)})` }"/>
@@ -25,7 +25,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</div>
 	<template v-if="showDecoration">
 		<img
-			v-for="decoration in decorations ?? user.avatarDecorations"
+			v-for="decoration in decorations ?? liveUser.avatarDecorations"
 			:class="[$style.decoration, { [$style.decorationBlink]: decoration.blink }]"
 			:src="getDecorationUrl(decoration)"
 			:style="{
@@ -43,7 +43,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, ref, computed } from 'vue';
+import { watch, ref, computed, toRef } from 'vue';
 import * as Misskey from 'misskey-js';
 import { extractAvgColorFromBlurhash } from '@@/js/extract-avg-color-from-blurhash.js';
 import MkImgWithBlurhash from '../MkImgWithBlurhash.vue';
@@ -52,6 +52,7 @@ import { getStaticImageUrl } from '@/utility/media-proxy.js';
 import { acct, userPage } from '@/filters/user.js';
 import MkUserOnlineIndicator from '@/components/MkUserOnlineIndicator.vue';
 import { prefer } from '@/preferences.js';
+import { useLiveUser } from '@/utility/live-user-cache.js';
 
 const animation = ref(prefer.s.animation);
 const squareAvatars = ref(prefer.s.squareAvatars);
@@ -77,16 +78,19 @@ const emit = defineEmits<{
 	(ev: 'click', v: MouseEvent): void;
 }>();
 
+// Merge WS profile patches (avatar / decorations) without REST
+const liveUser = useLiveUser(toRef(props, 'user'));
+
 const showDecoration = props.forceShowDecoration || prefer.s.showAvatarDecorations;
 
 const bound = computed(() => props.link
-	? { to: userPage(props.user), target: props.target }
+	? { to: userPage(liveUser.value), target: props.target }
 	: {});
 
-// Cache-bust when avatarUrl changes (WS userAvatarUpdated may append ?t=)
+// Cache-bust when avatarUrl changes (WS userUpdated / userAvatarUpdated may append ?t=)
 const url = computed(() => {
-	if (props.user.avatarUrl == null) return null;
-	const raw = props.user.avatarUrl;
+	if (liveUser.value.avatarUrl == null) return null;
+	const raw = liveUser.value.avatarUrl;
 	if (prefer.s.disableShowingAnimatedImages || prefer.s.dataSaver.avatar) return getStaticImageUrl(raw);
 	return raw;
 });
@@ -123,9 +127,9 @@ function getDecorationZIndex(decoration: Omit<Misskey.entities.UserDetailed['ava
 
 const color = ref<string | undefined>();
 
-watch(() => props.user.avatarBlurhash, () => {
-	if (props.user.avatarBlurhash == null) return;
-	color.value = extractAvgColorFromBlurhash(props.user.avatarBlurhash);
+watch(() => liveUser.value.avatarBlurhash, () => {
+	if (liveUser.value.avatarBlurhash == null) return;
+	color.value = extractAvgColorFromBlurhash(liveUser.value.avatarBlurhash);
 }, {
 	immediate: true,
 });

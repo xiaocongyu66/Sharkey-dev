@@ -10,4 +10,9 @@ export const globalEvents = new EventEmitter<{
 	themeChanging: () => void;
 	themeChanged: () => void;
 	clientNotification: (notification: Misskey.entities.Notification) => void;
+	/** WS-driven profile patch (avatar / name / description / …) */
+	userUpdated: (payload: {
+		user: Misskey.entities.UserLite | Misskey.entities.User;
+		updatedAt: string;
+	}) => void;
 }>();

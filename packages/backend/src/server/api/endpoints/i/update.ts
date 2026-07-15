@@ -671,18 +671,25 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			// Publish meUpdated event
 			await this.globalEventService.publishMainStream(user.id, 'meUpdated', iObj);
 
-			// Avatar changed: push lite user to open chat streams so clients refresh
-			const avatarChanged =
-				(updates as any).avatarId !== undefined
+			// Display-facing fields: push WS so other clients patch avatar/name/signature caches
+			const displayChanged =
+				this.userNeedsPublishing(user, updates)
+				|| this.profileNeedsPublishing(profile, updatedProfile)
+				|| (updates as any).avatarId !== undefined
 				|| (updates as any).avatarUrl !== undefined
-				|| (updates as any).avatarBlurhash !== undefined;
-			if (avatarChanged) {
+				|| (updates as any).avatarBlurhash !== undefined
+				|| (updates as any).name !== undefined
+				|| (profileUpdates as any).description !== undefined;
+			if (displayChanged) {
 				try {
 					const lite = await this.userEntityService.pack(updatedUser, null, { schema: 'UserLite' });
 					const payload = { user: lite, updatedAt: new Date().toISOString() };
-					// Also on own main (other devices / UI that only listen to main)
-					await this.globalEventService.publishMainStream(user.id, 'userAvatarUpdated' as any, payload);
-					// Rooms this user is in (membership rows; owner may not have a row)
+					// Instance-wide: timelines / note headers / avatars on other sessions
+					await this.globalEventService.publishBroadcastStream('userUpdated', payload);
+					// Own main (other devices) + legacy avatar listeners
+					await this.globalEventService.publishMainStream(user.id, 'userUpdated', payload);
+					await this.globalEventService.publishMainStream(user.id, 'userAvatarUpdated', payload);
+					// Open chat rooms: patch fromUser without reopening
 					const memberships = await this.chatRoomMembershipsRepository.find({
 						where: { userId: user.id },
 						select: { roomId: true },

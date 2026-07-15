@@ -75,6 +75,11 @@ export type Channels = {
 				user: UserLite;
 				updatedAt: string;
 			}) => void;
+			/** Own profile display fields updated (same payload as broadcast userUpdated) */
+			userUpdated: (payload: {
+				user: UserLite;
+				updatedAt: string;
+			}) => void;
 			/** Response to requestNotifications over main WS */
 			notifications: (payload: {
 				reqId?: string | null;
@@ -490,4 +495,9 @@ export type BroadcastEvents = {
 	emojiUpdated: (payload: EmojiUpdated) => void;
 	emojiDeleted: (payload: EmojiDeleted) => void;
 	announcementCreated: (payload: AnnouncementCreated) => void;
+	/** Any local user changed display profile (avatar / name / description / …) */
+	userUpdated: (payload: {
+		user: UserLite;
+		updatedAt: string;
+	}) => void;
 };

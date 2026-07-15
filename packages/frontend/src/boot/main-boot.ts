@@ -112,6 +112,13 @@ export async function mainBoot() {
 		removeCustomEmojis(emojiData.emojis);
 	});
 
+	// Profile display updates (avatar / name / signature) — patch in-memory without REST
+	stream.on('userUpdated', (body: any) => {
+		import('@/utility/live-user-cache.js').then(({ applyUserUpdated }) => {
+			applyUserUpdated(body);
+		}).catch(() => { /* ignore */ });
+	});
+
 	launchPlugins();
 
 	try {
@@ -396,8 +403,8 @@ export async function mainBoot() {
 			updateCurrentAccountPartial({ hasUnreadAnnouncement: false });
 		});
 
-		// Avatar update on own account (other devices / pack refresh)
-		main.on('userAvatarUpdated', (body: any) => {
+		// Avatar / profile on own account (other devices / pack refresh)
+		const onOwnProfilePatch = (body: any) => {
 			const u = body?.user;
 			if (!u?.id || !$i || u.id !== $i.id) return;
 			const updatedAt = body?.updatedAt ? String(body.updatedAt) : String(Date.now());
@@ -406,7 +413,12 @@ export async function mainBoot() {
 				...u,
 				avatarUrl: base ? `${base}?t=${encodeURIComponent(updatedAt)}` : $i.avatarUrl,
 			});
-		});
+			import('@/utility/live-user-cache.js').then(({ applyUserUpdated }) => {
+				applyUserUpdated(body);
+			}).catch(() => { /* ignore */ });
+		};
+		main.on('userAvatarUpdated', onOwnProfilePatch);
+		main.on('userUpdated', onOwnProfilePatch);
 
 		// 個人宛てお知らせが発行されたとき
 		main.on('announcementCreated', onAnnouncementCreated);
