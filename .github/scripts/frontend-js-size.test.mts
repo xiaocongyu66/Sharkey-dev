@@ -12,7 +12,7 @@ import test, { type TestContext } from 'node:test';
 import * as util from './utility.mts';
 
 type Manifest = Record<string, {
-	file: string;
+	file?: string;
 	src?: string;
 	name?: string;
 	isEntry?: boolean;
@@ -120,4 +120,114 @@ test('shows both filenames for an updated stable chunk', async t => {
 
 	assert.match(report, /`ja-JP\/entry-before\.js → ja-JP\/entry-after\.js`/);
 	assert.match(report, /`ja-JP\/vue-before\.js → ja-JP\/vue-after\.js`/);
+});
+
+test('fails descriptively when the startup entry is missing', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	delete before.manifest['src/_boot_.ts'];
+	delete before.sizes['scripts/entry-before.js'];
+
+	const diagnostic = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+		true,
+	);
+	assert.match(diagnostic, /Unable to find frontend startup entry in Vite manifest/);
+});
+
+test('fails descriptively when a static import is missing from the manifest', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.manifest['src/_boot_.ts'].imports = ['_missing'];
+
+	const diagnostic = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+		true,
+	);
+	assert.match(diagnostic, /Startup manifest key "_missing".*is missing/);
+});
+
+test('fails descriptively when a static import has no output file', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.manifest['src/_boot_.ts'].imports = ['_malformed'];
+	before.manifest._malformed = { name: 'malformed' };
+
+	const diagnostic = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+		true,
+	);
+	assert.match(diagnostic, /Startup manifest key "_malformed".*has no output file/);
+});
+
+test('fails descriptively when a static import resolves to a non-JavaScript output', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.manifest['src/_boot_.ts'].imports = ['_malformed'];
+	before.manifest._malformed = { file: 'assets/malformed.css', name: 'malformed' };
+
+	const diagnostic = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+		true,
+	);
+	assert.match(diagnostic, /Startup manifest key "_malformed".*non-JavaScript output "assets\/malformed\.css"/);
+});
+
+test('keeps source-backed additions and removals as individual rows', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.manifest._removed = { file: 'scripts/removed-before.js', src: 'src/removed.ts' };
+	before.sizes['scripts/removed-before.js'] = 12;
+	const after = fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 });
+	after.manifest._added = { file: 'scripts/added-after.js', src: 'src/added.ts' };
+	after.sizes['scripts/added-after.js'] = 13;
+
+	const report = await runReport(t, before, after);
+
+	assert.match(report, /<summary>`src\/added\.ts`<\/summary> `ja-JP\/added-after\.js` <\/details> \| 0 B \| 13 B \|/);
+	assert.match(report, /<summary>`src\/removed\.ts`<\/summary> `ja-JP\/removed-before\.js` <\/details> \| 12 B \| 0 B \|/);
+});
+
+test('counts an unmanifested localized JavaScript file in totals and the generated aggregate', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.sizes['scripts/unmanifested-before.js'] = 15;
+
+	const report = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+	);
+
+	assert.match(report, /\| \(total\) \| 235 B \| 275 B \|/);
+	assert.match(report, /\| \(other generated chunks\) \| 45 B \| 70 B \|/);
+	assert.match(report, /_3 before \/ 2 after generated chunks are grouped\._/);
+});
+
+test('counts duplicate manifest entries for one physical output only once', async t => {
+	const before = fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 });
+	before.manifest._generatedAlias = { file: 'scripts/generated-a-before.js', name: 'dist' };
+
+	const report = await runReport(
+		t,
+		before,
+		fixture('after', 'esm', { entry: 110, generatedA: 30, generatedB: 40, vue: 45, i18n: 50 }),
+	);
+
+	assert.match(report, /\| \(total\) \| 220 B \| 275 B \|/);
+	assert.match(report, /_2 before \/ 2 after generated chunks are grouped\._/);
+});
+
+test('does not count generated-aggregate-only changes as individual chunk changes', async t => {
+	const report = await runReport(
+		t,
+		fixture('before', 'dist', { entry: 100, generatedA: 10, generatedB: 20, vue: 40, i18n: 50 }),
+		fixture('after', 'esm', { entry: 100, generatedA: 30, generatedB: 40, vue: 40, i18n: 50 }),
+	);
+
+	assert.match(report, /<summary>Chunk size diff \(0 updated, 0 added, 0 removed\)<\/summary>/);
+	assert.match(report, /<summary>Startup chunk size \(0 updated, 0 added, 0 removed\)<\/summary>/);
+	assert.equal(report.match(/\| \(other generated chunks\) \| 30 B \| 70 B \|/g)?.length, 2);
 });

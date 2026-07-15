@@ -80,14 +80,17 @@ function stableChunkKey(chunk: Manifest[string]) {
 function collectStartupManifestKeys(manifest: Manifest) {
 	const entryKey = findEntryKey(manifest);
 	const keys = new Set<string>();
-	if (entryKey == null) return keys;
+	if (entryKey == null) throw new Error('Unable to find frontend startup entry in Vite manifest.');
 
-	function visit(key: string) {
+	function visit(key: string, importedBy?: string) {
 		if (keys.has(key)) return;
 		const chunk = manifest[key];
-		if (!chunk || !chunk.file?.endsWith('.js')) return;
+		const importContext = importedBy == null ? '' : ` imported by "${importedBy}"`;
+		if (chunk == null) throw new Error(`Startup manifest key "${key}"${importContext} is missing.`);
+		if (chunk.file == null || chunk.file.length === 0) throw new Error(`Startup manifest key "${key}"${importContext} has no output file.`);
+		if (!chunk.file.endsWith('.js')) throw new Error(`Startup manifest key "${key}"${importContext} resolves to non-JavaScript output "${chunk.file}".`);
 		keys.add(key);
-		for (const importKey of chunk.imports ?? []) visit(importKey);
+		for (const importKey of chunk.imports ?? []) visit(importKey, key);
 	}
 
 	visit(entryKey);
