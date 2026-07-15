@@ -836,12 +836,18 @@ export class NoteEntityService implements OnModuleInit {
 			Promise.all([userRelationsPromise, iAmAdminPromise, iAmModeratorPromise])
 				.then(([userRelations, iAmAdmin, iAmModerator]) => this.userEntityService.packMany(users, me, { hint: { userRelations, iAmAdmin, iAmModerator } }))
 				.then(packedUsers => new Map(packedUsers.map(u => [u.id, u]))),
-			// polls
-			this.pollsRepository.findBy({ noteId: IsOne(noteIds) })
-				.then(polls => new Map(polls.map(p => [p.noteId, p]))),
-			// pollVotes — SK-097 / PERF-09: only the viewer's votes (not all packed users)
-			me
-				? this.pollVotesRepository.findBy({ noteId: IsOne(noteIds), userId: me.id })
+			// polls — PERF-03: skip when no note in the set has a poll
+			(() => {
+				const pollNoteIds = Array.from(targetNotes.values()).filter(n => n.hasPoll).map(n => n.id);
+				if (pollNoteIds.length === 0) return Promise.resolve(new Map<string, MiPoll>());
+				return this.pollsRepository.findBy({ noteId: IsOne(pollNoteIds) })
+					.then(polls => new Map(polls.map(p => [p.noteId, p])));
+			})(),
+			// pollVotes — SK-097 / PERF-09: only the viewer's votes; PERF-03: only poll notes
+			(() => {
+				const pollNoteIds = Array.from(targetNotes.values()).filter(n => n.hasPoll).map(n => n.id);
+				if (!me || pollNoteIds.length === 0) return Promise.resolve(new Map<string, MiPollVote[]>());
+				return this.pollVotesRepository.findBy({ noteId: IsOne(pollNoteIds), userId: me.id })
 					.then(votes => {
 						const noteMap = new Map<string, MiPollVote[]>();
 						for (const vote of votes) {
@@ -853,8 +859,8 @@ export class NoteEntityService implements OnModuleInit {
 							list.push(vote);
 						}
 						return noteMap;
-					})
-				: Promise.resolve(new Map<string, MiPollVote[]>()),
+					});
+			})(),
 			// channels
 			this.getChannels(targetNotes.values()),
 			// mutedThreads

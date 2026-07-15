@@ -44,7 +44,19 @@ export type FanoutTimelineName = (
  * Never pull unbounded fanout lists (PERF-01 / SK Pass 13).
  * Lists are newest-first (LPUSH); window covers normal pagination + filter churn.
  */
-const FANOUT_READ_MAX = 1000;
+export const FANOUT_READ_MAX = 1000;
+
+export type FanoutReadResult = {
+	/** Newest-first IDs after until/since filter, sorted for the caller's direction */
+	ids: string[];
+	/**
+	 * SK-098: raw window was full-sized, so older IDs may exist past the window.
+	 * Callers paging with untilId older than the window must DB-fallback.
+	 */
+	windowFull: boolean;
+	/** Oldest id in the raw Redis window (before until/since filter), if any */
+	windowOldestId: string | null;
+};
 
 @Injectable()
 export class FanoutTimelineService {
@@ -79,27 +91,47 @@ export class FanoutTimelineService {
 		}
 	}
 
-	@bindThis
-	public get(name: FanoutTimelineName, untilId?: string | null, sinceId?: string | null) {
-		// Bound LRANGE — full 0..-1 was PERF-01 hotspot
-		const rangeEnd = FANOUT_READ_MAX - 1;
+	private processRawIds(
+		raw: string[],
+		untilId?: string | null,
+		sinceId?: string | null,
+	): FanoutReadResult {
+		const windowFull = raw.length >= FANOUT_READ_MAX;
+		const windowOldestId = raw.length > 0 ? raw[raw.length - 1]! : null;
+
+		let ids: string[];
 		if (untilId && sinceId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
-				.then(ids => ids.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1));
+			ids = raw.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1);
 		} else if (untilId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
-				.then(ids => ids.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1));
+			ids = raw.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1);
 		} else if (sinceId) {
-			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
-				.then(ids => ids.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1));
+			ids = raw.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1);
 		} else {
-			return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
-				.then(ids => ids.sort((a, b) => a > b ? -1 : 1));
+			ids = [...raw].sort((a, b) => a > b ? -1 : 1);
 		}
+
+		return { ids, windowFull, windowOldestId };
+	}
+
+	@bindThis
+	public get(name: FanoutTimelineName, untilId?: string | null, sinceId?: string | null): Promise<string[]> {
+		return this.getDetailed(name, untilId, sinceId).then(r => r.ids);
+	}
+
+	@bindThis
+	public getDetailed(name: FanoutTimelineName, untilId?: string | null, sinceId?: string | null): Promise<FanoutReadResult> {
+		const rangeEnd = FANOUT_READ_MAX - 1;
+		return this.redisForTimelines.lrange('list:' + name, 0, rangeEnd)
+			.then(raw => this.processRawIds(raw, untilId, sinceId));
 	}
 
 	@bindThis
 	public getMulti(name: FanoutTimelineName[], untilId?: string | null, sinceId?: string | null): Promise<string[][]> {
+		return this.getMultiDetailed(name, untilId, sinceId).then(rows => rows.map(r => r.ids));
+	}
+
+	@bindThis
+	public getMultiDetailed(name: FanoutTimelineName[], untilId?: string | null, sinceId?: string | null): Promise<FanoutReadResult[]> {
 		const pipeline = this.redisForTimelines.pipeline();
 		const rangeEnd = FANOUT_READ_MAX - 1;
 		for (const n of name) {
@@ -107,17 +139,22 @@ export class FanoutTimelineService {
 		}
 		return pipeline.exec().then(res => {
 			if (res == null) return [];
-			const tls = res.map(r => r[1] as string[]);
-			return tls.map(ids =>
-				(untilId && sinceId)
-					? ids.filter(id => id < untilId && id > sinceId).sort((a, b) => a > b ? -1 : 1)
-					: untilId
-						? ids.filter(id => id < untilId).sort((a, b) => a > b ? -1 : 1)
-						: sinceId
-							? ids.filter(id => id > sinceId).sort((a, b) => a < b ? -1 : 1)
-							: ids.sort((a, b) => a > b ? -1 : 1),
-			);
+			return res.map(r => this.processRawIds((r[1] as string[]) ?? [], untilId, sinceId));
 		});
+	}
+
+	/**
+	 * SK-098: client wants notes older than our Redis window can provide.
+	 * untilId is exclusive upper bound (newer side); windowOldest is the oldest id we read.
+	 */
+	public static needsDbForOlderPage(
+		untilId: string | null | undefined,
+		windowFull: boolean,
+		windowOldestId: string | null,
+	): boolean {
+		if (!untilId || !windowFull || windowOldestId == null) return false;
+		// Need strictly older than windowOldest → not present in the bounded LRANGE
+		return untilId <= windowOldestId;
 	}
 
 	@bindThis

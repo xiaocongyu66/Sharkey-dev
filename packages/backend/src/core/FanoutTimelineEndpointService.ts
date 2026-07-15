@@ -75,14 +75,23 @@ export class FanoutTimelineEndpointService {
 		const ascending = ps.sinceId && !ps.untilId;
 		const idCompare: (a: string, b: string) => number = ascending ? (a, b) => a < b ? -1 : 1 : (a, b) => a > b ? -1 : 1;
 
-		const redisResult = await this.fanoutTimelineService.getMulti(ps.redisTimelines, ps.untilId, ps.sinceId);
-
-		// TODO: いい感じにgetMulti内でソート済だからuniqするときにredisResultが全てソート済なのを利用して再ソートを避けたい
-		const redisResultIds = Array.from(new Set(redisResult.flat(1))).sort(idCompare);
+		// SK-098: use detailed read so we can detect "untilId older than Redis window"
+		const redisDetailed = await this.fanoutTimelineService.getMultiDetailed(ps.redisTimelines, ps.untilId, ps.sinceId);
+		const redisResultIds = Array.from(new Set(redisDetailed.flatMap(r => r.ids))).sort(idCompare);
+		const windowFull = redisDetailed.some(r => r.windowFull);
+		// Oldest among raw windows (across multi keys); null if empty
+		const windowOldestId = redisDetailed
+			.map(r => r.windowOldestId)
+			.filter((id): id is string => id != null)
+			.sort((a, b) => a < b ? -1 : 1)[0] ?? null;
 
 		let noteIds = redisResultIds.slice(0, ps.limit);
 		const oldestNoteId = ascending ? redisResultIds[0] : redisResultIds[redisResultIds.length - 1];
-		const shouldFallbackToDb = noteIds.length === 0 || ps.sinceId != null && ps.sinceId < oldestNoteId;
+		const pastRedisWindow = FanoutTimelineService.needsDbForOlderPage(ps.untilId, windowFull, windowOldestId);
+		const shouldFallbackToDb =
+			noteIds.length === 0
+			|| pastRedisWindow
+			|| (ps.sinceId != null && oldestNoteId != null && ps.sinceId < oldestNoteId);
 
 		if (!shouldFallbackToDb) {
 			const me = ps.me ? await this.cacheService.findUserById(ps.me.id) : null;

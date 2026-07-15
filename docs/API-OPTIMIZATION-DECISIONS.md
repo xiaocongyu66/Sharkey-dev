@@ -7,8 +7,8 @@
 | **日期** | 2026-07-16 |
 | **读者** | 开发、评审、运维、后续接手者 |
 | **关联** | `SECURITY-AUDIT-AMD.md` · `SECURITY-AUDIT-PASS13.md` · `API-PERF-AND-BUGS-PASS14.md` |
-| **已落地基线** | Commit `6514330`（Pass 13 部分项） |
-| **待落地** | Pass 14：SK-097 等（见文中「状态」） |
+| **已落地基线** | `6514330` Pass13 · `2d72032` SK-097/100 · 后续 SK-098 / PERF-03 partial / PERF-12 harden |
+| **待落地** | PERF-03 深度 lite pack、生产搜索引擎、PERF-13 mute anti-join、PERF-16 指标 |
 
 ---
 

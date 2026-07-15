@@ -322,7 +322,21 @@ export class SearchService {
 		} else if (this.config.fulltextSearch?.provider === 'sqlTsvector') {
 			query.andWhere('note.tsvector_embedding @@ websearch_to_tsquery(:q)', { q });
 		} else {
-			query.andWhere('note.text ILIKE :q', { q: `%${ sqlLikeEscape(q) }%` });
+			// PERF-12 / SK-101: sqlLike is a last-resort full scan — harden against abuse.
+			// Prefer meilisearch / pgroonga / tsvector in production.
+			const trimmed = q.trim();
+			// Empty after trim: nothing to search
+			if (trimmed.length === 0) {
+				return [];
+			}
+			// Cap pattern length so ILIKE '%…%' cannot explode planning/CPU
+			const maxQ = 80;
+			const safeQ = trimmed.length > maxQ ? trimmed.slice(0, maxQ) : trimmed;
+			// Require a usable minimum length (avoid single-char table scans)
+			if (safeQ.length < 2) {
+				return [];
+			}
+			query.andWhere('note.text ILIKE :q', { q: `%${ sqlLikeEscape(safeQ) }%` });
 		}
 
 		if (opts.host) {

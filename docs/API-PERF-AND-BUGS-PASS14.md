@@ -24,28 +24,28 @@ Pass 14 digs into **what still makes APIs slow** and **logic bugs still in packi
 
 | Pri | ID | One-line |
 |-----|-----|----------|
-| **P0 bug** | **SK-097** | `packMany` poll `isVoted` uses **note author** votes, not viewer — **FIXED** (viewer-only map) |
-| **P0 perf** | **PERF-09** | Same path over-fetches **all packed users’** poll votes — **FIXED** (query `userId: me.id` only) |
-| **P0 perf** | **PERF-03** (open) | `packMany` still heaviest stage after fanout bound |
-| **P1 perf** | **PERF-10** | Hybrid DB EXISTS following — **FIXED** (IN-list from follow/channel caches) |
-| **P1 perf** | **PERF-11** | TL `allowPartial` default **false** → more filter rounds + more DB |
-| **P1 perf** | **PERF-12** | Default search provider **`ILIKE %q%`** cannot use B-tree |
-| **P1 bug** | **SK-098** | Fanout read cap can **skip older IDs** still in Redis list (pagination hole) |
-| **P2** | **PERF-13…16** | Mute EXISTS forest, global Cache-Control, meta uncached, emoji O(n) work |
+| **P0 bug** | **SK-097** | poll `isVoted` wrong user — **FIXED** (`2d72032`) |
+| **P0 perf** | **PERF-09** | poll vote overfetch — **FIXED** |
+| **P0 perf** | **PERF-03** | packMany weight — **partial** (skip poll queries when no polls) |
+| **P1 perf** | **PERF-10** | Hybrid EXISTS — **FIXED** (IN-list) |
+| **P1 perf** | **PERF-11** | `allowPartial` default false — OPEN (MkPagination already sends true) |
+| **P1 perf** | **PERF-12** | sqlLike ILIKE — **mitigated** (min len 2, max 80); still recommend Meili/pgroonga |
+| **P1 bug** | **SK-098** | Fanout window hole — **FIXED** (windowFull → DB fallback on home/hybrid path) |
+| **P2** | **PERF-13…16** | Mute EXISTS forest, Cache-Control, metrics |
 
 **One-line:**  
-**“Fast path is better after PERF-01; remaining pain is packMany (poll bug+overfetch), hybrid EXISTS fallback, default ILIKE search, and allowPartial=false.”**
+**“Poll/hybrid/fanout-window fixed; remaining: packMany depth (PERF-03), production search provider, mute EXISTS on DB path.”**
 
-### 0.2 Scores (after Pass 13 land)
+### 0.2 Scores (after Pass 14 partial land)
 
 | Dimension | Score | Note |
 |-----------|-------|------|
-| Fanout Redis read | **7.5** | Bounded LRANGE landed |
-| Home DB fallback | **7.0** | IN-list + 503 on timeout |
-| Note packing | **4.5** | SK-097 + weight |
-| Hybrid/social DB | **5.0** | EXISTS following |
-| Search (sqlLike) | **3.5** | Leading-wildcard ILIKE |
-| Composite API feel | **~6.0** | Need SK-097 + pack/hybrid/search |
+| Fanout Redis read | **8.0** | Bounded LRANGE + window-miss DB fallback |
+| Home DB fallback | **7.5** | IN-list + 503 on timeout |
+| Note packing | **5.5** | SK-097 fixed; skip empty poll queries; still heavy |
+| Hybrid/social DB | **7.0** | IN-list aligned with home |
+| Search (sqlLike) | **5.0** | Length caps; still not index-friendly |
+| Composite API feel | **~7.0** | Main residual packMany + search provider |
 
 ---
 
@@ -137,8 +137,8 @@ Or keep nested map but **`.get(meId)`**, and query only `userId: me.id`.
 | | |
 |--|--|
 | **Severity** | **L–M** (missing notes when scrolling) |
-| **Status** | **OPEN** (side effect of PERF-01 fix) |
-| **Components** | `FanoutTimelineService.get` / `getMulti` |
+| **Status** | **FIXED** on `FanoutTimelineEndpointService` (getMultiDetailed + forced DB when untilId past window) |
+| **Components** | `FanoutTimelineService`, `FanoutTimelineEndpointService` |
 
 **Behavior**  
 Reads only first `FANOUT_READ_MAX` list elements (newest). Client `untilId` pagination filters **within that window** only.
