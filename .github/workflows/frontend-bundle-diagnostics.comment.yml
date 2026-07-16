@@ -175,5 +175,5 @@ jobs:
         uses: thollander/actions-comment-pull-request@v3
         with:
           pr-number: ${{ steps.load-pr-number.outputs.pr-number }}
-          comment-tag: frontend_bundle_diagnostics
+          comment-tag: frontend-bundle-diagnostics
           file-path: ${{ runner.temp }}/frontend-bundle-report/frontend-bundle-diagnostics-report.md
