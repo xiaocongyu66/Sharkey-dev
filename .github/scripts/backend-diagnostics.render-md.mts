@@ -6,7 +6,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import * as util from './utility.mts';
 import * as heapSnapshotUtil from './heap-snapshot-util.mts';
-import type { MemoryReport } from './measure-backend-memory-comparison.mts';
+import type { MemoryReport } from './backend-diagnostics.inspect.mts';
 
 const [baseFile, headFile, outputFile] = process.argv.slice(2);
 
