@@ -324,11 +324,11 @@ export function renderFrontendBrowserReport(base: BrowserMetricsReport, head: Br
 		: `${base.sampleCount} base sample(s), ${head.sampleCount} head sample(s)`;
 	const heapSnapshotTable = heapSnapshotUtil.renderHeapSnapshotTable(toHeapSnapshotReport(base), toHeapSnapshotReport(head));
 	const lines = [
-		'## 🖥 Frontend Browser Metrics',
-		'',
-		'Only metrics showing significant changes are displayed.',
+		'## 🖥 Frontend Browser Diagnostics Report',
 		'',
 		renderSummaryTable(base, head),
+		'',
+		'<i>Only metrics showing significant changes are displayed.</i>',
 		'',
 		//`> Measured ${sampleSummary} with fresh headless Chrome profiles, browser cache disabled, service workers bypassed, and forced V8 GC before each heap snapshot. Base/Head values are medians; Δ median is the median of paired Head - Base sample deltas; percent uses Δ median / Base median; ± and Δ MAD are median absolute deviations. Scenario: sign up, dismiss the initial account setup dialog, create the first timeline note, then wait until that note is visible.`,
 		//'',
@@ -367,9 +367,6 @@ export function renderFrontendBrowserReport(base: BrowserMetricsReport, head: Br
 
 async function main() {
 	const [baseFile, headFile, outputFile] = process.argv.slice(2);
-	if (baseFile == null || headFile == null || outputFile == null) {
-		throw new Error('Usage: node frontend-browser-report.mts <base-browser.json> <head-browser.json> <output.md>');
-	}
 
 	const base = JSON.parse(await readFile(baseFile, 'utf8')) as BrowserMetricsReport;
 	const head = JSON.parse(await readFile(headFile, 'utf8')) as BrowserMetricsReport;
