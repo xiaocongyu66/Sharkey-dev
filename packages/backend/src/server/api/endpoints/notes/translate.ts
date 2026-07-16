@@ -17,7 +17,7 @@ import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
 import { CacheManagementService, type ManagedRedisKVCache } from '@/global/CacheManagementService.js';
 import { ApiError } from '@/server/api/error.js';
 import { bindThis } from '@/decorators.js';
-import { AiTranslationService } from '@/core/AiTranslationService.js';
+import { AiTranslationError, AiTranslationService } from '@/core/AiTranslationService.js';
 import type { UserProfilesRepository } from '@/models/_.js';
 
 export const meta = {
@@ -56,6 +56,62 @@ export const meta = {
 			message: 'Failed to translate note. Please try again later or contact an administrator for assistance.',
 			code: 'TRANSLATION_FAILED',
 			id: '4e7a1a4f-521c-4ba2-b10a-69e5e2987b2f',
+		},
+		aiNotConfigured: {
+			message: 'AI translation is not configured (missing endpoint or API key).',
+			code: 'AI_NOT_CONFIGURED',
+			id: 'a1t0c0n1-0001-4000-8000-000000000001',
+			kind: 'server',
+			httpStatusCode: 503,
+		},
+		aiAuthFailed: {
+			message: 'AI provider rejected the API key (HTTP 401).',
+			code: 'AI_AUTH_FAILED',
+			id: 'a1t0c0n1-0001-4000-8000-000000000401',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiForbidden: {
+			message: 'AI provider denied access (HTTP 403).',
+			code: 'AI_FORBIDDEN',
+			id: 'a1t0c0n1-0001-4000-8000-000000000403',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiRateLimited: {
+			message: 'AI provider rate limit exceeded (HTTP 429).',
+			code: 'AI_RATE_LIMITED',
+			id: 'a1t0c0n1-0001-4000-8000-000000000429',
+			kind: 'client',
+			httpStatusCode: 429,
+		},
+		aiTimeout: {
+			message: 'AI translation timed out.',
+			code: 'AI_TIMEOUT',
+			id: 'a1t0c0n1-0001-4000-8000-000000000408',
+			kind: 'server',
+			httpStatusCode: 504,
+		},
+		aiUpstreamError: {
+			message: 'AI provider returned an error.',
+			code: 'AI_UPSTREAM_ERROR',
+			id: 'a1t0c0n1-0001-4000-8000-000000000502',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiEmptyResponse: {
+			message: 'AI returned an empty translation.',
+			code: 'AI_EMPTY_RESPONSE',
+			id: 'a1t0c0n1-0001-4000-8000-000000000204',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiScopeDisabled: {
+			message: 'AI translation is disabled for notes.',
+			code: 'AI_SCOPE_DISABLED',
+			id: 'a1t0c0n1-0001-4000-8000-000000000503',
+			kind: 'client',
+			httpStatusCode: 403,
 		},
 	},
 
@@ -210,20 +266,61 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			return await this.fetchClassic(note, classicLang);
 		};
 
+		const mapAiError = (e: unknown): never => {
+			if (e instanceof AiTranslationError) {
+				const table: Record<AiTranslationError['code'], typeof meta.errors[keyof typeof meta.errors]> = {
+					AI_NOT_CONFIGURED: meta.errors.aiNotConfigured,
+					AI_AUTH_FAILED: meta.errors.aiAuthFailed,
+					AI_FORBIDDEN: meta.errors.aiForbidden,
+					AI_RATE_LIMITED: meta.errors.aiRateLimited,
+					AI_TIMEOUT: meta.errors.aiTimeout,
+					AI_UPSTREAM_ERROR: meta.errors.aiUpstreamError,
+					AI_EMPTY_RESPONSE: meta.errors.aiEmptyResponse,
+					AI_SCOPE_DISABLED: meta.errors.aiScopeDisabled,
+				};
+				throw new ApiError(table[e.code] ?? meta.errors.translationFailed, {
+					httpStatus: e.httpStatus,
+					detail: e.message,
+				});
+			}
+			throw e;
+		};
+
 		try {
 			if (opts.preferAi && opts.canAi) {
-				const ai = await tryAi();
-				if (ai) return ai;
-				// fallback classic
+				try {
+					const ai = await tryAi();
+					if (ai) return ai;
+				} catch (e) {
+					// Prefer surfacing auth/config errors over silent classic fallback
+					if (e instanceof AiTranslationError && (
+						e.code === 'AI_AUTH_FAILED'
+						|| e.code === 'AI_FORBIDDEN'
+						|| e.code === 'AI_NOT_CONFIGURED'
+						|| e.code === 'AI_SCOPE_DISABLED'
+					)) {
+						mapAiError(e);
+					}
+					// Other AI failures: try classic, then rethrow AI error if classic missing
+					const classic = await tryClassic();
+					if (classic) return classic;
+					mapAiError(e);
+				}
 				const classic = await tryClassic();
 				if (classic) return classic;
 			} else {
 				const classic = await tryClassic();
 				if (classic) return classic;
-				const ai = await tryAi();
-				if (ai) return ai;
+				try {
+					const ai = await tryAi();
+					if (ai) return ai;
+				} catch (e) {
+					mapAiError(e);
+				}
 			}
 		} catch (e) {
+			if (e instanceof ApiError) throw e;
+			if (e instanceof AiTranslationError) mapAiError(e);
 			this.loggerService.logger.error('Unhandled error from translation API: ', { e });
 		}
 

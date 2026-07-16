@@ -53,6 +53,27 @@ export type AiTranslateResult = {
 	provider: 'ai';
 };
 
+/** Structured failure from upstream AI / config (not a generic null). */
+export class AiTranslationError extends Error {
+	override name = 'AiTranslationError';
+
+	constructor(
+		message: string,
+		public readonly code:
+			| 'AI_NOT_CONFIGURED'
+			| 'AI_AUTH_FAILED'
+			| 'AI_FORBIDDEN'
+			| 'AI_RATE_LIMITED'
+			| 'AI_TIMEOUT'
+			| 'AI_UPSTREAM_ERROR'
+			| 'AI_EMPTY_RESPONSE'
+			| 'AI_SCOPE_DISABLED',
+		public readonly httpStatus?: number,
+	) {
+		super(message);
+	}
+}
+
 type ChatMsg = { role: 'system' | 'user' | 'assistant'; content: string };
 
 /**
@@ -219,13 +240,13 @@ export class AiTranslationService {
 		if (!text) return { text: '', provider: 'ai' };
 
 		if (!this.isScopeEnabled(input.scope)) {
-			return null;
+			throw new AiTranslationError('AI translation is disabled for this scope.', 'AI_SCOPE_DISABLED');
 		}
 
 		const ep = this.resolveEndpoint(input.scope, input.userOverride);
 		if (!ep) {
 			this.logger.warn(`AI translation enabled for ${input.scope} but no credentials`);
-			return null;
+			throw new AiTranslationError('AI translation is not configured (missing endpoint or API key).', 'AI_NOT_CONFIGURED');
 		}
 
 		const c = this.getConfig();
@@ -268,7 +289,9 @@ export class AiTranslationService {
 				out = this.cleanOutput(raw);
 			}
 
-			if (!out) return null;
+			if (!out) {
+				throw new AiTranslationError('AI returned an empty translation.', 'AI_EMPTY_RESPONSE');
+			}
 
 			if (c.cacheEnabled !== false) {
 				const ttlMs = this.resolveCacheTtlMs(c);
@@ -281,9 +304,18 @@ export class AiTranslationService {
 				provider: 'ai',
 			};
 		} catch (err) {
+			if (err instanceof AiTranslationError) {
+				this.logger.warn(`AI translation failed: ${err.code} ${err.message}`);
+				throw err;
+			}
 			const msg = err instanceof Error ? err.message : String(err);
 			this.logger.warn(`AI translation failed: ${msg}`);
-			return null;
+			// Network / parse / unexpected
+			const lower = msg.toLowerCase();
+			if (lower.includes('timeout') || lower.includes('aborted') || lower.includes('etimedout')) {
+				throw new AiTranslationError(msg, 'AI_TIMEOUT');
+			}
+			throw new AiTranslationError(msg, 'AI_UPSTREAM_ERROR');
 		}
 	}
 
@@ -513,6 +545,9 @@ export class AiTranslationService {
 				'content-type': 'application/json',
 				authorization: `Bearer ${apiKey}`,
 				accept: 'application/json',
+				// Help downstream gateways (e.g. grok2api) classify this caller in request audits
+				'x-client-name': 'sharkey',
+				'x-title': 'sharkey-ai-translate',
 			},
 			body: JSON.stringify(body),
 			timeout: timeoutMs,
@@ -525,8 +560,21 @@ export class AiTranslationService {
 		});
 		const text = await res.text();
 		if (!res.ok) {
-			// Do not echo internal response bodies (SK-061 remediation)
-			throw new Error(`AI endpoint HTTP ${res.status}`);
+			// Map status for clients; never echo upstream body (SK-061)
+			const status = res.status;
+			if (status === 401) {
+				throw new AiTranslationError(`AI endpoint HTTP ${status}`, 'AI_AUTH_FAILED', status);
+			}
+			if (status === 403) {
+				throw new AiTranslationError(`AI endpoint HTTP ${status}`, 'AI_FORBIDDEN', status);
+			}
+			if (status === 429) {
+				throw new AiTranslationError(`AI endpoint HTTP ${status}`, 'AI_RATE_LIMITED', status);
+			}
+			if (status === 408 || status === 504) {
+				throw new AiTranslationError(`AI endpoint HTTP ${status}`, 'AI_TIMEOUT', status);
+			}
+			throw new AiTranslationError(`AI endpoint HTTP ${status}`, 'AI_UPSTREAM_ERROR', status);
 		}
 		let json: any;
 		try {

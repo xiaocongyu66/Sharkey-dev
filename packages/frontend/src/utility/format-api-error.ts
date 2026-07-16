@@ -106,6 +106,51 @@ const CODE_FALLBACKS: Record<string, { en: string; zh: string }> = {
 	DELETE_FAILED: { en: 'Failed to delete.', zh: '删除失败。' },
 	CLEAR_FAILED: { en: 'Failed to clear messages.', zh: '清理消息失败。' },
 	NO_SUCH_FILE_OR_CONTENT: { en: 'Content required.', zh: '请填写内容或附件。' },
+	// Translation / AI upstream
+	TRANSLATION_FAILED: {
+		en: 'Translation failed. Please try again later.',
+		zh: '翻译失败，请稍后再试。',
+	},
+	AI_NOT_CONFIGURED: {
+		en: 'AI translation is not configured (missing endpoint or API key).',
+		zh: 'AI 翻译未配置（缺少接口地址或 API 密钥）。',
+	},
+	AI_AUTH_FAILED: {
+		en: 'AI provider rejected the API key (HTTP 401 Unauthorized). Check the key in admin settings.',
+		zh: 'AI 服务拒绝了 API 密钥（HTTP 401 未授权）。请检查后台配置的密钥。',
+	},
+	AI_FORBIDDEN: {
+		en: 'AI provider denied access (HTTP 403 Forbidden). Check plan / IP allowlist / model permission.',
+		zh: 'AI 服务拒绝访问（HTTP 403 禁止）。请检查套餐、IP 白名单或模型权限。',
+	},
+	AI_RATE_LIMITED: {
+		en: 'AI provider rate limit exceeded (HTTP 429). Please wait and try again.',
+		zh: 'AI 服务请求过于频繁（HTTP 429）。请稍后再试。',
+	},
+	AI_TIMEOUT: {
+		en: 'AI translation timed out. Try again or raise the timeout in admin settings.',
+		zh: 'AI 翻译超时。请重试，或在后台调高超时时间。',
+	},
+	AI_UPSTREAM_ERROR: {
+		en: 'AI provider returned an error. Check the endpoint URL and model name.',
+		zh: 'AI 服务返回错误。请检查接口地址与模型名称。',
+	},
+	AI_EMPTY_RESPONSE: {
+		en: 'AI returned an empty translation.',
+		zh: 'AI 返回了空的翻译结果。',
+	},
+	AI_SCOPE_DISABLED: {
+		en: 'AI translation is disabled for this feature.',
+		zh: '该场景的 AI 翻译已关闭。',
+	},
+	CANNOT_TRANSLATE_INVISIBLE_NOTE: {
+		en: 'Cannot translate a note you cannot see.',
+		zh: '无法翻译你不可见的帖子。',
+	},
+	EMPTY_MESSAGE: {
+		en: 'Message has no text to translate.',
+		zh: '消息没有可翻译的文本。',
+	},
 };
 
 function preferZh(): boolean {
@@ -190,8 +235,20 @@ export function formatApiError(
 		return { title: genericTitle, text: err };
 	}
 
-	const e = err as ApiErrLike;
-	const code = typeof e.code === 'string' ? e.code : undefined;
+	const e = err as ApiErrLike & { status?: number };
+	let code = typeof e.code === 'string' ? e.code : undefined;
+	// Local browser AI (ai-translation-local) throws Error with .code / HTTP status in message
+	if (!code && typeof e.message === 'string') {
+		const m = e.message.match(/\bHTTP\s+(\d{3})\b/i);
+		if (m) {
+			const st = Number(m[1]);
+			if (st === 401) code = 'AI_AUTH_FAILED';
+			else if (st === 403) code = 'AI_FORBIDDEN';
+			else if (st === 429) code = 'AI_RATE_LIMITED';
+			else if (st === 408 || st === 504) code = 'AI_TIMEOUT';
+			else if (st >= 400) code = 'AI_UPSTREAM_ERROR';
+		}
+	}
 	const id = typeof e.id === 'string' ? e.id : undefined;
 	const message = typeof e.message === 'string' ? e.message : undefined;
 

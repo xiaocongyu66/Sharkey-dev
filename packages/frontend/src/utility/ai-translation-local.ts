@@ -135,7 +135,15 @@ export async function translateTextLocal(
 	});
 
 	if (!res.ok) {
-		throw new Error(`Local AI HTTP ${res.status}`);
+		// Preserve status for UI (401 / 403 / 429 / …)
+		const err = new Error(`Local AI HTTP ${res.status}`) as Error & { code?: string; status?: number };
+		err.status = res.status;
+		if (res.status === 401) err.code = 'AI_AUTH_FAILED';
+		else if (res.status === 403) err.code = 'AI_FORBIDDEN';
+		else if (res.status === 429) err.code = 'AI_RATE_LIMITED';
+		else if (res.status === 408 || res.status === 504) err.code = 'AI_TIMEOUT';
+		else err.code = 'AI_UPSTREAM_ERROR';
+		throw err;
 	}
 
 	const json = await res.json();

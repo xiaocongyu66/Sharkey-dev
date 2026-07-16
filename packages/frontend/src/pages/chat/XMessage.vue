@@ -393,7 +393,10 @@ async function translateMessage() {
 						translation.value = localRes.text;
 						return;
 					}
-				} catch (e) {
+				} catch (e: any) {
+					if (e?.code === 'AI_AUTH_FAILED' || e?.code === 'AI_FORBIDDEN' || e?.code === 'AI_RATE_LIMITED') {
+						throw e;
+					}
 					console.warn('Local AI chat translate failed, falling back:', e);
 				}
 			}
@@ -407,10 +410,20 @@ async function translateMessage() {
 		translation.value = res?.text ?? null;
 	} catch (err) {
 		console.error('Chat translation failed', err);
-		os.alert({
-			type: 'error',
-			text: chatT('translateFailed'),
-		});
+		try {
+			const { formatApiError } = await import('@/utility/format-api-error.js');
+			const formatted = formatApiError(err);
+			os.alert({
+				type: 'error',
+				title: formatted.title,
+				text: formatted.text,
+			});
+		} catch {
+			os.alert({
+				type: 'error',
+				text: chatT('translateFailed'),
+			});
+		}
 	} finally {
 		translating.value = false;
 	}

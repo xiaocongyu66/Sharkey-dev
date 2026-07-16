@@ -785,7 +785,11 @@ export async function translateNote(noteId: string, translation: Ref<Misskey.ent
 							return;
 						}
 					}
-				} catch (e) {
+				} catch (e: any) {
+					// Auth/permission errors from local key: surface immediately (don't hide as generic fail)
+					if (e?.code === 'AI_AUTH_FAILED' || e?.code === 'AI_FORBIDDEN' || e?.code === 'AI_RATE_LIMITED') {
+						throw e;
+					}
 					console.warn('Local AI translate failed, falling back to instance:', e);
 				}
 			}
@@ -799,6 +803,17 @@ export async function translateNote(noteId: string, translation: Ref<Misskey.ent
 	} catch (err) {
 		console.error(`Translation failed for ${noteId}: `, err);
 		translation.value = false;
+		// Surface structured API codes (AI_AUTH_FAILED / 401, AI_FORBIDDEN / 403, …)
+		try {
+			const os = await import('@/os.js');
+			const { formatApiError } = await import('@/utility/format-api-error.js');
+			const formatted = formatApiError(err);
+			os.alert({
+				type: 'error',
+				title: formatted.title,
+				text: formatted.text,
+			});
+		} catch { /* ignore UI alert failures */ }
 	} finally {
 		translating.value = false;
 	}

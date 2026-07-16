@@ -14078,6 +14078,50 @@ export interface Locale extends ILocale {
          */
         "NO_SUCH_USER_LIST": string;
         /**
+         * Translation failed. Please try again later.
+         */
+        "TRANSLATION_FAILED": string;
+        /**
+         * AI translation is not configured (missing endpoint or API key).
+         */
+        "AI_NOT_CONFIGURED": string;
+        /**
+         * AI provider rejected the API key (HTTP 401 Unauthorized). Check the key in admin settings.
+         */
+        "AI_AUTH_FAILED": string;
+        /**
+         * AI provider denied access (HTTP 403 Forbidden). Check plan / IP allowlist / model permission.
+         */
+        "AI_FORBIDDEN": string;
+        /**
+         * AI provider rate limit exceeded (HTTP 429). Please wait and try again.
+         */
+        "AI_RATE_LIMITED": string;
+        /**
+         * AI translation timed out. Try again or raise the timeout in admin settings.
+         */
+        "AI_TIMEOUT": string;
+        /**
+         * AI provider returned an error. Check the endpoint URL and model name.
+         */
+        "AI_UPSTREAM_ERROR": string;
+        /**
+         * AI returned an empty translation.
+         */
+        "AI_EMPTY_RESPONSE": string;
+        /**
+         * AI translation is disabled for this feature.
+         */
+        "AI_SCOPE_DISABLED": string;
+        /**
+         * Cannot translate a note you cannot see.
+         */
+        "CANNOT_TRANSLATE_INVISIBLE_NOTE": string;
+        /**
+         * Message has no text to translate.
+         */
+        "EMPTY_MESSAGE": string;
+        /**
          * User not found.
          */
         "NO_SUCH_USER": string;

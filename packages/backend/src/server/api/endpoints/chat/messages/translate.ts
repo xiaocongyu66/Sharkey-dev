@@ -9,10 +9,11 @@ import { DI } from '@/di-symbols.js';
 import { ChatService } from '@/core/ChatService.js';
 import { ChatCryptoService } from '@/core/ChatCryptoService.js';
 import { RoleService } from '@/core/RoleService.js';
-import { AiTranslationService } from '@/core/AiTranslationService.js';
+import { AiTranslationError, AiTranslationService } from '@/core/AiTranslationService.js';
 import { ApiError } from '@/server/api/error.js';
 import type { UserProfilesRepository } from '@/models/_.js';
 import { CacheManagementService, type ManagedRedisKVCache } from '@/global/CacheManagementService.js';
+import { createHash } from 'node:crypto';
 
 export const meta = {
 	tags: ['chat'],
@@ -57,6 +58,62 @@ export const meta = {
 			message: 'Message has no text to translate.',
 			code: 'EMPTY_MESSAGE',
 			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567804',
+		},
+		aiNotConfigured: {
+			message: 'AI translation is not configured (missing endpoint or API key).',
+			code: 'AI_NOT_CONFIGURED',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567811',
+			kind: 'server',
+			httpStatusCode: 503,
+		},
+		aiAuthFailed: {
+			message: 'AI provider rejected the API key (HTTP 401).',
+			code: 'AI_AUTH_FAILED',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567812',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiForbidden: {
+			message: 'AI provider denied access (HTTP 403).',
+			code: 'AI_FORBIDDEN',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567813',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiRateLimited: {
+			message: 'AI provider rate limit exceeded (HTTP 429).',
+			code: 'AI_RATE_LIMITED',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567814',
+			kind: 'client',
+			httpStatusCode: 429,
+		},
+		aiTimeout: {
+			message: 'AI translation timed out.',
+			code: 'AI_TIMEOUT',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567815',
+			kind: 'server',
+			httpStatusCode: 504,
+		},
+		aiUpstreamError: {
+			message: 'AI provider returned an error.',
+			code: 'AI_UPSTREAM_ERROR',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567816',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiEmptyResponse: {
+			message: 'AI returned an empty translation.',
+			code: 'AI_EMPTY_RESPONSE',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567817',
+			kind: 'server',
+			httpStatusCode: 502,
+		},
+		aiScopeDisabled: {
+			message: 'AI translation is disabled for chat.',
+			code: 'AI_SCOPE_DISABLED',
+			id: 'c1a2b3d4-e5f6-7890-abcd-ef1234567818',
+			kind: 'client',
+			httpStatusCode: 403,
 		},
 	},
 } as const;
@@ -156,14 +213,35 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 			}
 
-			const result = await this.aiTranslationService.translate({
-				text: plain,
-				targetLang,
-				scope: 'chat',
-				selective: selective === true,
-				userOverride,
-				nativeLang,
-			});
+			let result;
+			try {
+				result = await this.aiTranslationService.translate({
+					text: plain,
+					targetLang,
+					scope: 'chat',
+					selective: selective === true,
+					userOverride,
+					nativeLang,
+				});
+			} catch (e) {
+				if (e instanceof AiTranslationError) {
+					const table: Record<AiTranslationError['code'], typeof meta.errors[keyof typeof meta.errors]> = {
+						AI_NOT_CONFIGURED: meta.errors.aiNotConfigured,
+						AI_AUTH_FAILED: meta.errors.aiAuthFailed,
+						AI_FORBIDDEN: meta.errors.aiForbidden,
+						AI_RATE_LIMITED: meta.errors.aiRateLimited,
+						AI_TIMEOUT: meta.errors.aiTimeout,
+						AI_UPSTREAM_ERROR: meta.errors.aiUpstreamError,
+						AI_EMPTY_RESPONSE: meta.errors.aiEmptyResponse,
+						AI_SCOPE_DISABLED: meta.errors.aiScopeDisabled,
+					};
+					throw new ApiError(table[e.code] ?? meta.errors.translationFailed, {
+						httpStatus: e.httpStatus,
+						detail: e.message,
+					});
+				}
+				throw e;
+			}
 
 			if (!result?.text) {
 				throw new ApiError(meta.errors.translationFailed);
