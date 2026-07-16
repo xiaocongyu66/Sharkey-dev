@@ -3030,7 +3030,7 @@ _aiTranslationSettings:
   localCleared: "Local credentials cleared."
 
 _chatEscrow:
-  title: "Chat escrow encryption"
+  title: "Cifrado de chat en custodia"
   scope: "Encrypts only direct and room chat messages at rest (AES-GCM). Public notes are not encrypted and remain crawlable by search engines."
   warn: "Operators who hold the master keys can decrypt all escrowed chat. Rotating creates a new key for new messages; keep old keys to read history. Retiring (deleting) an old key makes that history undecryptable."
   enable: "Enable chat escrow encryption"
@@ -3085,6 +3085,12 @@ _uiCommon:
   federation: Federation
   instances: Instances
   apRequests: ActivityPub requests
+  apInboxReceived: "AP bandeja recibida"
+  apDeliverSucceeded: "AP entrega correcta"
+  apDeliverFailed: "AP entrega fallida"
+  apOutSucc: "Salida: éxito"
+  apOutFail: "Salida: fallo"
+  apIn: "Entrada"
   newUsers: New users
   deliverQueue: Deliver queue
   inboxQueue: Inbox queue

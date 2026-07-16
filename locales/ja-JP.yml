@@ -3277,7 +3277,7 @@ _xAlgorithm:
   timeout: "リクエストタイムアウト (ms)"
   modelArtifacts: "モデル成果物パス"
 _adminNotes:
-  title: "操作に失敗しました"
+  title: "ノート管理"
   siteWide: "全体の投稿"
   siteWideCaption: "ローカルユーザーのノート作成を制御します。無効時もモデレーター/管理者は投稿できます。"
   disableLocalNoteCreation: "ローカル投稿をすべて禁止"
@@ -3474,7 +3474,7 @@ _aiTranslationSettings:
   localCleared: "ローカル認証情報を削除しました。"
 
 _chatEscrow:
-  title: "操作に失敗しました"
+  title: "チャット託送暗号化"
   scope: "DMとルームチャットのみ保管時に暗号化（AES-GCM）。公開ノートは暗号化せず、検索エンジンから取得可能なままです。"
   warn: "マスターキーを持つ運営者は託送チャットを復号できます。ローテーションは新メッセージ用の新キーを作り、履歴には旧キーが必要です。旧キーを退役させると該当履歴は復号できなくなります。"
   enable: "チャット託送暗号化を有効化"
@@ -3529,6 +3529,12 @@ _uiCommon:
   federation: 連合
   instances: インスタンス
   apRequests: ActivityPubリクエスト
+  apInboxReceived: "AP受信（inbox）"
+  apDeliverSucceeded: "AP配信（成功）"
+  apDeliverFailed: "AP配信（失敗）"
+  apOutSucc: "送信: 成功"
+  apOutFail: "送信: 失敗"
+  apIn: "受信"
   newUsers: 新規ユーザー
   deliverQueue: 配信キュー
   inboxQueue: 受信キュー

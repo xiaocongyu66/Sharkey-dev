@@ -791,7 +791,10 @@ _apiErrors:
   NOT_A_MEMBER: "你不是该群成员。"
   SEND_FAILED: "发送失败，请检查网络后重试。"
 
+# --- multi-lang recent UI (auto) ---
 change: "更改"
+customEmojisBeta: "自定义表情符号（测试版）"
+systemWebhook: "系统 Webhook"
 _activity:
   uniquePvUser: "独立访问（登录用户）"
   uniquePvVisitor: "独立访问（访客）"
@@ -802,29 +805,6 @@ _activity:
   followRemote: "关注（远程）"
   followedLocal: "被关注（本地）"
   followedRemote: "被关注（远程）"
-_themeNames:
-  "4eea646f-7afa-4645-83e9-83af0333cd37": "浅色（默认）"
-  "8050783a-7f63-445a-b270-36d0f6ba1677": "深色（默认）"
-  "6ed80faa-74f0-42c2-98e4-a64d9e138eab": "咖啡浅色"
-  "0ff48d43-aab3-46e7-ab12-8492110d2e2b": "杏子浅色"
-  "a58a0abb-ff8c-476a-8dec-0ad7837e7e96": "雨天浅色"
-  "1100673c-f902-4ccd-93aa-7cb88be56178": "植物浅色"
-  "6128c2a9-5c54-43fe-a47d-17942356470b": "鲜艳浅色"
-  "ac168876-f737-4074-a3fc-a370c732ef48": "樱桃浅色"
-  "213273e5-7d20-d5f0-6e36-1b6a4f67115c": "寿司浅色"
-  "e2c940b5-6e9a-4c03-b738-261c720c426d": "U0 浅色"
-  "c503d768-7c70-4db2-a4e6-08264304bc8d": "柿子深色"
-  "080a01c5-377d-4fbb-88cc-6bb5d04977ea": "星空深色"
-  "32a637ef-b47a-4775-bb7b-bacbb823f865": "未来深色"
-  "504debaf-4912-6a4c-5059-1db08a76b737": "植物深色"
-  "02816013-8107-440f-877e-865083ffe194": "绿+青柠深色"
-  "dc489603-27b5-424a-9b25-1ff6aec9824a": "绿+橙深色"
-  "679b3b87-a4e9-4789-8696-b56c15cc33b0": "樱桃深色"
-  "66e7e5a9-cd43-42cd-837d-12f47841fa34": "冰蓝深色"
-  "7a5bc13b-df8f-4d44-8e94-4452f0c634bb": "U0 深色"
-  "3cdfd635-4d5e-4d06-9ba3-20f123f0999b": "Rosé Pine"
-  "919c91ac-c6fa-43dc-a423-3cc84fd67d7c": "Rosé Pine 黎明"
-
 _customEmojisManagerLegacy:
   selectMode: "选择模式"
   selectAll: "全选"
@@ -833,10 +813,6 @@ _customEmojisManagerLegacy:
   addTag: "添加标签"
   removeTag: "移除标签"
   setLicense: "设置许可信息"
-
-customEmojisBeta: "自定义表情符号（测试版）"
-systemWebhook: "系统 Webhook"
-
 _chartSeries:
   received: "已接收"
   delivered: "已投递"
@@ -868,3 +844,26 @@ _chartSeries:
   inc: "增加"
   dec: "减少"
   other: "其他"
+_themeNames:
+  "4eea646f-7afa-4645-83e9-83af0333cd37": "浅色（默认）"
+  "8050783a-7f63-445a-b270-36d0f6ba1677": "深色（默认）"
+  "6ed80faa-74f0-42c2-98e4-a64d9e138eab": "咖啡浅色"
+  "0ff48d43-aab3-46e7-ab12-8492110d2e2b": "杏子浅色"
+  "a58a0abb-ff8c-476a-8dec-0ad7837e7e96": "雨天浅色"
+  "1100673c-f902-4ccd-93aa-7cb88be56178": "植物浅色"
+  "6128c2a9-5c54-43fe-a47d-17942356470b": "鲜艳浅色"
+  "ac168876-f737-4074-a3fc-a370c732ef48": "樱桃浅色"
+  "213273e5-7d20-d5f0-6e36-1b6a4f67115c": "寿司浅色"
+  "e2c940b5-6e9a-4c03-b738-261c720c426d": "U0 浅色"
+  "c503d768-7c70-4db2-a4e6-08264304bc8d": "柿子深色"
+  "080a01c5-377d-4fbb-88cc-6bb5d04977ea": "星空深色"
+  "32a637ef-b47a-4775-bb7b-bacbb823f865": "未来深色"
+  "504debaf-4912-6a4c-5059-1db08a76b737": "植物深色"
+  "02816013-8107-440f-877e-865083ffe194": "绿+青柠深色"
+  "dc489603-27b5-424a-9b25-1ff6aec9824a": "绿+橙深色"
+  "679b3b87-a4e9-4789-8696-b56c15cc33b0": "樱桃深色"
+  "66e7e5a9-cd43-42cd-837d-12f47841fa34": "冰蓝深色"
+  "7a5bc13b-df8f-4d44-8e94-4452f0c634bb": "U0 深色"
+  "3cdfd635-4d5e-4d06-9ba3-20f123f0999b": "Rosé Pine"
+  "919c91ac-c6fa-43dc-a423-3cc84fd67d7c": "Rosé Pine 黎明"
+

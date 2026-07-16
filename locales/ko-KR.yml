@@ -3146,7 +3146,7 @@ _search:
   serverHostPlaceholder: "예: misskey.example.com"
 
 _adminNotes:
-  title: "작업 실패"
+  title: "게시물 관리"
   siteWide: "전체 게시"
   siteWideCaption: "로컬 사용자의 게시 가능 여부를 제어합니다. 비활성화해도 모더레이터/관리자는 게시할 수 있습니다."
   disableLocalNoteCreation: "로컬 게시 모두 금지"
@@ -3329,7 +3329,7 @@ _aiTranslationSettings:
   localCleared: "Local credentials cleared."
 
 _chatEscrow:
-  title: "작업 실패"
+  title: "채팅 에스크로 암호화"
   scope: "Encrypts only direct and room chat messages at rest (AES-GCM). Public notes are not encrypted and remain crawlable by search engines."
   warn: "Operators who hold the master keys can decrypt all escrowed chat. Rotating creates a new key for new messages; keep old keys to read history. Retiring (deleting) an old key makes that history undecryptable."
   enable: "Enable chat escrow encryption"
@@ -3384,6 +3384,12 @@ _uiCommon:
   federation: Federation
   instances: Instances
   apRequests: ActivityPub requests
+  apInboxReceived: "AP 수신 (inbox)"
+  apDeliverSucceeded: "AP 전달 (성공)"
+  apDeliverFailed: "AP 전달 (실패)"
+  apOutSucc: "발신: 성공"
+  apOutFail: "발신: 실패"
+  apIn: "수신"
   newUsers: New users
   deliverQueue: Deliver queue
   inboxQueue: Inbox queue

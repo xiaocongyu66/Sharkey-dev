@@ -3155,7 +3155,7 @@ _search:
   serverHostPlaceholder: "Beispiel: misskey.example.com"
 
 _adminNotes:
-  title: "Beiträge"
+  title: "Beiträge verwalten"
   siteWide: "Site-weite Beiträge"
   siteWideCaption: "Steuert, ob lokale Nutzer Notizen erstellen können. Moderatoren und Admins können weiterhin posten."
   disableLocalNoteCreation: "Alle lokalen Beiträge deaktivieren"
@@ -3338,7 +3338,7 @@ _aiTranslationSettings:
   localCleared: "Local credentials cleared."
 
 _chatEscrow:
-  title: "Chat escrow encryption"
+  title: "Chat-Escrow-Verschlüsselung"
   scope: "Encrypts only direct and room chat messages at rest (AES-GCM). Public notes are not encrypted and remain crawlable by search engines."
   warn: "Operators who hold the master keys can decrypt all escrowed chat. Rotating creates a new key for new messages; keep old keys to read history. Retiring (deleting) an old key makes that history undecryptable."
   enable: "Enable chat escrow encryption"
@@ -3393,6 +3393,12 @@ _uiCommon:
   federation: Federation
   instances: Instances
   apRequests: ActivityPub requests
+  apInboxReceived: "AP-Posteingang empfangen"
+  apDeliverSucceeded: "AP-Zustellung erfolgreich"
+  apDeliverFailed: "AP-Zustellung fehlgeschlagen"
+  apOutSucc: "Aus: Erfolg"
+  apOutFail: "Aus: Fehler"
+  apIn: "Ein"
   newUsers: New users
   deliverQueue: Deliver queue
   inboxQueue: Inbox queue

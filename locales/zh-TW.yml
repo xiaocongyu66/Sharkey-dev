@@ -3183,7 +3183,7 @@ _xAlgorithm:
   timeout: "請求逾時（毫秒）"
   modelArtifacts: "模型產物路徑"
 _adminNotes:
-  title: "操作失敗"
+  title: "貼文管理"
   siteWide: "全站發文"
   siteWideCaption: "控制本站用戶是否可以發文。停用後，版主與管理員仍可發文。"
   disableLocalNoteCreation: "禁止全站發文"
@@ -3342,7 +3342,7 @@ _aiTranslationSettings:
   localCleared: "已清除本機憑證。"
 
 _chatEscrow:
-  title: "操作失敗"
+  title: "聊天託管加密"
   scope: "僅加密私訊與群聊訊息（落庫 AES-GCM）。公開貼文不加密，搜尋引擎仍可抓取。"
   warn: "持有主金鑰的營運方可解密全部託管聊天。輪換會產生新金鑰供新訊息使用；舊金鑰保留才能讀歷史。退役舊金鑰後對應歷史將無法解密。"
   enable: "啟用聊天託管加密"
@@ -3397,6 +3397,12 @@ _uiCommon:
   federation: 聯邦
   instances: 站點
   apRequests: ActivityPub 請求
+  apInboxReceived: "AP 收件（已接收）"
+  apDeliverSucceeded: "AP 投遞（成功）"
+  apDeliverFailed: "AP 投遞（失敗）"
+  apOutSucc: "送出：成功"
+  apOutFail: "送出：失敗"
+  apIn: "接收"
   newUsers: 新使用者
   deliverQueue: 投遞佇列
   inboxQueue: 收件佇列
