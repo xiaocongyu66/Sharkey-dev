@@ -24,7 +24,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<MkAcct :class="$style.messageHeaderUsername" :user="item.other!"/>
 				<MkTime :time="item.message.createdAt" :class="$style.messageHeaderTime"/>
 			</header>
-			<div :class="$style.messageBodyText"><span v-if="item.isMe" :class="$style.youSaid">{{ i18n.ts.you }}:</span>{{ item.message.text }}</div>
+			<div :class="$style.messageBodyText">
+				<span v-if="item.isMe" :class="$style.youSaid">{{ i18n.ts.you }}:</span>{{ previewText(item.message) }}
+			</div>
 		</div>
 	</MkA>
 </div>
@@ -42,6 +44,9 @@ import { ensureSignin } from '@/i.js';
 
 const $i = ensureSignin();
 
+/** Telegram-style list preview: one line, no full message dump */
+const PREVIEW_MAX_CHARS = 120;
+
 const history = ref<{
 	id: string;
 	message: Misskey.entities.ChatMessage;
@@ -51,6 +56,31 @@ const history = ref<{
 
 const initializing = ref(true);
 const fetching = ref(false);
+
+function previewText(message: Misskey.entities.ChatMessage): string {
+	// E2EE ciphertext is not useful in list preview
+	if ((message as any).isE2ee || (message as any).ciphertext) {
+		return (i18n.ts as any)._chat?.encryptedMessage ?? '🔒';
+	}
+	const raw = (message as any).text;
+	if (typeof raw === 'string' && raw.trim().length > 0) {
+		// Collapse newlines / excess spaces so list rows stay one line
+		let t = raw.replace(/\s+/g, ' ').trim();
+		if (t.length > PREVIEW_MAX_CHARS) {
+			t = t.slice(0, PREVIEW_MAX_CHARS - 1) + '…';
+		}
+		return t;
+	}
+	if ((message as any).fileId || (message as any).file) {
+		const file = (message as any).file;
+		const type = file?.type as string | undefined;
+		if (type?.startsWith('image/')) return i18n.ts.image;
+		if (type?.startsWith('video/')) return i18n.ts.video;
+		if (type?.startsWith('audio/')) return i18n.ts.audio;
+		return file?.name ? String(file.name) : i18n.ts.file;
+	}
+	return '';
+}
 
 async function fetchHistory() {
 	if (fetching.value) return;
@@ -193,10 +223,16 @@ onMounted(() => {
 	margin-left: auto;
 }
 
+/* Telegram-style single-line preview under title — never expand the list row */
 .messageBodyText {
 	overflow: hidden;
-	overflow-wrap: break-word;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	font-size: 1.1em;
+	line-height: 1.35;
+	max-width: 100%;
+	color: var(--MI_THEME-fgTransparentStrong, inherit);
+	opacity: 0.85;
 }
 
 .youSaid {
