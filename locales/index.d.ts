@@ -16005,6 +16005,128 @@ export interface Locale extends ILocale {
      * System Webhook
      */
     "systemWebhook": string;
+    "_chartSeries": {
+        /**
+         * Received
+         */
+        "received": string;
+        /**
+         * Delivered
+         */
+        "delivered": string;
+        /**
+         * Stalled
+         */
+        "stalled": string;
+        /**
+         * Pub Active
+         */
+        "pubActive": string;
+        /**
+         * Sub Active
+         */
+        "subActive": string;
+        /**
+         * Pub & Sub
+         */
+        "pubAndSub": string;
+        /**
+         * Pub
+         */
+        "pub": string;
+        /**
+         * Sub
+         */
+        "sub": string;
+        /**
+         * In
+         */
+        "in": string;
+        /**
+         * Out (success)
+         */
+        "outSucc": string;
+        /**
+         * Out (fail)
+         */
+        "outFail": string;
+        /**
+         * Combined
+         */
+        "combined": string;
+        /**
+         * Read & Write
+         */
+        "readWrite": string;
+        /**
+         * Write
+         */
+        "write": string;
+        /**
+         * Read
+         */
+        "read": string;
+        /**
+         * Registered < 1 week
+         */
+        "withinWeek": string;
+        /**
+         * Registered < 1 month
+         */
+        "withinMonth": string;
+        /**
+         * Registered < 1 year
+         */
+        "withinYear": string;
+        /**
+         * Registered > 1 week
+         */
+        "outsideWeek": string;
+        /**
+         * Registered > 1 month
+         */
+        "outsideMonth": string;
+        /**
+         * Registered > 1 year
+         */
+        "outsideYear": string;
+        /**
+         * Local +
+         */
+        "localInc": string;
+        /**
+         * Local -
+         */
+        "localDec": string;
+        /**
+         * Remote +
+         */
+        "remoteInc": string;
+        /**
+         * Remote -
+         */
+        "remoteDec": string;
+        /**
+         * Drive usage
+         */
+        "driveUsage": string;
+        /**
+         * Drive files
+         */
+        "driveFiles": string;
+        /**
+         * Inc
+         */
+        "inc": string;
+        /**
+         * Dec
+         */
+        "dec": string;
+        /**
+         * Other
+         */
+        "other": string;
+    };
 }
 export type Locales = {
     [lang: string]: Locale;

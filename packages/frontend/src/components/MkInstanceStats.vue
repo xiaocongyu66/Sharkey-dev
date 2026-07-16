@@ -6,7 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div :class="$style.root">
 	<MkFoldableSection class="item">
-		<template #header>Chart</template>
+		<template #header>{{ i18n.ts.charts }}</template>
 		<div :class="$style.chart">
 			<div class="selects">
 				<MkSelect v-model="chartSrc" style="margin: 0; flex: 1;">
@@ -42,21 +42,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkFoldableSection>
 
 	<MkFoldableSection class="item">
-		<template #header>Active users heatmap</template>
+		<template #header>{{ tCommon('activeUsers') }} · {{ tCommon('heatmap') }}</template>
 		<MkSelect v-model="heatmapSrc" style="margin: 0 0 12px 0;">
-			<option value="active-users">Active users</option>
-			<option value="notes">Notes</option>
-			<option v-if="shouldShowFederation" value="ap-requests-inbox-received">AP Requests: inboxReceived</option>
-			<option v-if="shouldShowFederation" value="ap-requests-deliver-succeeded">AP Requests: deliverSucceeded</option>
-			<option v-if="shouldShowFederation" value="ap-requests-deliver-failed">AP Requests: deliverFailed</option>
+			<option value="active-users">{{ tCommon('activeUsers') }}</option>
+			<option value="notes">{{ tCommon('notes') }}</option>
+			<option v-if="shouldShowFederation" value="ap-requests-inbox-received">{{ tCommon('apInboxReceived') }}</option>
+			<option v-if="shouldShowFederation" value="ap-requests-deliver-succeeded">{{ tCommon('apDeliverSucceeded') }}</option>
+			<option v-if="shouldShowFederation" value="ap-requests-deliver-failed">{{ tCommon('apDeliverFailed') }}</option>
 		</MkSelect>
 		<div class="_panel" :class="$style.heatmap">
-			<MkHeatmap :src="heatmapSrc" :label="'Read & Write'"/>
+			<MkHeatmap :src="heatmapSrc" :label="i18n.ts._chartSeries.readWrite"/>
 		</div>
 	</MkFoldableSection>
 
 	<MkFoldableSection class="item">
-		<template #header>Retention rate</template>
+		<template #header>{{ tCommon('retentionRate') }}</template>
 		<div class="_panel" :class="$style.retentionHeatmap">
 			<MkRetentionHeatmap/>
 		</div>
@@ -66,15 +66,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkFoldableSection>
 
 	<MkFoldableSection v-if="shouldShowFederation" class="item">
-		<template #header>Federation</template>
+		<template #header>{{ i18n.ts.federation }}</template>
 		<div :class="$style.federation">
 			<div class="pies">
 				<div class="sub">
-					<div class="title">Sub</div>
+					<div class="title">{{ tCommon('sub') }}</div>
 					<canvas ref="subDoughnutEl"></canvas>
 				</div>
 				<div class="pub">
-					<div class="title">Pub</div>
+					<div class="title">{{ tCommon('pub') }}</div>
 					<canvas ref="pubDoughnutEl"></canvas>
 				</div>
 			</div>
@@ -100,6 +100,7 @@ import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkRetentionHeatmap from '@/components/MkRetentionHeatmap.vue';
 import MkRetentionLineChart from '@/components/MkRetentionLineChart.vue';
 import { initChart } from '@/utility/init-chart.js';
+import { tCommon } from '@/utility/ui-fb-i18n.js';
 
 initChart();
 
@@ -187,7 +188,7 @@ onMounted(() => {
 		}));
 
 		subs.push({
-			name: '(other)',
+			name: i18n.ts._chartSeries.other,
 			color: '#80808080',
 			value: fedStats.otherFollowersCount,
 		});
@@ -204,7 +205,7 @@ onMounted(() => {
 		}));
 
 		pubs.push({
-			name: '(other)',
+			name: i18n.ts._chartSeries.other,
 			color: '#80808080',
 			value: fedStats.otherFollowingCount,
 		});
