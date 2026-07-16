@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: syuilo and misskey-project / Sharkey contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# GitHub CodeQL security analysis for this monorepo.
+# Results appear under: Security → Code scanning
+#
+# Requirements:
+# - Workflow must run on the default branch (or a PR into it)
+# - Public repos: free. Private repos: needs GitHub Advanced Security
+# - Repository → Settings → Code security → Code scanning must allow Actions
+
+name: CodeQL
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  schedule:
+    # Weekly: catch newly added query packs without waiting for a push
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # NestJS / Vue / misskey-js — primary attack surface
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history not required; submodules only if present
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
+          # security-extended: more rules than default; not as noisy as security-and-quality
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'

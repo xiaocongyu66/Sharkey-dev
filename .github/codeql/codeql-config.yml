@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: syuilo and misskey-project / Sharkey contributors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Scope CodeQL to application source. Built artifacts, fixtures, and vendored
+# trees are excluded to keep analysis time and noise under control.
+
+name: Sharkey CodeQL
+
+paths:
+  - packages/backend
+  - packages/frontend
+  - packages/frontend-embed
+  - packages/frontend-shared
+  - packages/misskey-js
+  - packages/sw
+  - packages/shared
+  - packages/megalodon
+  - scripts
+
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/built/**'
+  - '**/dist/**'
+  - '**/.turbo/**'
+  - '**/coverage/**'
+  - '**/cypress/**'
+  - '**/*.stories.*'
+  - '**/*.test.*'
+  - '**/*.spec.*'
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/__tests__/**'
+  - '**/fixtures/**'
+  - '**/fluent-emojis/**'
+  - '**/assets/**'
+  - 'chart/**'
+  - 'locales/**'
+  - 'sharkey-locales/**'
+  - 'docs/**'
+  - '**/*.md'
+  - '**/*.yml'
+  - '**/*.yaml'
+  - '**/*.json'
+  - '**/*.json5'
