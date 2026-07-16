@@ -3,19 +3,20 @@
 #
 # Build the root Dockerfile and push to GitHub Container Registry (GHCR).
 #
-# Images:
+# Images (always lowercase — GHCR requirement):
 #   ghcr.io/<owner>/<repo>:<tag>
+#   e.g. ghcr.io/xiaocongyu66/sharkey-dev:latest
 #
-# Default tags (example repo xiaocongyu66/Sharkey-dev):
+# Tags:
 #   - latest          (default branch only)
 #   - <package.json version>  e.g. 2025.5.2-dev
 #   - sha-<short>     e.g. sha-7bd5e01
-#   - branch name     e.g. main
+#   - branch name     e.g. main (sanitized)
 #   - git tag         when building a release tag
 #
 # Requirements:
-#   - Packages: Read and write (Settings → Actions → General → Workflow permissions)
-#   - First image may need: Settings → Packages → package visibility / link to repo
+#   - Settings → Actions → General → Workflow permissions: Read and write
+#   - First package may need linking under Packages after the first push
 
 name: Docker
 
@@ -66,20 +67,15 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  # GHCR requires lowercase image names
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
     name: Build${{ github.event_name == 'pull_request' && ' (no push)' || ' & push' }}
     runs-on: ubuntu-latest
-    # Sharkey full image build is heavy
     timeout-minutes: 180
     permissions:
       contents: read
       packages: write
-      # needed for PR builds that only authenticate to pull base layers anonymously
-      id-token: write
 
     steps:
       - name: Checkout
@@ -89,7 +85,6 @@ jobs:
           fetch-depth: 1
 
       - name: Free disk space
-        # Full monorepo build + node_modules can exhaust the default runner disk
         run: |
           set -eux
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
@@ -111,37 +106,40 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract package version
-        id: pkg
+      - name: Prepare image name and version
+        id: prep
         run: |
           set -eux
+          # GHCR / OCI require lowercase repository names
+          IMAGE_NAME="${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
           VERSION=$(node -p "require('./package.json').version")
-          # sanitize for docker tag (semver-ish already ok)
-          VERSION_TAG=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+          # Docker tag: [a-zA-Z0-9_.-] — collapse invalid chars
+          VERSION_TAG=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g' | sed 's/--*/-/g')
+          echo "image=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "version_tag=${VERSION_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Image: ${IMAGE_NAME}"
+          echo "Version tag: ${VERSION_TAG}"
 
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          flavor: |
-            latest=false
+          images: ${{ steps.prep.outputs.image }}
+          # Do not use type=semver here: package.json uses versions like 2025.5.2-dev
+          # which are not valid SemVer and make metadata-action fail validation.
           tags: |
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
-            type=raw,value=${{ steps.pkg.outputs.version_tag }},enable=${{ github.event_name != 'pull_request' }}
+            type=raw,value=${{ steps.prep.outputs.version_tag }},enable=${{ github.event_name != 'pull_request' }}
             type=sha,prefix=sha-,format=short
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ github.ref_name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=ref,event=tag
           labels: |
             org.opencontainers.image.title=Sharkey
             org.opencontainers.image.description=Sharkey (Misskey-based) Fediverse server
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.version=${{ steps.pkg.outputs.version }}
+            org.opencontainers.image.version=${{ steps.prep.outputs.version }}
 
       - name: Resolve platforms
         id: platforms
@@ -172,7 +170,6 @@ jobs:
           push: ${{ steps.push.outputs.value }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # GHA cache speeds up rebuilds of node_modules / layers
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
@@ -181,14 +178,16 @@ jobs:
       - name: Image summary
         if: steps.push.outputs.value == 'true'
         run: |
-          echo "### Docker image pushed" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Pull example:" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo '```bash' >> "$GITHUB_STEP_SUMMARY"
-          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Docker image pushed"
+            echo ""
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo ""
+            echo "Pull example:"
+            echo ""
+            echo '```bash'
+            echo "docker pull ${{ steps.prep.outputs.image }}:latest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
