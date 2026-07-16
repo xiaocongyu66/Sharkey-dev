@@ -2664,3 +2664,12 @@ _uiCommon:
   sub: Sub
   pub: Pub
   jobsCount: jobs
+
+_apiErrors:
+  title: "Operation failed"
+  generic: "Something went wrong. Please try again later."
+  network: "Network error or server unreachable. Please check your connection and try again."
+  aborted: "Request cancelled."
+  EMPTY_KEYWORD: "Введите хотя бы одно ключевое слово или слово-исключение."
+  TOO_MANY_ANTENNAS: "Нельзя создать больше антенн."
+  NO_SUCH_USER_LIST: "Список не найден."

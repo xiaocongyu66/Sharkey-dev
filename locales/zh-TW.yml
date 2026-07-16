@@ -1647,7 +1647,7 @@ _initialAccountSetting:
   laterAreYouSure: "稍後再重新進行初始設定嗎？"
 _initialTutorial:
   launchTutorial: "觀看教學課程"
-  title: "新手教學"
+  title: "操作失敗"
   wellDone: "做得好"
   skipAreYouSure: "結束教學模式？"
   _landing:
@@ -2226,7 +2226,7 @@ _wordMute:
 _instanceMute:
   instanceMuteDescription: "包括對被靜音伺服器上的使用者的回覆，被設定的伺服器上所有貼文及轉發都會被靜音。"
   instanceMuteDescription2: "設定時以換行進行分隔"
-  title: "將隱藏被設定的伺服器貼文。"
+  title: "操作失敗"
   heading: "要靜音的伺服器"
 _theme:
   explore: "探索佈景主題"
@@ -2628,7 +2628,7 @@ _play:
   my: "自己的 Play"
   liked: "按讚的 Play"
   featured: "熱門"
-  title: "標題"
+  title: "操作失敗"
   script: "腳本"
   summary: "描述"
   visibilityDescription: "如果您將其設為私密，它將不再顯示在您的個人資料中，但知道該 URL 的人仍然可以存取它。"
@@ -2652,7 +2652,7 @@ _pages:
   contents: "內容"
   content: "頁面方塊"
   variables: "變數"
-  title: "標題"
+  title: "操作失敗"
   url: "頁面網址"
   summary: "頁面摘要"
   alignCenter: "置中"
@@ -2779,7 +2779,7 @@ _dialog:
   charactersExceeded: "您的貼文太長了！現時字數 {current}／限制字數 {max}"
   charactersBelow: "您的貼文太短了！現時字數 {current}／限制字數 {min}"
 _disabledTimeline:
-  title: "時間軸已停用"
+  title: "操作失敗"
   description: "目前角色無法使用這個時間軸。"
 _drivecleaner:
   orderBySizeDesc: "按大小降序排列"
@@ -2874,7 +2874,7 @@ _moderationLogTypes:
   deleteChatRoom: "刪除聊天室"
   updateProxyAccountDescription: "更新代理帳戶的說明"
 _fileViewer:
-  title: "檔案詳細資訊"
+  title: "操作失敗"
   type: "檔案類型 "
   size: "檔案大小"
   url: "URL"
@@ -2882,7 +2882,7 @@ _fileViewer:
   attachedNotes: "含有附件的貼文"
   thisPageCanBeSeenFromTheAuthor: "本頁面僅限上傳了這個檔案的使用者可以檢視。"
 _externalResourceInstaller:
-  title: "從外部網站安裝"
+  title: "操作失敗"
   checkVendorBeforeInstall: "安裝前請確認提供者是可信賴的。"
   _plugin:
     title: "要安裝此外掛嘛？"
@@ -2982,10 +2982,10 @@ _reversi:
   showBoardLabels: "在棋盤上顯示行、列號"
   useAvatarAsStone: "用大頭貼當作棋子"
 _offlineScreen:
-  title: "離線－無法連接伺服器"
+  title: "操作失敗"
   header: "無法連接伺服器"
 _urlPreviewSetting:
-  title: "URL 預覽設定"
+  title: "操作失敗"
   enable: "啟用 URL 預覽"
   timeout: "取得預覽的逾時時間 (ms)"
   timeoutDescription: "若取得預覽所需的時間超過這個值，則不會產生預覽。"
@@ -3003,7 +3003,7 @@ _mediaControls:
   playbackRate: "播放速度"
   loop: "循環播放"
 _contextMenu:
-  title: "內容功能表"
+  title: "操作失敗"
   app: "應用程式"
   appWithShift: "Shift 鍵應用程式"
   native: "瀏覽器的使用者介面"
@@ -3083,7 +3083,7 @@ _customEmojisManager:
       confirmClearEmojisDescription: "放棄編輯內容並清除列表中顯示的表情符號。是否確定？"
       confirmUploadEmojisDescription: "將拖放的{count}個檔案上傳到雲端硬碟。是否執行此操作？"
 _embedCodeGen:
-  title: "自訂嵌入程式碼"
+  title: "操作失敗"
   header: "檢視標頭 "
   autoload: "自動繼續載入（不建議）"
   maxHeight: "最大高度"
@@ -3098,7 +3098,7 @@ _embedCodeGen:
   codeGeneratedDescription: "請將產生的程式碼貼到您的網站上。"
 _selfXssPrevention:
   warning: "警告"
-  title: "「在此畫面貼上一些內容」完全是個騙局。"
+  title: "操作失敗"
   description1: "如果您在此處貼上任何內容，惡意使用者可能會接管您的帳戶或竊取您的個人資訊。"
   description2: "如果您不確切知道要貼上的內容，%c 請立即停止工作並關閉此視窗。"
   description3: "細節請看這裡。{link}"
@@ -3135,7 +3135,7 @@ _captcha:
       title: "CAPTCHA 錯誤"
       text: "發生了意外的錯誤。"
 _bootErrors:
-  title: "載入失敗"
+  title: "操作失敗"
   serverError: "如果稍等片刻並重新載入後問題仍然存在，請聯絡您的伺服器管理員並提供以下的錯誤 ID。"
   solution: "執行以下操作或許可以解決問題。"
   solution1: "將瀏覽器和作業系統更新至最新版本"
@@ -3156,7 +3156,7 @@ _search:
   serverHostPlaceholder: "例：misskey.example.com"
 
 _xAlgorithm:
-  title: "演算法"
+  title: "操作失敗"
   info: "X Algorithm 必須以原始上游服務運行。Sharkey 透過 HTTP 閘道呼叫 Home Mixer/Scored Posts，不會在本機模擬簡化演算法。"
   enable: "啟用 X Algorithm"
   enableCaption: "使用 xai-org/x-algorithm 作為推薦後端。"
@@ -3183,7 +3183,7 @@ _xAlgorithm:
   timeout: "請求逾時（毫秒）"
   modelArtifacts: "模型產物路徑"
 _adminNotes:
-  title: "貼文管理"
+  title: "操作失敗"
   siteWide: "全站發文"
   siteWideCaption: "控制本站用戶是否可以發文。停用後，版主與管理員仍可發文。"
   disableLocalNoteCreation: "禁止全站發文"
@@ -3194,6 +3194,10 @@ _adminNotes:
   suspendUser: "停用用戶"
   postIp: "發文 IP"
   postFingerprint: "發文指紋"
+  postUserAgent: "發文瀏覽器 (UA)"
+  auditDetails: "請求稽核"
+  auditExpand: "展開完整指紋 / UA"
+  auditCollapse: "收起"
   loginHistory: "登入歷史"
   loginIp: "登入 IP"
   browserFingerprint: "瀏覽器指紋"
@@ -3217,7 +3221,7 @@ _ai:
   tabAbuse: "管控"
 
 _aiTranslation:
-  title: "AI 翻譯"
+  title: "操作失敗"
   info: "貼文與聊天的 OpenAI 相容 AI 翻譯。破甲模式採 SillyTavern 分層 jailbreak。"
   enableNotes: "啟用貼文翻譯"
   enableNotesCaption: "開啟後貼文翻譯可使用 AI。"
@@ -3254,7 +3258,7 @@ _aiTranslation:
   systemPromptCaption: "若填寫則覆寫整套 ST 堆疊。留空使用分層破甲。"
 
 _aiNoteModeration:
-  title: "貼文 AI 審核"
+  title: "操作失敗"
   info: "相容 OpenAI /v1。可依情況啟用圖片辨識（僅有圖時送出）。本機與遠端可貼文分別開關。"
   enableLocal: "審核本機貼文"
   enableLocalCaption: "開啟後，本站使用者發文/改文前會呼叫 AI 審核。"
@@ -3284,7 +3288,7 @@ _aiNoteModeration:
   systemPromptCaption: "留空使用內建提示。"
 
 _aiAbuseControl:
-  title: "AI 刷號/多帳號管控"
+  title: "操作失敗"
   info: "預設僅當同一 IP 與指紋同時相符才關聯。會將使用者身分傳給 AI。"
   autoSuspendCaption: "判定濫用時僅自動封禁觸發帳號，關聯帳號記錄供複核。"
   enabled: "啟用 AI 多帳號管控"
@@ -3314,7 +3318,7 @@ _aiAbuseControl:
   systemPromptCaption: "可選。留空使用內建提示。"
 
 _aiTranslationSettings:
-  title: "AI 翻譯"
+  title: "操作失敗"
   info: "語言偏好會同步到帳號。API 基址/金鑰僅保存在本機，不會上傳伺服器。"
   userKeyDisabled: "本站未開放本機 AI 端點。"
   prefs: "偏好（同步）"
@@ -3338,7 +3342,7 @@ _aiTranslationSettings:
   localCleared: "已清除本機憑證。"
 
 _chatEscrow:
-  title: "聊天託管加密"
+  title: "操作失敗"
   scope: "僅加密私訊與群聊訊息（落庫 AES-GCM）。公開貼文不加密，搜尋引擎仍可抓取。"
   warn: "持有主金鑰的營運方可解密全部託管聊天。輪換會產生新金鑰供新訊息使用；舊金鑰保留才能讀歷史。退役舊金鑰後對應歷史將無法解密。"
   enable: "啟用聊天託管加密"
@@ -3481,3 +3485,12 @@ _uiCommon:
   sub: 訂閱
   pub: 發佈
   jobsCount: 個任務
+
+_apiErrors:
+  title: "操作失敗"
+  generic: "出錯了，請稍後重試。"
+  network: "網路異常或伺服器暫時不可用，請檢查連線後重試。"
+  aborted: "請求已取消。"
+  EMPTY_KEYWORD: "請至少填寫一個「包含關鍵字」或「排除關鍵字」。"
+  TOO_MANY_ANTENNAS: "天線數量已達上限，無法再建立。"
+  NO_SUCH_USER_LIST: "找不到該列表。"

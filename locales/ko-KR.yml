@@ -1640,7 +1640,7 @@ _initialAccountSetting:
   laterAreYouSure: "초기 설정을 나중에 진행하시겠습니까?"
 _initialTutorial:
   launchTutorial: "튜토리얼 보기"
-  title: "튜토리얼"
+  title: "작업 실패"
   wellDone: "잘 하셨습니다"
   skipAreYouSure: "튜토리얼을 종료하시겠습니까?"
   _landing:
@@ -2216,7 +2216,7 @@ _wordMute:
 _instanceMute:
   instanceMuteDescription: "뮤트한 서버에서 오는 답글을 포함한 모든 노트와 Renote를 뮤트합니다."
   instanceMuteDescription2: "한 줄에 하나씩 입력해 주세요"
-  title: "지정한 서버의 노트를 숨깁니다."
+  title: "작업 실패"
   heading: "뮤트할 서버"
 _theme:
   explore: "테마 둘러보기"
@@ -2618,7 +2618,7 @@ _play:
   my: "나의 Play"
   liked: "좋아요 한 Play"
   featured: "인기"
-  title: "제목"
+  title: "작업 실패"
   script: "스크립트"
   summary: "설명"
   visibilityDescription: "비공개로 설정하면 프로필에 표시하지 않지만 URL을 아는 사람은 계속해서 접속할 수 있습니다."
@@ -2642,7 +2642,7 @@ _pages:
   contents: "콘텐츠"
   content: "페이지 블록"
   variables: "변수"
-  title: "제목"
+  title: "작업 실패"
   url: "페이지 URL"
   summary: "페이지 요약"
   alignCenter: "가운데 정렬"
@@ -2769,7 +2769,7 @@ _dialog:
   charactersExceeded: "최대 글자수를 초과하였습니다! 현재 {current} / 최대 {max}"
   charactersBelow: "최소 글자수 미만입니다! 현재 {current} / 최소 {min}"
 _disabledTimeline:
-  title: "비활성화된 타임라인"
+  title: "작업 실패"
   description: "현재 역할에서는 이 타임라인을 이용할 수 없습니다."
 _drivecleaner:
   orderBySizeDesc: "크기가 큰 순"
@@ -2864,7 +2864,7 @@ _moderationLogTypes:
   deleteChatRoom: "채팅 룸 삭제"
   updateProxyAccountDescription: "프록시 계정의 설명 업데이트"
 _fileViewer:
-  title: "파일 상세"
+  title: "작업 실패"
   type: "파일 유형"
   size: "파일 크기"
   url: "URL"
@@ -2872,7 +2872,7 @@ _fileViewer:
   attachedNotes: "첨부된 노트"
   thisPageCanBeSeenFromTheAuthor: "이 페이지는 파일 소유자만 열람할 수 있습니다"
 _externalResourceInstaller:
-  title: "외부 사이트로부터 설치"
+  title: "작업 실패"
   checkVendorBeforeInstall: "제공자를 신뢰할 수 있는 경우에만 설치하십시오."
   _plugin:
     title: "이 플러그인을 설치하시겠습니까?"
@@ -2972,10 +2972,10 @@ _reversi:
   showBoardLabels: "판에 행·열 번호 표시"
   useAvatarAsStone: "돌을 아이콘으로 표시"
 _offlineScreen:
-  title: "오프라인 - 서버에 접속할 수 없습니다"
+  title: "작업 실패"
   header: "서버에 접속할 수 없습니다"
 _urlPreviewSetting:
-  title: "URL 미리보기 설정"
+  title: "작업 실패"
   enable: "URL 미리보기 활성화"
   timeout: "미리보기를 불러올 때의 타임아웃 (ms)"
   timeoutDescription: "미리보기를 로딩하는데 걸리는 시간이 정한 시간보다 오래 걸리는 경우, 미리보기를 생성하지 않습니다."
@@ -2993,7 +2993,7 @@ _mediaControls:
   playbackRate: "재생 속도"
   loop: "반복 재생"
 _contextMenu:
-  title: "컨텍스트 메뉴"
+  title: "작업 실패"
   app: "애플리케이션"
   appWithShift: "Shift 키로 애플리케이션"
   native: "브라우저의 UI"
@@ -3073,7 +3073,7 @@ _customEmojisManager:
       confirmClearEmojisDescription: "편집 내용을 지우고, 목록에 표시되어진 이모지를 지웁니다. 실행할까요?"
       confirmUploadEmojisDescription: "드래그 앤 드롭한 {count}개의 파일을 드라이브에 업로드 합니다. 실행할까요?"
 _embedCodeGen:
-  title: "임베디드 코드를 커스터마이즈"
+  title: "작업 실패"
   header: "해더를 표시"
   autoload: "자동으로 다음 코드를 실행 (비권장)"
   maxHeight: "최대 높이"
@@ -3088,7 +3088,7 @@ _embedCodeGen:
   codeGeneratedDescription: "만들어진 코드를 웹 사이트에 붙여서 사용하세요."
 _selfXssPrevention:
   warning: "경고"
-  title: "“이 화면에 뭔가를 붙여넣어라\"는 것은 모두 사기입니다."
+  title: "작업 실패"
   description1: "여기에 무언가를 붙여넣으면 악의적인 유저에게 계정을 탈취당하거나 개인정보를 도용당할 수 있습니다."
   description2: "붙여 넣으려는 항목이 무엇인지 정확히 이해하지 못하는 경우, %c지금 바로 작업을 중단하고 이 창을 닫으십시오."
   description3: "자세한 내용은 여기를 확인해 주세요.  {link}"
@@ -3125,7 +3125,7 @@ _captcha:
       title: "CAPTCHA 오류"
       text: "알 수 없는 오류가 발생했습니다."
 _bootErrors:
-  title: "로딩이 실패함"
+  title: "작업 실패"
   serverError: "잠시 기다렸다가 다시 로드해도 여전히 문제가 해결되지 않으면 아래 Error ID와 함께 서버 관리자에게 연락해 주세요."
   solution: "다음과 같은 방법으로 해결할 수 있습니다."
   solution1: "브라우저 및 OS를 최신 버전으로 업데이트하기"
@@ -3146,7 +3146,7 @@ _search:
   serverHostPlaceholder: "예: misskey.example.com"
 
 _adminNotes:
-  title: "게시물 관리"
+  title: "작업 실패"
   siteWide: "전체 게시"
   siteWideCaption: "로컬 사용자의 게시 가능 여부를 제어합니다. 비활성화해도 모더레이터/관리자는 게시할 수 있습니다."
   disableLocalNoteCreation: "로컬 게시 모두 금지"
@@ -3172,7 +3172,7 @@ _adminNotes:
   latestIp: "Latest IP"
 
 _xAlgorithm:
-  title: "알고리즘"
+  title: "작업 실패"
   info: "X Algorithm은 원본 업스트림 서비스로 실행되어야 합니다. Sharkey는 Home Mixer/Scored Posts를 HTTP 게이트웨이로 호출하며 로컬에서 단순 알고리즘을 흉내 내지 않습니다."
   enable: "X Algorithm 사용"
   enableCaption: "추천 백엔드로 xai-org/x-algorithm을 사용합니다."
@@ -3208,7 +3208,7 @@ _ai:
   tabAbuse: "Abuse control"
 
 _aiTranslation:
-  title: "AI translation"
+  title: "작업 실패"
   info: "OpenAI-compatible translation for notes and chat. Shared or separate API keys; optional user keys. Uncensored mode uses a SillyTavern jailbreak stack (main + nsfw + post-history), not a polite translate request."
   enableNotes: "Enable note translation"
   enableNotesCaption: "When on, notes/translate can use AI (alongside DeepL/Libre if configured)."
@@ -3245,7 +3245,7 @@ _aiTranslation:
   systemPromptCaption: "If set, replaces the entire ST stack with this single system prompt. Leave empty to use Main+NSFW+Jailbreak layers."
 
 _aiNoteModeration:
-  title: "AI note moderation"
+  title: "작업 실패"
   info: "Uses any OpenAI-compatible /v1 API. Optional image vision when the note has images (model must support vision). Separate switches for local and remote notes."
   enableLocal: "Moderate local notes"
   enableLocalCaption: "When on, notes from users on this instance are checked before publish."
@@ -3275,7 +3275,7 @@ _aiNoteModeration:
   systemPromptCaption: "Leave empty to use the built-in JSON classifier prompt."
 
 _aiAbuseControl:
-  title: "AI multi-account control"
+  title: "작업 실패"
   info: "Links local accounts only when they share the same real IP AND browser fingerprint (configurable). Passes full user identity to AI. Optional auto-suspend of the seed account. Separate API key from note moderation."
   autoSuspendCaption: "When AI (or hard heuristic) flags abuse, auto-suspend the seed account only (not the whole cohort). Moderators/root are never auto-suspended. Linked accounts are logged for review."
   enabled: "Enable AI multi-account control"
@@ -3305,7 +3305,7 @@ _aiAbuseControl:
   systemPromptCaption: "Optional. Empty = built-in anti-abuse JSON classifier."
 
 _aiTranslationSettings:
-  title: "AI translation"
+  title: "작업 실패"
   info: "Language prefs sync to your account. Optional API key/base URL stay only on this device and are never sent to the server."
   userKeyDisabled: "This instance does not allow local user AI endpoints. Instance-level translation still works if configured."
   prefs: "Preferences (synced)"
@@ -3329,7 +3329,7 @@ _aiTranslationSettings:
   localCleared: "Local credentials cleared."
 
 _chatEscrow:
-  title: "Chat escrow encryption"
+  title: "작업 실패"
   scope: "Encrypts only direct and room chat messages at rest (AES-GCM). Public notes are not encrypted and remain crawlable by search engines."
   warn: "Operators who hold the master keys can decrypt all escrowed chat. Rotating creates a new key for new messages; keep old keys to read history. Retiring (deleting) an old key makes that history undecryptable."
   enable: "Enable chat escrow encryption"
@@ -3472,3 +3472,12 @@ _uiCommon:
   sub: Sub
   pub: Pub
   jobsCount: jobs
+
+_apiErrors:
+  title: "작업 실패"
+  generic: "문제가 발생했습니다. 잠시 후 다시 시도하세요."
+  network: "네트워크 오류이거나 서버에 연결할 수 없습니다. 연결을 확인한 뒤 다시 시도하세요."
+  aborted: "요청이 취소되었습니다."
+  EMPTY_KEYWORD: "키워드 또는 제외 키워드를 하나 이상 입력하세요."
+  TOO_MANY_ANTENNAS: "더 이상 안테나를 만들 수 없습니다."
+  NO_SUCH_USER_LIST: "리스트를 찾을 수 없습니다."

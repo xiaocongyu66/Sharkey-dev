@@ -128,3 +128,12 @@ _customEmojisManager:
     host: "Host"
     uri: "URI"
     publicUrl: "Public URL"
+
+_apiErrors:
+  title: "Operation failed"
+  generic: "Something went wrong. Please try again later."
+  network: "Network error or server unreachable. Please check your connection and try again."
+  aborted: "Request cancelled."
+  EMPTY_KEYWORD: "Enter at least one keyword or exclude keyword."
+  TOO_MANY_ANTENNAS: "You cannot create any more antennas."
+  NO_SUCH_USER_LIST: "List not found."

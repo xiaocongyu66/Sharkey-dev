@@ -120,6 +120,20 @@ watch(() => src.value, async () => {
 });
 
 async function saveAntenna() {
+	const keywordRows = keywords.value.trim().split('\n').map(x => x.trim().split(' ').filter(Boolean)).filter(row => row.length > 0);
+	const excludeRows = excludeKeywords.value.trim().split('\n').map(x => x.trim().split(' ').filter(Boolean)).filter(row => row.length > 0);
+
+	// Client-side check (same rule as backend EMPTY_KEYWORD) — show localized message early
+	if (keywordRows.length === 0 && excludeRows.length === 0) {
+		const msg =
+			(i18n.ts as any)?._apiErrors?.EMPTY_KEYWORD
+			|| (String((i18n as any).locale || '').toLowerCase().startsWith('zh')
+				? '请至少填写一个「包含关键词」或「排除关键词」。'
+				: 'Enter at least one keyword or exclude keyword.');
+		os.alert({ type: 'error', text: msg });
+		return;
+	}
+
 	const antennaData = {
 		name: name.value,
 		src: src.value,
@@ -130,9 +144,10 @@ async function saveAntenna() {
 		excludeNotesInSensitiveChannel: excludeNotesInSensitiveChannel.value,
 		caseSensitive: caseSensitive.value,
 		localOnly: localOnly.value,
-		users: users.value.trim().split('\n').map(x => x.trim()),
-		keywords: keywords.value.trim().split('\n').map(x => x.trim().split(' ')),
-		excludeKeywords: excludeKeywords.value.trim().split('\n').map(x => x.trim().split(' ')),
+		users: users.value.trim().split('\n').map(x => x.trim()).filter(Boolean),
+		// Keep backend shape: array of arrays (empty string rows allowed for API parity)
+		keywords: keywords.value.trim() === '' ? [['']] : keywords.value.trim().split('\n').map(x => x.trim().split(' ')),
+		excludeKeywords: excludeKeywords.value.trim() === '' ? [['']] : excludeKeywords.value.trim().split('\n').map(x => x.trim().split(' ')),
 	};
 
 	if (initialAntenna.id == null) {

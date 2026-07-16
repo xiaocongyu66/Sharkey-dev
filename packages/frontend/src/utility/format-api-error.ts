@@ -54,6 +54,15 @@ const CODE_FALLBACKS: Record<string, { en: string; zh: string }> = {
 	NO_SUCH_KEY: { en: 'Key not found.', zh: '找不到该密钥。' },
 	NO_SUCH_REPLY: { en: 'Reply target not found.', zh: '找不到回复目标。' },
 	NO_SUCH_POST: { en: 'Post not found.', zh: '找不到该内容。' },
+	// Antennas
+	EMPTY_KEYWORD: {
+		en: 'Enter at least one keyword or exclude keyword.',
+		zh: '请至少填写一个「包含关键词」或「排除关键词」。',
+	},
+	TOO_MANY_ANTENNAS: {
+		en: 'You cannot create any more antennas.',
+		zh: '天线数量已达上限，无法再创建。',
+	},
 	ACCESS_DENIED: { en: 'Access denied.', zh: '访问被拒绝。' },
 	PERMISSION_DENIED: { en: 'Permission denied.', zh: '没有权限执行此操作。' },
 	ROLE_PERMISSION_DENIED: { en: 'Permission denied.', zh: '没有权限执行此操作。' },

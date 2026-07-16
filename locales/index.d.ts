@@ -15773,6 +15773,15 @@ export interface Locale extends ILocale {
          */
         "NO_SUCH_ANTENNA": string;
         /**
+         * Either keywords or excludeKeywords is required.
+         */
+        "EMPTY_KEYWORD": string;
+        /**
+         * You cannot create any more antennas.
+         */
+        "TOO_MANY_ANTENNAS": string;
+
+        /**
          * Page not found.
          */
         "NO_SUCH_PAGE": string;

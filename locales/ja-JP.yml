@@ -1659,7 +1659,7 @@ _initialAccountSetting:
 
 _initialTutorial:
   launchTutorial: "チュートリアルを見る"
-  title: "チュートリアル"
+  title: "操作に失敗しました"
   wellDone: "よくできました"
   skipAreYouSure: "チュートリアルを終了しますか？"
   _landing:
@@ -2264,7 +2264,7 @@ _wordMute:
 _instanceMute:
   instanceMuteDescription: "ミュートしたサーバーのユーザーへの返信を含めて、設定したサーバーの全てのノートとRenoteをミュートします。"
   instanceMuteDescription2: "改行で区切って設定します"
-  title: "設定したサーバーのノートを隠します。"
+  title: "操作に失敗しました"
   heading: "ミュートするサーバー"
 
 _theme:
@@ -2689,7 +2689,7 @@ _play:
   my: "自分のPlay"
   liked: "いいねしたPlay"
   featured: "人気"
-  title: "タイトル"
+  title: "操作に失敗しました"
   script: "スクリプト"
   summary: "説明"
   visibilityDescription: "非公開に設定するとプロフィールに表示されなくなりますが、URLを知っている人は引き続きアクセスできます。"
@@ -2714,7 +2714,7 @@ _pages:
   contents: "コンテンツ"
   content: "ページブロック"
   variables: "変数"
-  title: "タイトル"
+  title: "操作に失敗しました"
   url: "ページURL"
   summary: "ページの要約"
   alignCenter: "中央寄せ"
@@ -2850,7 +2850,7 @@ _dialog:
   charactersBelow: "最小文字数を下回っています！ 現在 {current} / 制限 {min}"
 
 _disabledTimeline:
-  title: "無効化されたタイムライン"
+  title: "操作に失敗しました"
   description: "現在のロールでは、このタイムラインを使用することはできません。"
 
 _drivecleaner:
@@ -2950,7 +2950,7 @@ _moderationLogTypes:
   updateProxyAccountDescription: "プロキシアカウントの説明を更新"
 
 _fileViewer:
-  title: "ファイルの詳細"
+  title: "操作に失敗しました"
   type: "ファイルタイプ"
   size: "ファイルサイズ"
   url: "URL"
@@ -2959,7 +2959,7 @@ _fileViewer:
   thisPageCanBeSeenFromTheAuthor: "このページは、このファイルをアップロードしたユーザーしか閲覧できません。"
 
 _externalResourceInstaller:
-  title: "外部サイトからインストール"
+  title: "操作に失敗しました"
   checkVendorBeforeInstall: "配布元が信頼できるかを確認した上でインストールしてください。"
   _plugin:
     title: "このプラグインをインストールしますか？"
@@ -3063,11 +3063,11 @@ _reversi:
   useAvatarAsStone: "石をアイコンにする"
 
 _offlineScreen:
-  title: "オフライン - サーバーに接続できません"
+  title: "操作に失敗しました"
   header: "サーバーに接続できません"
 
 _urlPreviewSetting:
-  title: "URLプレビューの設定"
+  title: "操作に失敗しました"
   enable: "URLプレビューを有効にする"
   timeout: "プレビュー取得時のタイムアウト(ms)"
   timeoutDescription: "プレビュー取得の所要時間がこの値を超えた場合、プレビューは生成されません。"
@@ -3087,7 +3087,7 @@ _mediaControls:
   loop: "ループ再生"
 
 _contextMenu:
-  title: "コンテキストメニュー"
+  title: "操作に失敗しました"
   app: "アプリケーション"
   appWithShift: "Shiftキーでアプリケーション"
   native: "ブラウザのUI"
@@ -3171,7 +3171,7 @@ _customEmojisManager:
       confirmUploadEmojisDescription: "ドラッグ＆ドロップされた{count}個のファイルをドライブにアップロードします。実行しますか？"
 
 _embedCodeGen:
-  title: "埋め込みコードをカスタマイズ"
+  title: "操作に失敗しました"
   header: "ヘッダーを表示"
   autoload: "自動で続きを読み込む（非推奨）"
   maxHeight: "高さの最大値"
@@ -3187,7 +3187,7 @@ _embedCodeGen:
 
 _selfXssPrevention:
   warning: "警告"
-  title: "「この画面に何か貼り付けろ」はすべて詐欺です。"
+  title: "操作に失敗しました"
   description1: "ここに何かを貼り付けると、悪意のあるユーザーにアカウントを乗っ取られたり、個人情報を盗まれたりする可能性があります。"
   description2: "貼り付けようとしているものが何なのかを正確に理解していない場合は、%c今すぐ作業を中止してこのウィンドウを閉じてください。"
   description3: "詳しくはこちらをご確認ください。 {link}"
@@ -3228,7 +3228,7 @@ _captcha:
       text: "想定外のエラーが発生しました。"
 
 _bootErrors:
-  title: "読み込みに失敗しました"
+  title: "操作に失敗しました"
   serverError: "少し待ってからリロードしてもまだ問題が解決されない場合、以下のError IDを添えてサーバー管理者に連絡してください。"
   solution: "以下を行うと解決する可能性があります。"
   solution1: "ブラウザおよびOSを最新バージョンに更新する"
@@ -3250,7 +3250,7 @@ _search:
   serverHostPlaceholder: "例: misskey.example.com"
 
 _xAlgorithm:
-  title: "アルゴリズム"
+  title: "操作に失敗しました"
   info: "X Algorithm はオリジナルの上流サービスとして動作する必要があります。Sharkey は Home Mixer/Scored Posts を HTTP ゲートウェイ経由で呼び出し、ローカルで簡易アルゴリズムをエミュレートしません。"
   enable: "X Algorithm を有効化"
   enableCaption: "推薦バックエンドとして xai-org/x-algorithm を使用します。"
@@ -3277,7 +3277,7 @@ _xAlgorithm:
   timeout: "リクエストタイムアウト (ms)"
   modelArtifacts: "モデル成果物パス"
 _adminNotes:
-  title: "ノート管理"
+  title: "操作に失敗しました"
   siteWide: "全体の投稿"
   siteWideCaption: "ローカルユーザーのノート作成を制御します。無効時もモデレーター/管理者は投稿できます。"
   disableLocalNoteCreation: "ローカル投稿をすべて禁止"
@@ -3294,6 +3294,10 @@ _adminNotes:
   suspendUser: "ユーザーを凍結"
   postIp: "投稿 IP"
   postFingerprint: "投稿指紋"
+  postUserAgent: "投稿ブラウザ (UA)"
+  auditDetails: "リクエスト監査"
+  auditExpand: "指紋 / UA をすべて表示"
+  auditCollapse: "折りたたむ"
   filterUsername: "ユーザー名"
   filterEmail: "メール"
   includeRemote: "連合（リモート）ノートを表示"
@@ -3349,7 +3353,7 @@ _ai:
   tabAbuse: "多垢対策"
 
 _aiTranslation:
-  title: "AI翻訳"
+  title: "操作に失敗しました"
   info: "ノートとチャットのOpenAI互換AI翻訳。アンセンサードはST式ジェイルブレイク層。"
   enableNotes: "ノート翻訳を有効"
   enableNotesCaption: "有効にするとノート翻訳でAIを利用できます。"
@@ -3386,7 +3390,7 @@ _aiTranslation:
   systemPromptCaption: "設定するとST層全体をこの1本に置換。空ならMain+NSFW+Jailbreak。"
 
 _aiNoteModeration:
-  title: "ノートAI審査"
+  title: "操作に失敗しました"
   info: "OpenAI互換 /v1。画像がある時のみビジョン送信可。ローカル/リモート個別有効化。"
   enableLocal: "ローカルノートを審査"
   enableLocalCaption: "有効にすると、このインスタンスのユーザーの投稿前にAI審査します。"
@@ -3416,7 +3420,7 @@ _aiNoteModeration:
   systemPromptCaption: "空なら内蔵プロンプトを使用"
 
 _aiAbuseControl:
-  title: "AI多垢対策"
+  title: "操作に失敗しました"
   info: "既定は同一実IPかつ同一指紋のときのみ関連付け。ユーザー身元をAIに渡し判定。"
   autoSuspendCaption: "判定時はシード垢のみ自動凍結。関連垢はログで確認。"
   enabled: "AI多垢対策を有効化"
@@ -3446,7 +3450,7 @@ _aiAbuseControl:
   systemPromptCaption: "空なら内蔵プロンプト。"
 
 _aiTranslationSettings:
-  title: "AI翻訳"
+  title: "操作に失敗しました"
   info: "言語設定はアカウントに同期。APIキー/ベースURLは端末のみ（サーバー非送信）。"
   userKeyDisabled: "このサーバーはローカルAI端点を許可していません。"
   prefs: "設定（同期）"
@@ -3470,7 +3474,7 @@ _aiTranslationSettings:
   localCleared: "ローカル認証情報を削除しました。"
 
 _chatEscrow:
-  title: "チャット託送暗号化"
+  title: "操作に失敗しました"
   scope: "DMとルームチャットのみ保管時に暗号化（AES-GCM）。公開ノートは暗号化せず、検索エンジンから取得可能なままです。"
   warn: "マスターキーを持つ運営者は託送チャットを復号できます。ローテーションは新メッセージ用の新キーを作り、履歴には旧キーが必要です。旧キーを退役させると該当履歴は復号できなくなります。"
   enable: "チャット託送暗号化を有効化"
@@ -3613,3 +3617,12 @@ _uiCommon:
   sub: 購読
   pub: 配信
   jobsCount: 件
+
+_apiErrors:
+  title: "操作に失敗しました"
+  generic: "エラーが発生しました。しばらくしてからもう一度お試しください。"
+  network: "ネットワークエラー、またはサーバーに接続できません。接続を確認して再試行してください。"
+  aborted: "リクエストがキャンセルされました。"
+  EMPTY_KEYWORD: "キーワードまたは除外キーワードを少なくとも1つ入力してください。"
+  TOO_MANY_ANTENNAS: "これ以上アンテナを作成できません。"
+  NO_SUCH_USER_LIST: "リストが見つかりません。"

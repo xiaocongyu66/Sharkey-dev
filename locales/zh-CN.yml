@@ -1645,7 +1645,7 @@ _initialAccountSetting:
   laterAreYouSure: "要稍后再进行初始设定吗？"
 _initialTutorial:
   launchTutorial: "观看教学"
-  title: "教学"
+  title: "操作失败"
   wellDone: "做得好"
   skipAreYouSure: "是否退出教学？"
   _landing:
@@ -2223,7 +2223,7 @@ _wordMute:
 _instanceMute:
   instanceMuteDescription: "隐藏服务器中的所有帖子和转帖，包括这些服务器上的用户回复。"
   instanceMuteDescription2: "一行一个"
-  title: "下面实例中的帖子将被隐藏。"
+  title: "操作失败"
   heading: "已隐藏的服务器"
 _theme:
   explore: "寻找主题"
@@ -2625,7 +2625,7 @@ _play:
   my: "我的 Play"
   liked: "点赞的 Play"
   featured: "热门"
-  title: "标题"
+  title: "操作失败"
   script: "脚本"
   summary: "描述"
   visibilityDescription: "设置为不公开后资料将不再显示，但知道 URL 的人仍可继续访问。"
@@ -2649,7 +2649,7 @@ _pages:
   contents: "内容"
   content: "页面内容"
   variables: "变量"
-  title: "标题"
+  title: "操作失败"
   url: "页面 URL"
   summary: "页面摘要"
   alignCenter: "居中"
@@ -2776,7 +2776,7 @@ _dialog:
   charactersExceeded: "已经超过了最大字符数! 当前字符数 {current} / 限制字符数 {max}"
   charactersBelow: "低于最小字符数！当前字符数 {current} / 限制字符数 {min}"
 _disabledTimeline:
-  title: "时间线已禁用"
+  title: "操作失败"
   description: "您不能在当前角色使用时间线。"
 _drivecleaner:
   orderBySizeDesc: "按大小降序排列"
@@ -2871,7 +2871,7 @@ _moderationLogTypes:
   deleteChatRoom: "删除聊天室"
   updateProxyAccountDescription: "更新代理账户的简介"
 _fileViewer:
-  title: "文件信息"
+  title: "操作失败"
   type: "文件类型"
   size: "文件大小"
   url: "URL"
@@ -2879,7 +2879,7 @@ _fileViewer:
   attachedNotes: "附加到的帖子"
   thisPageCanBeSeenFromTheAuthor: "此页只能被该文件的上传者查看。"
 _externalResourceInstaller:
-  title: "从外部站点安装"
+  title: "操作失败"
   checkVendorBeforeInstall: "请在安装前确保来源可靠"
   _plugin:
     title: "要安装此插件吗？"
@@ -2979,10 +2979,10 @@ _reversi:
   showBoardLabels: "显示行号和列号"
   useAvatarAsStone: "用头像作为棋子"
 _offlineScreen:
-  title: "离线——无法连接到服务器"
+  title: "操作失败"
   header: "无法连接到服务器"
 _urlPreviewSetting:
-  title: "设置 URL 预览"
+  title: "操作失败"
   enable: "启用 URL 预览"
   timeout: "超时阈值（ms）"
   timeoutDescription: "如果获取预览所用时间超过这个值，则不生成预览。"
@@ -3000,7 +3000,7 @@ _mediaControls:
   playbackRate: "播放速度"
   loop: "循环播放"
 _contextMenu:
-  title: "上下文菜单"
+  title: "操作失败"
   app: "应用"
   appWithShift: "Shift 键应用"
   native: "浏览器的用户界面"
@@ -3080,7 +3080,7 @@ _customEmojisManager:
       confirmClearEmojisDescription: "要放弃编辑并将列表内表示的表情符号清空吗？"
       confirmUploadEmojisDescription: "要将拖放的 {count} 个文件上传到网盘上吗？"
 _embedCodeGen:
-  title: "自定义嵌入代码"
+  title: "操作失败"
   header: "显示标题"
   autoload: "连续加载（不推荐）"
   maxHeight: "最大高度"
@@ -3095,7 +3095,7 @@ _embedCodeGen:
   codeGeneratedDescription: "将生成的代码贴到网站上来使用。"
 _selfXssPrevention:
   warning: "警告"
-  title: "「在此处粘贴什么东西」是欺诈行为。"
+  title: "操作失败"
   description1: "如果在此处粘贴了什么，恶意用户可能会接管账户或者盗取个人资料。"
   description2: "如果不能完全理解将要粘贴的内容，%c 请立即停止操作并关闭这个窗口。"
   description3: "详情请看这里。{link}"
@@ -3132,7 +3132,7 @@ _captcha:
       title: "CAPTCHA 错误"
       text: "发生意外错误。"
 _bootErrors:
-  title: "加载失败"
+  title: "操作失败"
   serverError: "请稍等片刻再重试。若问题仍无法解决，请将以下 Error ID 一起发送给管理员。"
   solution: "以下方法或许可以解决问题："
   solution1: "将浏览器及操作系统更新到最新版本"
@@ -3153,7 +3153,7 @@ _search:
   serverHostPlaceholder: "如：misskey.example.com"
 
 _xAlgorithm:
-  title: "算法"
+  title: "操作失败"
   info: "X Algorithm 必须以原始上游服务运行。Sharkey 通过 HTTP 网关调用 Home Mixer/Scored Posts，不会在本地模拟简化算法。"
   enable: "启用 X Algorithm"
   enableCaption: "使用 xai-org/x-algorithm 作为推荐后端。"
@@ -3180,7 +3180,7 @@ _xAlgorithm:
   timeout: "请求超时（毫秒）"
   modelArtifacts: "模型产物路径"
 _adminNotes:
-  title: "帖子管理"
+  title: "操作失败"
   siteWide: "全站发帖"
   siteWideCaption: "控制本站用户是否可以发帖。禁用后，版主与管理员仍可发帖。"
   disableLocalNoteCreation: "禁止全站发帖"
@@ -3197,6 +3197,10 @@ _adminNotes:
   suspendUser: "封禁用户"
   postIp: "发帖 IP"
   postFingerprint: "发帖指纹"
+  postUserAgent: "发帖浏览器 (UA)"
+  auditDetails: "请求审计"
+  auditExpand: "展开完整指纹 / UA"
+  auditCollapse: "收起"
   filterUsername: "用户名"
   filterEmail: "邮箱"
   includeRemote: "显示联合（远程）帖子"
@@ -3252,7 +3256,7 @@ _ai:
   tabAbuse: "管控"
 
 _aiTranslation:
-  title: "AI 翻译"
+  title: "操作失败"
   info: "帖子与群聊/私信的 OpenAI 兼容 AI 翻译。可共用或分别配置密钥；可允许用户自带 Key。破甲模式用 SillyTavern 多层 jailbreak（main + nsfw + 历史后指令），不是普通“请翻译”。"
   enableNotes: "启用帖子翻译"
   enableNotesCaption: "开启后，帖子翻译可走 AI（若已配置 DeepL/Libre 仍可回退）。"
@@ -3289,7 +3293,7 @@ _aiTranslation:
   systemPromptCaption: "若填写，将用这一条 system 提示替换整套 ST 破甲栈。留空则使用 Main+NSFW+Jailbreak 分层。"
 
 _aiNoteModeration:
-  title: "帖子 AI 审核"
+  title: "操作失败"
   info: "兼容任意 OpenAI /v1 接口。可按情况开启图片识别（仅当帖子带图时发送；模型需支持 vision）。本地帖与远程帖可分别开关。"
   enableLocal: "审核本地帖子"
   enableLocalCaption: "开启后，本站用户发帖/改帖前会调用 AI 审核。"
@@ -3319,7 +3323,7 @@ _aiNoteModeration:
   systemPromptCaption: "留空使用内置 JSON 分类提示词。"
 
 _aiAbuseControl:
-  title: "AI 刷号/多账号管控"
+  title: "操作失败"
   info: "默认仅当「同一真实 IP + 同一浏览器指纹」同时匹配才关联账号（可配置）。会把用户身份完整传给 AI 判定。可选自动封禁触发账号。API Key 与帖子审核独立。"
   autoSuspendCaption: "AI 或强启发式判定滥用时，仅自动封禁触发账号（不连坐全员）。版主/root 不会被自动封。关联账号写入日志供人工复核。"
   enabled: "启用 AI 多账号管控"
@@ -3349,7 +3353,7 @@ _aiAbuseControl:
   systemPromptCaption: "可选。留空使用内置刷号分类提示。"
 
 _aiTranslationSettings:
-  title: "AI 翻译"
+  title: "操作失败"
   info: "目标语言等偏好会同步到账号。可选的 API 基址/密钥只保存在本机，不会上传到服务器。"
   userKeyDisabled: "本站未开放用户本地 AI 端点。若管理员已配置实例翻译，仍可使用。"
   prefs: "偏好（同步到账号）"
@@ -3373,7 +3377,7 @@ _aiTranslationSettings:
   localCleared: "已清除本机凭据。"
 
 _chatEscrow:
-  title: "聊天托管加密"
+  title: "操作失败"
   scope: "仅加密私信与群聊消息（落库 AES-GCM）。公开帖子/笔记不加密，搜索引擎仍可抓取。"
   warn: "持有主密钥的运营方可解密全部托管聊天。轮换会生成新密钥用于新消息；旧密钥保留才能读历史。删除（退役）旧密钥后，对应历史将无法解密。"
   enable: "启用聊天托管加密"
@@ -3516,3 +3520,12 @@ _uiCommon:
   sub: 订阅
   pub: 发布
   jobsCount: 个任务
+
+_apiErrors:
+  title: "操作失败"
+  generic: "出错了，请稍后重试。"
+  network: "网络异常或服务器暂时不可用，请检查连接后重试。"
+  aborted: "请求已取消。"
+  EMPTY_KEYWORD: "请至少填写一个「包含关键词」或「排除关键词」。"
+  TOO_MANY_ANTENNAS: "天线数量已达上限，无法再创建。"
+  NO_SUCH_USER_LIST: "找不到该列表。"
