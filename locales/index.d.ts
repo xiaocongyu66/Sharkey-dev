@@ -15997,6 +15997,14 @@ export interface Locale extends ILocale {
          */
         "setLicense": string;
     };
+    /**
+     * Custom emoji (beta)
+     */
+    "customEmojisBeta": string;
+    /**
+     * System Webhook
+     */
+    "systemWebhook": string;
 }
 export type Locales = {
     [lang: string]: Locale;

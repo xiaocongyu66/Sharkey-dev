@@ -3181,7 +3181,7 @@ _xAlgorithm:
   timeout: "请求超时（毫秒）"
   modelArtifacts: "模型产物路径"
 _adminNotes:
-  title: "操作失败"
+  title: "帖子管理"
   siteWide: "全站发帖"
   siteWideCaption: "控制本站用户是否可以发帖。禁用后，版主与管理员仍可发帖。"
   disableLocalNoteCreation: "禁止全站发帖"
@@ -3378,7 +3378,7 @@ _aiTranslationSettings:
   localCleared: "已清除本机凭据。"
 
 _chatEscrow:
-  title: "操作失败"
+  title: "聊天托管加密"
   scope: "仅加密私信与群聊消息（落库 AES-GCM）。公开帖子/笔记不加密，搜索引擎仍可抓取。"
   warn: "持有主密钥的运营方可解密全部托管聊天。轮换会生成新密钥用于新消息；旧密钥保留才能读历史。删除（退役）旧密钥后，对应历史将无法解密。"
   enable: "启用聊天托管加密"
@@ -3433,6 +3433,12 @@ _uiCommon:
   federation: 联邦
   instances: 实例
   apRequests: ActivityPub 请求
+  apInboxReceived: AP 收件（已接收）
+  apDeliverSucceeded: AP 投递（成功）
+  apDeliverFailed: AP 投递（失败）
+  apOutSucc: "发出：成功"
+  apOutFail: "发出：失败"
+  apIn: 接收
   newUsers: 新用户
   deliverQueue: 投递队列
   inboxQueue: 收件队列

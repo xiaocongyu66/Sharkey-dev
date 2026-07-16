@@ -831,3 +831,6 @@ _customEmojisManagerLegacy:
   addTag: "Add tag"
   removeTag: "Remove tag"
   setLicense: "Set license"
+
+customEmojisBeta: "Custom emoji (beta)"
+systemWebhook: "System Webhook"

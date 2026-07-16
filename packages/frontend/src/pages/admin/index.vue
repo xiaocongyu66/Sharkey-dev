@@ -157,7 +157,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		active: currentPage.value?.route.name === 'emojis',
 	}, {
 		icon: 'ti ti-icons',
-		text: i18n.ts.customEmojis + '(beta)',
+		text: (i18n.ts as any).customEmojisBeta ?? `${i18n.ts.customEmojis}（测试版）`,
 		to: '/admin/emojis2',
 		active: currentPage.value?.route.name === 'emojis2',
 	}, {
@@ -187,7 +187,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		active: currentPage.value?.route.name === 'files',
 	}, {
 		icon: 'ti ti-notes',
-		text: (i18n.ts as any)._adminNotes?.title ?? i18n.ts.notes ?? 'Posts',
+		text: (i18n.ts as any)._adminNotes?.title ?? i18n.ts.notes,
 		to: '/admin/notes',
 		active: currentPage.value?.route.name === 'notes',
 	}, {
@@ -255,7 +255,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		active: currentPage.value?.route.name === 'external-services',
 	}, {
 		icon: 'ti ti-webhook',
-		text: 'Webhook',
+		text: (i18n.ts as any).systemWebhook ?? i18n.ts._settings?.webhook ?? 'Webhook',
 		to: '/admin/system-webhook',
 		active: currentPage.value?.route.name === 'system-webhook',
 	}, {

@@ -833,3 +833,6 @@ _customEmojisManagerLegacy:
   addTag: "添加标签"
   removeTag: "移除标签"
   setLicense: "设置许可信息"
+
+customEmojisBeta: "自定义表情符号（测试版）"
+systemWebhook: "系统 Webhook"

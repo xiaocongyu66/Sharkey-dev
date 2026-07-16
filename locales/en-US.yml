@@ -3435,6 +3435,12 @@ _uiCommon:
   federation: Federation
   instances: Instances
   apRequests: ActivityPub requests
+  apInboxReceived: "AP inbox received"
+  apDeliverSucceeded: "AP deliver succeeded"
+  apDeliverFailed: "AP deliver failed"
+  apOutSucc: "Out: Success"
+  apOutFail: "Out: Fail"
+  apIn: "In"
   newUsers: New users
   deliverQueue: Deliver queue
   inboxQueue: Inbox queue

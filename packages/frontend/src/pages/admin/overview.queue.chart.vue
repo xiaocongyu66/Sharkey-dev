@@ -15,6 +15,7 @@ import { useChartTooltip } from '@/use/use-chart-tooltip.js';
 import { chartVLine } from '@/utility/chart-vline.js';
 import { alpha } from '@/utility/color.js';
 import { initChart } from '@/utility/init-chart.js';
+import { tCommon } from '@/utility/ui-fb-i18n.js';
 
 initChart();
 
@@ -53,10 +54,10 @@ function pushData(value) {
 }
 
 const label =
-	props.type === 'process' ? 'Process' :
-	props.type === 'active' ? 'Active' :
-	props.type === 'delayed' ? 'Delayed' :
-	props.type === 'waiting' ? 'Waiting' :
+	props.type === 'process' ? tCommon('process') :
+	props.type === 'active' ? tCommon('active') :
+	props.type === 'delayed' ? tCommon('delayed') :
+	props.type === 'waiting' ? tCommon('waiting') :
 	'?' as never;
 
 const color =
