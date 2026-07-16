@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-else-if="tab === 'my'">
 			<div class="_gaps">
 				<MkButton gradate rounded style="margin: 0 auto;" @click="create()"><i class="ti ti-plus"></i></MkButton>
-				<MkPagination v-slot="{items}" :pagination="myFlashsPagination">
+				<MkPagination ref="myPaging" v-slot="{items}" :pagination="myFlashsPagination">
 					<div class="_gaps_s">
 						<MkFlashPreview v-for="flash in items" :key="flash.id" :flash="flash"/>
 					</div>
@@ -37,17 +37,19 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import MkFlashPreview from '@/components/MkFlashPreview.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkButton from '@/components/MkButton.vue';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { useRouter } from '@/router.js';
+import { globalEvents } from '@/events.js';
 
 const router = useRouter();
 
 const tab = ref('featured');
+const myPaging = useTemplateRef('myPaging');
 
 const featuredFlashsPagination = {
 	endpoint: 'flash/featured' as const,
@@ -66,6 +68,22 @@ const likedFlashsPagination = {
 function create() {
 	router.push('/play/new');
 }
+
+function onContentCreated(payload: { kind: string; id: string; item?: any }) {
+	if (payload.kind !== 'flash') return;
+	if (payload.item?.id) {
+		myPaging.value?.prepend?.(payload.item);
+	} else {
+		myPaging.value?.reload?.();
+	}
+}
+
+onMounted(() => {
+	globalEvents.on('contentCreated', onContentCreated);
+});
+onBeforeUnmount(() => {
+	globalEvents.off('contentCreated', onContentCreated);
+});
 
 const headerActions = computed(() => [{
 	icon: 'ti ti-plus',

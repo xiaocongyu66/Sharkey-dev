@@ -11,6 +11,7 @@ import { MiGalleryPost } from '@/models/GalleryPost.js';
 import type { MiDriveFile } from '@/models/DriveFile.js';
 import { IdService } from '@/core/IdService.js';
 import { GalleryPostEntityService } from '@/core/entities/GalleryPostEntityService.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { TimeService } from '@/global/TimeService.js';
 import { In } from 'typeorm';
@@ -65,6 +66,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private galleryPostEntityService: GalleryPostEntityService,
 		private idService: IdService,
 		private readonly timeService: TimeService,
+		private readonly globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			const files = await this.driveFilesRepository.findBy({
@@ -86,7 +88,14 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				fileIds: files.map(file => file.id),
 			}));
 
-			return await this.galleryPostEntityService.pack(post, me);
+			const packed = await this.galleryPostEntityService.pack(post, me);
+			// Live-refresh gallery list UIs (other tabs / multi-device)
+			await this.globalEventService.publishMainStream(me.id, 'contentCreated', {
+				kind: 'galleryPost',
+				id: packed.id,
+				item: packed as any,
+			});
+			return packed;
 		});
 	}
 }

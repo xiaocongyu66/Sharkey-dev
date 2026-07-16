@@ -7,6 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import type { MiClip } from '@/models/_.js';
 import { ClipEntityService } from '@/core/entities/ClipEntityService.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { ApiError } from '@/server/api/error.js';
 import { ClipService } from '@/core/ClipService.js';
 
@@ -55,6 +56,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	constructor(
 		private clipEntityService: ClipEntityService,
 		private clipService: ClipService,
+		private readonly globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			let clip: MiClip;
@@ -68,7 +70,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				}
 				throw e;
 			}
-			return await this.clipEntityService.pack(clip, me);
+			const packed = await this.clipEntityService.pack(clip, me);
+			await this.globalEventService.publishMainStream(me.id, 'contentCreated', {
+				kind: 'clip',
+				id: packed.id,
+				item: packed as any,
+			});
+			return packed;
 		});
 	}
 }

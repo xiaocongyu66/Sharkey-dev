@@ -420,6 +420,18 @@ export async function mainBoot() {
 		main.on('userAvatarUpdated', onOwnProfilePatch);
 		main.on('userUpdated', onOwnProfilePatch);
 
+		// Gallery / Play / Page / Clip created — refresh open list UIs (other tabs too)
+		main.on('contentCreated', (body: any) => {
+			if (!body?.kind || !body?.id) return;
+			import('@/events.js').then(({ globalEvents }) => {
+				globalEvents.emit('contentCreated', {
+					kind: body.kind,
+					id: String(body.id),
+					item: body.item,
+				});
+			}).catch(() => { /* ignore */ });
+		});
+
 		// 個人宛てお知らせが発行されたとき
 		main.on('announcementCreated', onAnnouncementCreated);
 

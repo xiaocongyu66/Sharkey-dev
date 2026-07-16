@@ -80,6 +80,12 @@ export type Channels = {
 				user: UserLite;
 				updatedAt: string;
 			}) => void;
+			/** Gallery / Play / Page / Clip created — list UIs should refresh */
+			contentCreated: (payload: {
+				kind: 'galleryPost' | 'flash' | 'page' | 'clip';
+				id: string;
+				item?: Record<string, unknown>;
+			}) => void;
 			/** Response to requestNotifications over main WS */
 			notifications: (payload: {
 				reqId?: string | null;

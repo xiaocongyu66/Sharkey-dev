@@ -21,7 +21,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, ref, useTemplateRef, computed } from 'vue';
+import { watch, ref, useTemplateRef, computed, onMounted, onBeforeUnmount } from 'vue';
 import * as Misskey from 'misskey-js';
 import MkPagination from '@/components/MkPagination.vue';
 import MkButton from '@/components/MkButton.vue';
@@ -31,6 +31,7 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { i18n } from '@/i18n.js';
 import { definePage } from '@/page.js';
 import { clipsCache } from '@/cache.js';
+import { globalEvents } from '@/events.js';
 
 const pagination = {
 	endpoint: 'clips/list' as const,
@@ -69,12 +70,33 @@ async function create() {
 	});
 	if (canceled) return;
 
-	os.apiWithDialog('clips/create', result);
+	const created = await os.apiWithDialog('clips/create', result);
 
 	clipsCache.delete();
 
-	pagingComponent.value?.reload();
+	if (created && typeof created === 'object' && (created as any).id) {
+		globalEvents.emit('contentCreated', { kind: 'clip', id: (created as any).id, item: created as any });
+		pagingComponent.value?.prepend?.(created as any);
+	} else {
+		pagingComponent.value?.reload();
+	}
 }
+
+function onContentCreated(payload: { kind: string; id: string; item?: any }) {
+	if (payload.kind !== 'clip') return;
+	if (payload.item?.id) {
+		pagingComponent.value?.prepend?.(payload.item);
+	} else {
+		pagingComponent.value?.reload?.();
+	}
+}
+
+onMounted(() => {
+	globalEvents.on('contentCreated', onContentCreated);
+});
+onBeforeUnmount(() => {
+	globalEvents.off('contentCreated', onContentCreated);
+});
 
 function onClipCreated() {
 	pagingComponent.value?.reload();

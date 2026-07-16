@@ -9,7 +9,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		<div v-if="tab === 'explore'">
 			<MkFoldableSection class="_margin">
 				<template #header><i class="ti ti-clock"></i>{{ i18n.ts.recentPosts }}</template>
-				<MkPagination v-slot="{items}" :pagination="recentPostsPagination" :disableAutoLoad="true">
+				<MkPagination ref="recentPaging" v-slot="{items}" :pagination="recentPostsPagination" :disableAutoLoad="true">
 					<div :class="$style.items">
 						<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
 					</div>
@@ -33,7 +33,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 		</div>
 		<div v-else-if="tab === 'my'">
 			<MkA to="/gallery/new" class="_link" style="margin: 16px;"><i class="ti ti-plus"></i> {{ i18n.ts.postToGallery }}</MkA>
-			<MkPagination v-slot="{items}" :pagination="myPostsPagination">
+			<MkPagination ref="myPaging" v-slot="{items}" :pagination="myPostsPagination">
 				<div :class="$style.items">
 					<MkGalleryPostPreview v-for="post in items" :key="post.id" :post="post" class="post"/>
 				</div>
@@ -44,13 +44,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 </template>
 
 <script lang="ts" setup>
-import { watch, ref, computed } from 'vue';
+import { watch, ref, computed, onMounted, onBeforeUnmount, useTemplateRef } from 'vue';
 import MkFoldableSection from '@/components/MkFoldableSection.vue';
 import MkPagination from '@/components/MkPagination.vue';
 import MkGalleryPostPreview from '@/components/MkGalleryPostPreview.vue';
 import { definePage } from '@/page.js';
 import { i18n } from '@/i18n.js';
 import { useRouter } from '@/router.js';
+import { globalEvents } from '@/events.js';
 
 const router = useRouter();
 
@@ -61,6 +62,8 @@ const props = defineProps<{
 const tab = ref('explore');
 const tags = ref([]);
 const tagsRef = ref();
+const recentPaging = useTemplateRef('recentPaging');
+const myPaging = useTemplateRef('myPaging');
 
 const recentPostsPagination = {
 	endpoint: 'gallery/posts' as const,
@@ -78,6 +81,25 @@ const likedPostsPagination = {
 	endpoint: 'i/gallery/likes' as const,
 	limit: 5,
 };
+
+function onContentCreated(payload: { kind: string; id: string; item?: any }) {
+	if (payload.kind !== 'galleryPost') return;
+	// Prefetch new item into open lists when possible
+	if (payload.item && typeof payload.item === 'object' && payload.item.id) {
+		recentPaging.value?.prepend?.(payload.item);
+		myPaging.value?.prepend?.(payload.item);
+	} else {
+		recentPaging.value?.reload?.();
+		myPaging.value?.reload?.();
+	}
+}
+
+onMounted(() => {
+	globalEvents.on('contentCreated', onContentCreated);
+});
+onBeforeUnmount(() => {
+	globalEvents.off('contentCreated', onContentCreated);
+});
 
 const tagUsersPagination = computed(() => ({
 	endpoint: 'hashtags/users' as const,

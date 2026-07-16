@@ -12,6 +12,7 @@ import { Endpoint } from '@/server/api/endpoint-base.js';
 import { PageEntityService } from '@/core/entities/PageEntityService.js';
 import { TimeService } from '@/global/TimeService.js';
 import { UserService } from '@/core/UserService.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { DI } from '@/di-symbols.js';
 import { ApiError } from '../../error.js';
 
@@ -83,6 +84,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private idService: IdService,
 		private readonly timeService: TimeService,
 		private readonly userService: UserService,
+		private readonly globalEventService: GlobalEventService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
 			let eyeCatchingImage: MiDriveFile | null = null;
@@ -125,7 +127,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 			this.userService.markUserActive(me, true);
 
-			return await this.pageEntityService.pack(page, me);
+			const packed = await this.pageEntityService.pack(page, me);
+			await this.globalEventService.publishMainStream(me.id, 'contentCreated', {
+				kind: 'page',
+				id: packed.id,
+				item: packed as any,
+			});
+			return packed;
 		});
 	}
 }

@@ -429,6 +429,9 @@ async function save() {
 			script: script.value,
 			visibility: visibility.value,
 		});
+		import('@/events.js').then(({ globalEvents }) => {
+			globalEvents.emit('contentCreated', { kind: 'flash', id: created.id, item: created as any });
+		}).catch(() => { /* ignore */ });
 		router.push('/play/' + created.id + '/edit');
 	}
 }

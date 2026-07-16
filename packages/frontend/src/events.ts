@@ -15,4 +15,13 @@ export const globalEvents = new EventEmitter<{
 		user: Misskey.entities.UserLite | Misskey.entities.User;
 		updatedAt: string;
 	}) => void;
+	/**
+	 * Extended content created (gallery / play / page / clip).
+	 * Fired from main WS and from the creating tab after a successful create.
+	 */
+	contentCreated: (payload: {
+		kind: 'galleryPost' | 'flash' | 'page' | 'clip';
+		id: string;
+		item?: Record<string, unknown>;
+	}) => void;
 }>();

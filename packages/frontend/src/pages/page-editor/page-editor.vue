@@ -154,6 +154,10 @@ async function save() {
 
 		pageId.value = created.id;
 		currentName.value = name.value.trim();
+		// Same-tab list refresh (main WS also covers other tabs)
+		import('@/events.js').then(({ globalEvents }) => {
+			globalEvents.emit('contentCreated', { kind: 'page', id: created.id, item: created as any });
+		}).catch(() => { /* ignore */ });
 		mainRouter.replace(`/pages/edit/${pageId.value}`);
 	}
 }
@@ -188,6 +192,9 @@ async function duplicate() {
 
 	pageId.value = created.id;
 	currentName.value = name.value.trim();
+	import('@/events.js').then(({ globalEvents }) => {
+		globalEvents.emit('contentCreated', { kind: 'page', id: created.id, item: created as any });
+	}).catch(() => { /* ignore */ });
 
 	mainRouter.push(`/pages/edit/${pageId.value}`);
 }

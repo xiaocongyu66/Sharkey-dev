@@ -113,6 +113,16 @@ export interface MainEventTypes {
 		user: Packed<'UserLite'>;
 		updatedAt: string;
 	};
+	/**
+	 * Extended content created by this user (gallery / play / page / clip).
+	 * Lets open list UIs refresh without a full page reload.
+	 */
+	contentCreated: {
+		kind: 'galleryPost' | 'flash' | 'page' | 'clip';
+		id: string;
+		/** Packed entity when available */
+		item?: Record<string, unknown>;
+	};
 }
 
 export interface DriveEventTypes {
