@@ -1,9 +1,9 @@
-name: frontend-bundle-report-comment
+name: Frontend bundle diagnostics (report)
 
 on:
   workflow_run:
     workflows:
-      - frontend-bundle-report
+      - Frontend bundle diagnostics (inspect)
     types:
       - completed
   pull_request_target:
