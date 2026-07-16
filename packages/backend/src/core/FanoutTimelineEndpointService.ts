@@ -179,6 +179,12 @@ export class FanoutTimelineEndpointService {
 			let readFromRedis = 0;
 			let lastSuccessfulRate = 1; // rateをキャッシュする？
 
+			// First page (no cursor): never stop at a partial Redis hit — fanout lists are often
+			// cold after redeploy/Redis flush and only hold posts created after the wipe.
+			// MkPagination always sends allowPartial=true; that would hide older DB notes.
+			const isFirstPage = ps.untilId == null && ps.sinceId == null;
+			const mayReturnPartial = ps.allowPartial && !isFirstPage;
+
 			while ((redisResultIds.length - readFromRedis) !== 0) {
 				const remainingToRead = ps.limit - redisTimeline.length;
 
@@ -196,7 +202,7 @@ export class FanoutTimelineEndpointService {
 					lastSuccessfulRate = gotFromDb.length / noteIds.length;
 				}
 
-				if (ps.allowPartial ? redisTimeline.length !== 0 : redisTimeline.length >= ps.limit) {
+				if (mayReturnPartial ? redisTimeline.length !== 0 : redisTimeline.length >= ps.limit) {
 					// 十分Redisからとれた
 					return redisTimeline.slice(0, ps.limit);
 				}
@@ -204,9 +210,16 @@ export class FanoutTimelineEndpointService {
 
 			// まだ足りない分はDBにフォールバック
 			const remainingToRead = ps.limit - redisTimeline.length;
+			if (remainingToRead <= 0) {
+				return redisTimeline.slice(0, ps.limit);
+			}
 			let dbUntil: string | null;
 			let dbSince: string | null;
-			if (ascending) {
+			if (noteIds.length === 0) {
+				// Redis had ids but none survived filtering — still fill first page from DB
+				dbUntil = ps.untilId;
+				dbSince = ps.sinceId;
+			} else if (ascending) {
 				dbUntil = ps.untilId;
 				dbSince = noteIds[noteIds.length - 1];
 			} else {
@@ -214,7 +227,17 @@ export class FanoutTimelineEndpointService {
 				dbSince = ps.sinceId;
 			}
 			const gotFromDb = await ps.dbFallback(dbUntil, dbSince, remainingToRead);
-			return [...redisTimeline, ...gotFromDb];
+			// Dedupe by id (Redis + DB overlap)
+			const seen = new Set(redisTimeline.map(n => n.id));
+			const merged = [...redisTimeline];
+			for (const n of gotFromDb) {
+				if (!seen.has(n.id)) {
+					seen.add(n.id);
+					merged.push(n);
+				}
+			}
+			merged.sort(idCompare);
+			return merged.slice(0, ps.limit);
 		}
 
 		return await ps.dbFallback(ps.untilId, ps.sinceId, ps.limit);

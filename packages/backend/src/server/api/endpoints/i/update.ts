@@ -684,12 +684,15 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			if (displayChanged) {
 				try {
 					const lite = await this.userEntityService.pack(updatedUser, null, { schema: 'UserLite' });
-					// Omit long bio from broadcast — clients only need id/name/avatar for cache bust
+					// Display-only fields for live cache — avoid overwriting packed note.user emojis etc.
 					const slim = {
-						...lite,
-						description: lite.description != null
-							? String(lite.description).slice(0, 120)
-							: lite.description,
+						id: lite.id,
+						name: lite.name,
+						username: lite.username,
+						host: lite.host,
+						avatarUrl: lite.avatarUrl,
+						avatarBlurhash: lite.avatarBlurhash,
+						avatarDecorations: lite.avatarDecorations,
 					};
 					const payload = { user: slim, updatedAt: new Date().toISOString() };
 					// Instance-wide lite patch (timelines / avatars). Still broadcast for UX;
