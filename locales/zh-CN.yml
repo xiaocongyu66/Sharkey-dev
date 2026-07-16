@@ -1550,6 +1550,7 @@ _settings:
   showNavbarSubButtons: "在导航栏中显示副按钮"
   ifOn: "启用时"
   ifOff: "关闭时"
+  enableSyncThemesBetweenDevices: "在设备之间同步已安装的主题"
   enablePullToRefresh: "开启下拉刷新"
   enablePullToRefresh_description: "使用鼠标时按下滚轮来拖动"
   _chat:

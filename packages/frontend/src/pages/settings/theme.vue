@@ -59,7 +59,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${instanceLightTheme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="instanceLightTheme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ instanceLightTheme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(instanceLightTheme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -79,7 +79,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${theme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="theme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ theme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(theme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -99,7 +99,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${theme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="theme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ theme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(theme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -130,7 +130,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${instanceDarkTheme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="instanceDarkTheme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ instanceDarkTheme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(instanceDarkTheme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -150,7 +150,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${theme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="theme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ theme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(theme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -170,7 +170,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 										/>
 										<label :for="`themeRadio_${theme.id}`" :class="$style.themeItemRoot" class="_button">
 											<MkThemePreview :theme="theme" :class="$style.themeItemPreview"/>
-											<div :class="$style.themeItemCaption">{{ theme.name }}</div>
+											<div :class="$style.themeItemCaption">{{ localizeThemeName(theme) }}</div>
 										</label>
 									</div>
 								</div>
@@ -210,7 +210,7 @@ import FormSection from '@/components/form/section.vue';
 import FormLink from '@/components/form/link.vue';
 import MkFolder from '@/components/MkFolder.vue';
 import MkThemePreview from '@/components/MkThemePreview.vue';
-import { getBuiltinThemesRef, getThemesRef } from '@/theme.js';
+import { getBuiltinThemesRef, getThemesRef, localizeThemeName } from '@/theme.js';
 import { isDeviceDarkmode } from '@/utility/is-device-darkmode.js';
 import { store } from '@/store.js';
 import { i18n } from '@/i18n.js';
@@ -231,7 +231,7 @@ const builtinLightThemes = computed(() => builtinThemes.value.filter(t => t.base
 const themes = computed(() => uniqueBy([instanceDarkTheme.value, instanceLightTheme.value, ...builtinThemes.value, ...installedThemes.value].filter(x => x != null), theme => theme.id));
 
 const darkTheme = prefer.r.darkTheme;
-const darkThemeName = computed(() => darkTheme.value?.name ?? defaultDarkTheme.name);
+const darkThemeName = computed(() => localizeThemeName(darkTheme.value ?? defaultDarkTheme));
 const darkThemeId = computed({
 	get() {
 		return darkTheme.value ? darkTheme.value.id : defaultDarkTheme.id;
@@ -244,7 +244,7 @@ const darkThemeId = computed({
 	},
 });
 const lightTheme = prefer.r.lightTheme;
-const lightThemeName = computed(() => lightTheme.value?.name ?? defaultLightTheme.name);
+const lightThemeName = computed(() => localizeThemeName(lightTheme.value ?? defaultLightTheme));
 const lightThemeId = computed({
 	get() {
 		return lightTheme.value ? lightTheme.value.id : defaultLightTheme.id;

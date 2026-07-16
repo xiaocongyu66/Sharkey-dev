@@ -8,10 +8,10 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkSelect v-model="selectedThemeId">
 		<template #label>{{ i18n.ts.theme }}</template>
 		<optgroup :label="i18n.ts._theme.installedThemes">
-			<option v-for="x in installedThemes" :key="x.id" :value="x.id">{{ x.name }}</option>
+			<option v-for="x in installedThemes" :key="x.id" :value="x.id">{{ localizeThemeName(x) }}</option>
 		</optgroup>
 		<optgroup :label="i18n.ts._theme.builtinThemes">
-			<option v-for="x in builtinThemes" :key="x.id" :value="x.id">{{ x.name }}</option>
+			<option v-for="x in builtinThemes" :key="x.id" :value="x.id">{{ localizeThemeName(x) }}</option>
 		</optgroup>
 	</MkSelect>
 	<template v-if="selectedTheme">
@@ -38,7 +38,7 @@ import MkTextarea from '@/components/MkTextarea.vue';
 import MkSelect from '@/components/MkSelect.vue';
 import MkInput from '@/components/MkInput.vue';
 import MkButton from '@/components/MkButton.vue';
-import { getBuiltinThemesRef, getThemesRef, removeTheme } from '@/theme.js';
+import { getBuiltinThemesRef, getThemesRef, localizeThemeName, removeTheme } from '@/theme.js';
 import { copyToClipboard } from '@/utility/copy-to-clipboard.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';

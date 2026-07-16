@@ -6598,7 +6598,7 @@ export interface Locale extends ILocale {
          */
         "launchTutorial": string;
         /**
-         * チュートリアル
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -8823,7 +8823,7 @@ export interface Locale extends ILocale {
          */
         "instanceMuteDescription2": string;
         /**
-         * 設定したサーバーのノートを隠します。
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -10501,7 +10501,7 @@ export interface Locale extends ILocale {
          */
         "featured": string;
         /**
-         * タイトル
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -10595,7 +10595,7 @@ export interface Locale extends ILocale {
          */
         "variables": string;
         /**
-         * タイトル
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -11131,7 +11131,7 @@ export interface Locale extends ILocale {
     };
     "_disabledTimeline": {
         /**
-         * 無効化されたタイムライン
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -11595,7 +11595,7 @@ export interface Locale extends ILocale {
     };
     "_fileViewer": {
         /**
-         * ファイルの詳細
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -11625,7 +11625,7 @@ export interface Locale extends ILocale {
     };
     "_externalResourceInstaller": {
         /**
-         * 外部サイトからインストール
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -11983,7 +11983,7 @@ export interface Locale extends ILocale {
     };
     "_offlineScreen": {
         /**
-         * オフライン - サーバーに接続できません
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -11993,7 +11993,7 @@ export interface Locale extends ILocale {
     };
     "_urlPreviewSetting": {
         /**
-         * URLプレビューの設定
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12061,7 +12061,7 @@ export interface Locale extends ILocale {
     };
     "_contextMenu": {
         /**
-         * コンテキストメニュー
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12354,7 +12354,7 @@ export interface Locale extends ILocale {
     };
     "_embedCodeGen": {
         /**
-         * 埋め込みコードをカスタマイズ
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12412,7 +12412,7 @@ export interface Locale extends ILocale {
          */
         "warning": string;
         /**
-         * 「この画面に何か貼り付けろ」はすべて詐欺です。
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12536,7 +12536,7 @@ export interface Locale extends ILocale {
     };
     "_bootErrors": {
         /**
-         * 読み込みに失敗しました
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12612,7 +12612,7 @@ export interface Locale extends ILocale {
     };
     "_xAlgorithm": {
         /**
-         * アルゴリズム
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12718,7 +12718,7 @@ export interface Locale extends ILocale {
     };
     "_adminNotes": {
         /**
-         * ノート管理
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -12754,6 +12754,18 @@ export interface Locale extends ILocale {
          */
         "blockRemoteConfirm": string;
         /**
+         * Pause fetching remote notes
+         */
+        "pauseRemoteNoteFetch": string;
+        /**
+         * When enabled, new remote notes are not ingested via federation. Existing remote notes remain.
+         */
+        "pauseRemoteNoteFetchCaption": string;
+        /**
+         * Pause fetching remote notes? New remote Notes will not be stored.
+         */
+        "pauseRemoteNoteFetchConfirm": string;
+        /**
          * ローカル投稿のみ。管理者は IP とブラウザ指紋を確認できます。
          */
         "listHint": string;
@@ -12773,6 +12785,22 @@ export interface Locale extends ILocale {
          * 投稿指紋
          */
         "postFingerprint": string;
+        /**
+         * 投稿ブラウザ (UA)
+         */
+        "postUserAgent": string;
+        /**
+         * リクエスト監査
+         */
+        "auditDetails": string;
+        /**
+         * 指紋 / UA をすべて表示
+         */
+        "auditExpand": string;
+        /**
+         * 折りたたむ
+         */
+        "auditCollapse": string;
         /**
          * ユーザー名
          */
@@ -12982,7 +13010,7 @@ export interface Locale extends ILocale {
     };
     "_aiTranslation": {
         /**
-         * AI翻訳
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -13124,7 +13152,7 @@ export interface Locale extends ILocale {
     };
     "_aiNoteModeration": {
         /**
-         * ノートAI審査
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -13238,7 +13266,7 @@ export interface Locale extends ILocale {
     };
     "_aiAbuseControl": {
         /**
-         * AI多垢対策
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -13352,7 +13380,7 @@ export interface Locale extends ILocale {
     };
     "_aiTranslationSettings": {
         /**
-         * AI翻訳
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -13442,7 +13470,7 @@ export interface Locale extends ILocale {
     };
     "_chatEscrow": {
         /**
-         * チャット託送暗号化
+         * 操作に失敗しました
          */
         "title": string;
         /**
@@ -13995,6 +14023,196 @@ export interface Locale extends ILocale {
          * 件
          */
         "jobsCount": string;
+    };
+    "_apiErrors": {
+        /**
+         * Operation failed
+         */
+        "title": string;
+        /**
+         * Something went wrong. Please try again later.
+         */
+        "generic": string;
+        /**
+         * Network error or server unreachable. Please check your connection and try again.
+         */
+        "network": string;
+        /**
+         * Request cancelled.
+         */
+        "aborted": string;
+        /**
+         * キーワードまたは除外キーワードを少なくとも1つ入力してください。
+         */
+        "EMPTY_KEYWORD": string;
+        /**
+         * これ以上アンテナを作成できません。
+         */
+        "TOO_MANY_ANTENNAS": string;
+        /**
+         * List not found.
+         */
+        "NO_SUCH_USER_LIST": string;
+        /**
+         * User not found.
+         */
+        "NO_SUCH_USER": string;
+        /**
+         * User not found.
+         */
+        "USER_NOT_FOUND": string;
+        /**
+         * Note not found.
+         */
+        "NO_SUCH_NOTE": string;
+        /**
+         * File not found.
+         */
+        "NO_SUCH_FILE": string;
+        /**
+         * Folder not found.
+         */
+        "NO_SUCH_FOLDER": string;
+        /**
+         * Chat room not found.
+         */
+        "NO_SUCH_ROOM": string;
+        /**
+         * Message not found.
+         */
+        "NO_SUCH_MESSAGE": string;
+        /**
+         * Channel not found.
+         */
+        "NO_SUCH_CHANNEL": string;
+        /**
+         * Clip not found.
+         */
+        "NO_SUCH_CLIP": string;
+        /**
+         * List not found.
+         */
+        "NO_SUCH_LIST": string;
+        /**
+         * Antenna not found.
+         */
+        "NO_SUCH_ANTENNA": string;
+        /**
+         * Page not found.
+         */
+        "NO_SUCH_PAGE": string;
+        /**
+         * Role not found.
+         */
+        "NO_SUCH_ROLE": string;
+        /**
+         * Reply target not found.
+         */
+        "NO_SUCH_REPLY": string;
+        /**
+         * Access denied.
+         */
+        "ACCESS_DENIED": string;
+        /**
+         * Permission denied.
+         */
+        "PERMISSION_DENIED": string;
+        /**
+         * Permission denied.
+         */
+        "ROLE_PERMISSION_DENIED": string;
+        /**
+         * Please sign in to continue.
+         */
+        "CREDENTIAL_REQUIRED": string;
+        /**
+         * Please sign in to continue.
+         */
+        "SIGNIN_REQUIRED": string;
+        /**
+         * Too many requests. Please wait and try again.
+         */
+        "RATE_LIMIT_EXCEEDED": string;
+        /**
+         * Sending too fast. Please wait a moment.
+         */
+        "ROOM_RATE_LIMITED": string;
+        /**
+         * This room is muted for all members.
+         */
+        "ROOM_MUTED_ALL": string;
+        /**
+         * Invalid request parameters.
+         */
+        "INVALID_PARAM": string;
+        /**
+         * Internal server error. Please try again later.
+         */
+        "INTERNAL_ERROR": string;
+        /**
+         * Content is required.
+         */
+        "CONTENT_REQUIRED": string;
+        /**
+         * Empty file is not allowed.
+         */
+        "EMPTY_FILE": string;
+        /**
+         * File is too large.
+         */
+        "TOO_BIG_FILE": string;
+        /**
+         * Unsupported file type.
+         */
+        "UNEXPECTED_FILE_TYPE": string;
+        /**
+         * Text is too long.
+         */
+        "MAX_LENGTH": string;
+        /**
+         * You have been blocked by this user.
+         */
+        "YOU_HAVE_BEEN_BLOCKED": string;
+        /**
+         * Already following this user.
+         */
+        "ALREADY_FOLLOWING": string;
+        /**
+         * Already favorited.
+         */
+        "ALREADY_FAVORITED": string;
+        /**
+         * You are not following this user.
+         */
+        "NOT_FOLLOWING": string;
+        /**
+         * Incorrect password.
+         */
+        "INCORRECT_PASSWORD": string;
+        /**
+         * Incorrect two-factor code.
+         */
+        "INCORRECT_TOTP": string;
+        /**
+         * This feature is unavailable.
+         */
+        "UNAVAILABLE": string;
+        /**
+         * Contains prohibited words.
+         */
+        "PROHIBITED_WORD": string;
+        /**
+         * Contains prohibited words.
+         */
+        "CONTAINS_PROHIBITED_WORDS": string;
+        /**
+         * You are not a member of this room.
+         */
+        "NOT_A_MEMBER": string;
+        /**
+         * Failed to send. Check your connection and try again.
+         */
+        "SEND_FAILED": string;
     };
     /**
      * Approvals
@@ -15707,196 +15925,47 @@ export interface Locale extends ILocale {
      * Root
      */
     "root": string;
-    "_apiErrors": {
+    /**
+     * Change
+     */
+    "change": string;
+    "_activity": {
         /**
-         * Operation failed
+         * Unique PV (user)
          */
-        "title": string;
+        "uniquePvUser": string;
         /**
-         * Something went wrong. Please try again later.
+         * Unique PV (visitor)
          */
-        "generic": string;
+        "uniquePvVisitor": string;
         /**
-         * Network error or server unreachable. Please check your connection and try again.
+         * PV (user)
          */
-        "network": string;
+        "pvUser": string;
         /**
-         * Request cancelled.
+         * PV (visitor)
          */
-        "aborted": string;
+        "pvVisitor": string;
         /**
-         * User not found.
+         * Unique / Natural PV
          */
-        "NO_SUCH_USER": string;
+        "pvChartTitle": string;
         /**
-         * User not found.
+         * Follow (local)
          */
-        "USER_NOT_FOUND": string;
+        "followLocal": string;
         /**
-         * Note not found.
+         * Follow (remote)
          */
-        "NO_SUCH_NOTE": string;
+        "followRemote": string;
         /**
-         * File not found.
+         * Followed (local)
          */
-        "NO_SUCH_FILE": string;
+        "followedLocal": string;
         /**
-         * Folder not found.
+         * Followed (remote)
          */
-        "NO_SUCH_FOLDER": string;
-        /**
-         * Chat room not found.
-         */
-        "NO_SUCH_ROOM": string;
-        /**
-         * Message not found.
-         */
-        "NO_SUCH_MESSAGE": string;
-        /**
-         * Channel not found.
-         */
-        "NO_SUCH_CHANNEL": string;
-        /**
-         * Clip not found.
-         */
-        "NO_SUCH_CLIP": string;
-        /**
-         * List not found.
-         */
-        "NO_SUCH_LIST": string;
-        /**
-         * List not found.
-         */
-        "NO_SUCH_USER_LIST": string;
-        /**
-         * Antenna not found.
-         */
-        "NO_SUCH_ANTENNA": string;
-        /**
-         * Either keywords or excludeKeywords is required.
-         */
-        "EMPTY_KEYWORD": string;
-        /**
-         * You cannot create any more antennas.
-         */
-        "TOO_MANY_ANTENNAS": string;
-
-        /**
-         * Page not found.
-         */
-        "NO_SUCH_PAGE": string;
-        /**
-         * Role not found.
-         */
-        "NO_SUCH_ROLE": string;
-        /**
-         * Reply target not found.
-         */
-        "NO_SUCH_REPLY": string;
-        /**
-         * Access denied.
-         */
-        "ACCESS_DENIED": string;
-        /**
-         * Permission denied.
-         */
-        "PERMISSION_DENIED": string;
-        /**
-         * Permission denied.
-         */
-        "ROLE_PERMISSION_DENIED": string;
-        /**
-         * Please sign in to continue.
-         */
-        "CREDENTIAL_REQUIRED": string;
-        /**
-         * Please sign in to continue.
-         */
-        "SIGNIN_REQUIRED": string;
-        /**
-         * Too many requests. Please wait and try again.
-         */
-        "RATE_LIMIT_EXCEEDED": string;
-        /**
-         * Sending too fast. Please wait a moment.
-         */
-        "ROOM_RATE_LIMITED": string;
-        /**
-         * This room is muted for all members.
-         */
-        "ROOM_MUTED_ALL": string;
-        /**
-         * Invalid request parameters.
-         */
-        "INVALID_PARAM": string;
-        /**
-         * Internal server error. Please try again later.
-         */
-        "INTERNAL_ERROR": string;
-        /**
-         * Content is required.
-         */
-        "CONTENT_REQUIRED": string;
-        /**
-         * Empty file is not allowed.
-         */
-        "EMPTY_FILE": string;
-        /**
-         * File is too large.
-         */
-        "TOO_BIG_FILE": string;
-        /**
-         * Unsupported file type.
-         */
-        "UNEXPECTED_FILE_TYPE": string;
-        /**
-         * Text is too long.
-         */
-        "MAX_LENGTH": string;
-        /**
-         * You have been blocked by this user.
-         */
-        "YOU_HAVE_BEEN_BLOCKED": string;
-        /**
-         * Already following this user.
-         */
-        "ALREADY_FOLLOWING": string;
-        /**
-         * Already favorited.
-         */
-        "ALREADY_FAVORITED": string;
-        /**
-         * You are not following this user.
-         */
-        "NOT_FOLLOWING": string;
-        /**
-         * Incorrect password.
-         */
-        "INCORRECT_PASSWORD": string;
-        /**
-         * Incorrect two-factor code.
-         */
-        "INCORRECT_TOTP": string;
-        /**
-         * This feature is unavailable.
-         */
-        "UNAVAILABLE": string;
-        /**
-         * Contains prohibited words.
-         */
-        "PROHIBITED_WORD": string;
-        /**
-         * Contains prohibited words.
-         */
-        "CONTAINS_PROHIBITED_WORDS": string;
-        /**
-         * You are not a member of this room.
-         */
-        "NOT_A_MEMBER": string;
-        /**
-         * Failed to send. Check your connection and try again.
-         */
-        "SEND_FAILED": string;
+        "followedRemote": string;
     };
 }
 export type Locales = {

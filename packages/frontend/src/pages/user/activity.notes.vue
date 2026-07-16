@@ -26,6 +26,7 @@ import { chartVLine } from '@/utility/chart-vline.js';
 import { initChart } from '@/utility/init-chart.js';
 import { chartLegend } from '@/utility/chart-legend.js';
 import MkChartLegend from '@/components/MkChartLegend.vue';
+import { i18n } from '@/i18n.js';
 
 initChart();
 
@@ -92,10 +93,10 @@ async function renderChart() {
 		type: 'bar',
 		data: {
 			datasets: [
-				makeDataset('File', format(raw.diffs.withFile).slice().reverse(), { backgroundColor: colorFile }),
-				makeDataset('Renote', format(raw.diffs.renote).slice().reverse(), { backgroundColor: colorRenote }),
-				makeDataset('Reply', format(raw.diffs.reply).slice().reverse(), { backgroundColor: colorReply }),
-				makeDataset('Normal', format(raw.diffs.normal).slice().reverse(), { backgroundColor: colorNormal }),
+				makeDataset(i18n.ts.files, format(raw.diffs.withFile).slice().reverse(), { backgroundColor: colorFile }),
+				makeDataset(i18n.ts.renotes, format(raw.diffs.renote).slice().reverse(), { backgroundColor: colorRenote }),
+				makeDataset(i18n.ts.replies, format(raw.diffs.reply).slice().reverse(), { backgroundColor: colorReply }),
+				makeDataset(i18n.ts.normal, format(raw.diffs.normal).slice().reverse(), { backgroundColor: colorNormal }),
 			],
 		},
 		options: {

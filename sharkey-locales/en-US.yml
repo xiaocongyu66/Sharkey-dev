@@ -810,3 +810,15 @@ _apiErrors:
   CONTAINS_PROHIBITED_WORDS: "Contains prohibited words."
   NOT_A_MEMBER: "You are not a member of this room."
   SEND_FAILED: "Failed to send. Check your connection and try again."
+
+change: "Change"
+_activity:
+  uniquePvUser: "Unique PV (user)"
+  uniquePvVisitor: "Unique PV (visitor)"
+  pvUser: "PV (user)"
+  pvVisitor: "PV (visitor)"
+  pvChartTitle: "Unique / Natural PV"
+  followLocal: "Follow (local)"
+  followRemote: "Follow (remote)"
+  followedLocal: "Followed (local)"
+  followedRemote: "Followed (remote)"

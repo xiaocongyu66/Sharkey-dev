@@ -59,6 +59,7 @@ import bytes from '@/filters/bytes.js';
 import { initChart } from '@/utility/init-chart.js';
 import { chartLegend } from '@/utility/chart-legend.js';
 import MkChartLegend from '@/components/MkChartLegend.vue';
+import { i18n } from '@/i18n.js';
 
 initChart();
 
@@ -698,27 +699,27 @@ const fetchPerUserNotesChart = async (): Promise<typeof chartData> => {
 	const raw = await misskeyApiGet('charts/user/notes', { userId: props.args?.user?.id, limit: props.limit, span: props.span });
 	return {
 		series: [...(props.args?.withoutAll ? [] : [{
-			name: 'All',
+			name: i18n.ts.all,
 			type: 'line' as const,
 			data: format(sum(raw.inc, negate(raw.dec))),
 			color: '#888888',
 		}]), {
-			name: 'With file',
+			name: i18n.ts.withFiles,
 			type: 'area',
 			data: format(raw.diffs.withFile),
 			color: colors.purple,
 		}, {
-			name: 'Renotes',
+			name: i18n.ts.renotes,
 			type: 'area',
 			data: format(raw.diffs.renote),
 			color: colors.green,
 		}, {
-			name: 'Replies',
+			name: i18n.ts.replies,
 			type: 'area',
 			data: format(raw.diffs.reply),
 			color: colors.yellow,
 		}, {
-			name: 'Normal',
+			name: i18n.ts.normal,
 			type: 'area',
 			data: format(raw.diffs.normal),
 			color: colors.blue,
@@ -730,22 +731,22 @@ const fetchPerUserPvChart = async (): Promise<typeof chartData> => {
 	const raw = await misskeyApiGet('charts/user/pv', { userId: props.args?.user?.id, limit: props.limit, span: props.span });
 	return {
 		series: [{
-			name: 'Unique PV (user)',
+			name: i18n.ts._activity.uniquePvUser,
 			type: 'area',
 			data: format(raw.upv.user),
 			color: colors.purple,
 		}, {
-			name: 'PV (user)',
+			name: i18n.ts._activity.pvUser,
 			type: 'area',
 			data: format(raw.pv.user),
 			color: colors.green,
 		}, {
-			name: 'Unique PV (visitor)',
+			name: i18n.ts._activity.uniquePvVisitor,
 			type: 'area',
 			data: format(raw.upv.visitor),
 			color: colors.yellow,
 		}, {
-			name: 'PV (visitor)',
+			name: i18n.ts._activity.pvVisitor,
 			type: 'area',
 			data: format(raw.pv.visitor),
 			color: colors.blue,
@@ -757,11 +758,11 @@ const fetchPerUserFollowingChart = async (): Promise<typeof chartData> => {
 	const raw = await misskeyApiGet('charts/user/following', { userId: props.args?.user?.id, limit: props.limit, span: props.span });
 	return {
 		series: [{
-			name: 'Local',
+			name: i18n.ts.local,
 			type: 'area',
 			data: format(raw.local.followings.total),
 		}, {
-			name: 'Remote',
+			name: i18n.ts.remote,
 			type: 'area',
 			data: format(raw.remote.followings.total),
 		}],
@@ -772,11 +773,11 @@ const fetchPerUserFollowersChart = async (): Promise<typeof chartData> => {
 	const raw = await misskeyApiGet('charts/user/following', { userId: props.args?.user?.id, limit: props.limit, span: props.span });
 	return {
 		series: [{
-			name: 'Local',
+			name: i18n.ts.local,
 			type: 'area',
 			data: format(raw.local.followers.total),
 		}, {
-			name: 'Remote',
+			name: i18n.ts.remote,
 			type: 'area',
 			data: format(raw.remote.followers.total),
 		}],

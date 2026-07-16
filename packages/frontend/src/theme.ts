@@ -15,6 +15,7 @@ import { globalEvents } from '@/events.js';
 import { miLocalStorage } from '@/local-storage.js';
 import { $i } from '@/i.js';
 import { prefer } from '@/preferences.js';
+import { i18n } from '@/i18n.js';
 
 export type Theme = {
 	id: string;
@@ -65,6 +66,14 @@ export function getBuiltinThemesRef() {
 	const builtinThemes = ref<Theme[]>([]);
 	getBuiltinThemes().then(themes => builtinThemes.value = themes);
 	return builtinThemes;
+}
+
+/** Display name for a theme, using locale overrides for builtins when available. */
+export function localizeThemeName(theme: Pick<Theme, 'id' | 'name'> | null | undefined): string {
+	if (theme == null) return '';
+	const names = (i18n.ts as any)._themeNames as Record<string, string> | undefined;
+	const localized = names?.[theme.id];
+	return (localized && localized.length > 0) ? localized : theme.name;
 }
 
 export function getThemesRef(): Ref<Theme[]> {
