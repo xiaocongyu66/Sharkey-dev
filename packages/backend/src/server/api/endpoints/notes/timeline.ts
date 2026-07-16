@@ -5,7 +5,7 @@
 
 import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, MiMeta } from '@/models/_.js';
+import type { NotesRepository, FollowingsRepository, MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import { QueryService } from '@/core/QueryService.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
@@ -81,6 +81,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
+
+		@Inject(DI.followingsRepository)
+		private followingsRepository: FollowingsRepository,
 
 		private noteEntityService: NoteEntityService,
 		private activeUsersChart: ActiveUsersChart,
@@ -167,7 +170,8 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 	/**
 	 * Same result set as upstream (channel I follow OR me OR followee, channelId IS NULL),
-	 * but uses cached ID lists + IN instead of correlated EXISTS for cheaper plans.
+	 * but uses followee/channel ID lists + IN instead of correlated EXISTS for cheaper plans.
+	 * (userFollowingsCache does not exist in this fork — load followee ids from repository.)
 	 */
 	private async getFromDb(ps: {
 		untilId: string | null;
@@ -177,14 +181,18 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		withRenotes: boolean;
 		withBots: boolean;
 	}, me: MiLocalUser) {
-		const followings = await this.cacheService.userFollowingsCache.fetch(me.id);
-		const followeeIds = Array.from(new Set([...followings.keys(), me.id]));
+		const followingRows = await this.followingsRepository.find({
+			where: { followerId: me.id },
+			select: { followeeId: true },
+		});
+		const followeeIds = Array.from(new Set([...followingRows.map(r => r.followeeId), me.id]));
 		const channelIds = Array.from(await this.cacheService.userFollowingChannelsCache.fetch(me.id));
 
 		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
 			// in a channel I follow OR my own post OR by a user I follow
 			.andWhere(new Brackets(qb => {
 				qb.where(new Brackets(q0 => {
+					// Empty IN is invalid SQL — always include at least me.id
 					q0.where('note.userId IN (:...followeeIds)', { followeeIds })
 						.andWhere('note.channelId IS NULL');
 				}));

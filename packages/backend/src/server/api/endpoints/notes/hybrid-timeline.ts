@@ -5,7 +5,7 @@
 
 import { Brackets } from 'typeorm';
 import { Inject, Injectable } from '@nestjs/common';
-import type { NotesRepository, MiMeta } from '@/models/_.js';
+import type { NotesRepository, FollowingsRepository, MiMeta } from '@/models/_.js';
 import { Endpoint } from '@/server/api/endpoint-base.js';
 import ActiveUsersChart from '@/core/chart/charts/active-users.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
@@ -83,6 +83,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 
 		@Inject(DI.notesRepository)
 		private notesRepository: NotesRepository,
+
+		@Inject(DI.followingsRepository)
+		private followingsRepository: FollowingsRepository,
 
 		private noteEntityService: NoteEntityService,
 		private roleService: RoleService,
@@ -169,8 +172,9 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 	}
 
 	/**
-	 * SK-100 / PERF-10: same result as EXISTS following, but IN-lists from cache
+	 * SK-100 / PERF-10: same result as EXISTS following, but IN-lists
 	 * (aligned with home timeline DB fallback).
+	 * Note: this fork has no userFollowingsCache — load followee ids from DB.
 	 */
 	private async getFromDb(ps: {
 		untilId: string | null,
@@ -181,8 +185,11 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		withBots: boolean,
 		withRenotes: boolean,
 	}, me: MiLocalUser) {
-		const followings = await this.cacheService.userFollowingsCache.fetch(me.id);
-		const followeeIds = Array.from(new Set([...followings.keys(), me.id]));
+		const followingRows = await this.followingsRepository.find({
+			where: { followerId: me.id },
+			select: { followeeId: true },
+		});
+		const followeeIds = Array.from(new Set([...followingRows.map(r => r.followeeId), me.id]));
 		const channelIds = Array.from(await this.cacheService.userFollowingChannelsCache.fetch(me.id));
 
 		const query = this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
