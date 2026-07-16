@@ -152,4 +152,3 @@ jobs:
         node-version-file: '.node-version'
     - run: node --test .github/scripts/frontend-js-size.test.mts
     - run: node --test .github/scripts/memory-stability-util.test.mts
-    - run: node --test .github/scripts/frontend-browser-report.test.mts

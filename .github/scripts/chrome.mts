@@ -90,53 +90,19 @@ export type TabMemory = {
 	totalBytes: number;
 };
 
-export type BrowserConsoleMetrics = {
-	log: number;
-	warn: number;
-	error: number;
-	info: number;
-};
-
 export type BrowserDiagnostics = {
 	pageErrorCount: number;
-	console: BrowserConsoleMetrics;
+	console: Record<'log' | 'warning' | 'error' | 'info', number>;
 };
 
-export function createBrowserDiagnostics(): BrowserDiagnostics {
-	return {
-		pageErrorCount: 0,
-		console: {
-			log: 0,
-			warn: 0,
-			error: 0,
-			info: 0,
-		},
-	};
-}
-
-export function recordPageError(diagnostics: BrowserDiagnostics) {
-	diagnostics.pageErrorCount += 1;
-}
-
-function isBrowserConsoleMetricKey(value: string): value is keyof BrowserConsoleMetrics {
-	return value === 'log' || value === 'warn' || value === 'error' || value === 'info';
-}
-
-export function recordConsoleMessageType(diagnostics: BrowserDiagnostics, messageType: string) {
-	const metricKey = messageType === 'warning' ? 'warn' : messageType;
-	if (!isBrowserConsoleMetricKey(metricKey)) return;
-	diagnostics.console[metricKey] += 1;
-}
-
 export function summarizeBrowserDiagnostics(samples: BrowserDiagnostics[]): BrowserDiagnostics {
-	if (samples.length === 0) throw new Error('No browser diagnostic samples');
 	const median = (select: (sample: BrowserDiagnostics) => number) => util.median(samples.map(select));
 
 	return {
 		pageErrorCount: median(sample => sample.pageErrorCount),
 		console: {
 			log: median(sample => sample.console.log),
-			warn: median(sample => sample.console.warn),
+			warning: median(sample => sample.console.warning),
 			error: median(sample => sample.console.error),
 			info: median(sample => sample.console.info),
 		},
@@ -204,7 +170,10 @@ type PlaywrightBrowserOptions = {
 export class HeadlessChromeController {
 	public networkRequests: NetworkRequest[] = [];
 	public webSocketConnections: WebSocketConnection[] = [];
-	private readonly diagnostics = createBrowserDiagnostics();
+	private readonly diagnostics = {
+		pageErrorCount: 0,
+		console: {} as Record<string, number | undefined>,
+	};
 	private readonly browser: Browser;
 	private readonly context: BrowserContext;
 	public readonly page: Page;
@@ -225,10 +194,14 @@ export class HeadlessChromeController {
 		this.page.setDefaultTimeout(options.scenarioTimeoutMs);
 		this.page.setDefaultNavigationTimeout(options.scenarioTimeoutMs);
 		this.page.on('pageerror', () => {
-			recordPageError(this.diagnostics);
+			this.diagnostics.pageErrorCount++;
 		});
 		this.page.on('console', message => {
-			recordConsoleMessageType(this.diagnostics, message.type());
+			if (this.diagnostics.console[message.type()] == null) {
+				this.diagnostics.console[message.type()] = 1;
+			} else {
+				this.diagnostics.console[message.type()]++;
+			}
 		});
 	}
 
@@ -441,7 +414,12 @@ export class HeadlessChromeController {
 	public collectDiagnostics(): BrowserDiagnostics {
 		return {
 			pageErrorCount: this.diagnostics.pageErrorCount,
-			console: { ...this.diagnostics.console },
+			console: {
+				log: this.diagnostics.console.log ?? 0,
+				warning: this.diagnostics.console.warning ?? 0,
+				error: this.diagnostics.console.error ?? 0,
+				info: this.diagnostics.console.info ?? 0,
+			},
 		};
 	}
 

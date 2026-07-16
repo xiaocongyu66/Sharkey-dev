@@ -172,19 +172,8 @@ function getMetric(report: BrowserMeasurement, key: string) {
 	return report.performance.cdpMetrics[key];
 }
 
-export function renderBrowserDiagnosticsRows(base: BrowserMetricsReport, head: BrowserMetricsReport, all = false) {
-	return [
-		metricRow('Page errors', base, head, summary => summary.diagnostics.pageErrorCount, sample => sample.diagnostics.pageErrorCount, util.formatNumber, 1, !all),
-		metricRow('Console log', base, head, summary => summary.diagnostics.console.log, sample => sample.diagnostics.console.log, util.formatNumber, 1, !all),
-		metricRow('Console warnings', base, head, summary => summary.diagnostics.console.warn, sample => sample.diagnostics.console.warn, util.formatNumber, 1, !all),
-		metricRow('Console errors', base, head, summary => summary.diagnostics.console.error, sample => sample.diagnostics.console.error, util.formatNumber, 1, !all),
-		metricRow('Console info', base, head, summary => summary.diagnostics.console.info, sample => sample.diagnostics.console.info, util.formatNumber, 1, !all),
-	].filter(row => row != null);
-}
-
 function renderSummaryTable(base: BrowserMetricsReport, head: BrowserMetricsReport, all = false) {
 	const rows = [
-		...renderBrowserDiagnosticsRows(base, head, all),
 		//metricRow('Scenario duration', base, head, summary => summary.durationMs, sample => sample.durationMs, formatMs),
 		metricRow('Requests', base, head, summary => summary.network.requestCount, sample => sample.network.requestCount, util.formatNumber, 1, !all),
 		//metricRow('Failed requests', base, head, summary => summary.network.failedRequestCount, sample => sample.network.failedRequestCount, util.formatNumber),
@@ -215,7 +204,12 @@ function renderSummaryTable(base: BrowserMetricsReport, head: BrowserMetricsRepo
 		metricRow('WebSocket connections', base, head, summary => summary.network.webSocketConnectionCount, sample => sample.network.webSocketConnectionCount, util.formatNumber, 1, !all),
 		metricRow('WebSocket sent', base, head, summary => summary.network.webSocketSentBytes, sample => sample.network.webSocketSentBytes, util.formatBytes, 10000, !all),
 		metricRow('WebSocket received', base, head, summary => summary.network.webSocketReceivedBytes, sample => sample.network.webSocketReceivedBytes, util.formatBytes, 10000, !all),
-		metricRow('Tab memory', base, head, summary => summary.performance.tabMemory.totalBytes, sample => sample.performance.tabMemory.totalBytes, util.formatBytes, 10000, !all),
+		metricRow('Page errors', base, head, summary => summary.diagnostics.pageErrorCount, sample => sample.diagnostics.pageErrorCount, util.formatNumber, 1, !all),
+		metricRow('Console log', base, head, summary => summary.diagnostics.console.log, sample => sample.diagnostics.console.log, util.formatNumber, 1, !all),
+		metricRow('Console warnings', base, head, summary => summary.diagnostics.console.warn, sample => sample.diagnostics.console.warn, util.formatNumber, 1, !all),
+		metricRow('Console errors', base, head, summary => summary.diagnostics.console.error, sample => sample.diagnostics.console.error, util.formatNumber, 1, !all),
+		metricRow('Console info', base, head, summary => summary.diagnostics.console.info, sample => sample.diagnostics.console.info, util.formatNumber, 1, !all),
+		metricRow('Page-attributed memory', base, head, summary => summary.performance.tabMemory.totalBytes, sample => sample.performance.tabMemory.totalBytes, util.formatBytes, 10000, !all),
 	].filter(row => row != null);
 
 	return [
