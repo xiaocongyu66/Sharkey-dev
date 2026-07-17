@@ -91,11 +91,6 @@ export type BrowserMetricsReport = {
 	samples: BrowserMeasurementSample[];
 };
 
-function formatDelta(delta: number, formatter: (value: number) => string, colorThreshold = 0) {
-	if (delta === 0) return formatter(0);
-	return util.formatColoredDelta(delta, v => formatter(v), colorThreshold);
-}
-
 function formatValueWithSpread(report: BrowserMetricsReport, value: number, getSampleValue: (sample: BrowserMeasurementSample) => number | null | undefined, formatter: (value: number) => string) {
 	const values = report.samples.map(sample => getSampleValue(sample)).filter(v => Number.isFinite(v)) as number[];
 	const spread = values.length < 2 ? null : util.median(values.map(value => Math.abs(value - util.median(values))));
@@ -103,7 +98,7 @@ function formatValueWithSpread(report: BrowserMetricsReport, value: number, getS
 	return `${formatter(value)}<br>± ${formatter(spread)}`;
 }
 
-function metricRow(
+function renderMetricRow(
 	label: string,
 	base: BrowserMetricsReport,
 	head: BrowserMetricsReport,
@@ -122,11 +117,11 @@ function metricRow(
 	if (skipIfNotSignificant && (Math.abs(summary.median) < significantThreshold)) return null;
 
 	const percent = baseValue === 0 ? null : summary.median * 100 / baseValue;
-	//const deltaMedian = `${formatDelta(summary.median, formatter, colorThreshold)}<br>${percent == null ? '-' : util.formatDeltaPercent(percent, 0.1).replaceAll('\\%', '\\\\%')}`;
-	const deltaMedian = formatDelta(summary.median, formatter, significantThreshold);
+	//const deltaMedian = `${util.formatColoredDelta(summary.median, formatter, colorThreshold)}<br>${percent == null ? '-' : util.formatDeltaPercent(percent, 0.1).replaceAll('\\%', '\\\\%')}`;
+	const deltaMedian = util.formatColoredDelta(summary.median, formatter, significantThreshold);
 
-	//return `| **${label}** | ${formatValueWithSpread(base, baseValue, getSampleValue, formatter)} | ${formatValueWithSpread(head, headValue, getSampleValue, formatter)} | ${deltaMedian} | ${summary == null ? '-' : formatter(summary.mad)} | ${summary == null ? '-' : formatDelta(summary.min, formatter)} | ${summary == null ? '-' : formatDelta(summary.max, formatter)} |`;
-	return `| **${label}** | ${formatter(baseValue)} | ${formatter(headValue)} | ${deltaMedian} | ${summary == null ? '-' : formatter(summary.mad)} | ${summary == null ? '-' : formatDelta(summary.min, formatter, significantThreshold)} | ${summary == null ? '-' : formatDelta(summary.max, formatter, significantThreshold)} |`;
+	//return `| **${label}** | ${formatValueWithSpread(base, baseValue, getSampleValue, formatter)} | ${formatValueWithSpread(head, headValue, getSampleValue, formatter)} | ${deltaMedian} | ${summary == null ? '-' : formatter(summary.mad)} | ${summary == null ? '-' : util.formatColoredDelta(summary.min, formatter)} | ${summary == null ? '-' : util.formatColoredDelta(summary.max, formatter)} |`;
+	return `| **${label}** | ${formatter(baseValue)} | ${formatter(headValue)} | ${deltaMedian} | ${summary == null ? '-' : formatter(summary.mad)} | ${summary == null ? '-' : util.formatColoredDelta(summary.min, formatter, significantThreshold)} | ${summary == null ? '-' : util.formatColoredDelta(summary.max, formatter, significantThreshold)} |`;
 }
 
 function resourceTypeBytes(report: BrowserMeasurement, resourceTypes: string[]) {
@@ -144,17 +139,17 @@ function renderSummaryTable(base: BrowserMetricsReport, head: BrowserMetricsRepo
 
 	const rows = [
 		//metricRow('Scenario duration', base, head, summary => summary.durationMs, sample => sample.durationMs, util.formatMs),
-		metricRow('Requests', base, head, summary => summary.network.requestCount, sample => sample.network.requestCount, util.formatNumber, 1, !all),
+		renderMetricRow('Requests', base, head, summary => summary.network.requestCount, sample => sample.network.requestCount, util.formatNumber, 1, !all),
 		//metricRow('Failed requests', base, head, summary => summary.network.failedRequestCount, sample => sample.network.failedRequestCount, util.formatNumber),
-		metricRow('Encoded network', base, head, summary => summary.network.totalEncodedBytes, sample => sample.network.totalEncodedBytes, util.formatBytes, 10000, !all),
-		metricRow('Decoded body', base, head, summary => summary.network.totalDecodedBodyBytes, sample => sample.network.totalDecodedBodyBytes, util.formatBytes, 10000, !all),
-		metricRow('Same-origin encoded', base, head, summary => summary.network.sameOriginEncodedBytes, sample => sample.network.sameOriginEncodedBytes, util.formatBytes, 10000, !all),
-		metricRow('Third-party encoded', base, head, summary => summary.network.thirdPartyEncodedBytes, sample => sample.network.thirdPartyEncodedBytes, util.formatBytes, 10000, !all),
-		metricRow('Script encoded', base, head, summary => resourceTypeBytes(summary, ['Script']), sample => resourceTypeSampleBytes(sample, ['Script']), util.formatBytes, 10000, !all),
-		metricRow('Stylesheet encoded', base, head, summary => resourceTypeBytes(summary, ['Stylesheet']), sample => resourceTypeSampleBytes(sample, ['Stylesheet']), util.formatBytes, 10000, !all),
-		metricRow('Fetch/XHR encoded', base, head, summary => resourceTypeBytes(summary, ['Fetch', 'XHR']), sample => resourceTypeSampleBytes(sample, ['Fetch', 'XHR']), util.formatBytes, 10000, !all),
-		metricRow('Image encoded', base, head, summary => resourceTypeBytes(summary, ['Image']), sample => resourceTypeSampleBytes(sample, ['Image']), util.formatBytes, 10000, !all),
-		metricRow('Font encoded', base, head, summary => resourceTypeBytes(summary, ['Font']), sample => resourceTypeSampleBytes(sample, ['Font']), util.formatBytes, 10000, !all),
+		renderMetricRow('Encoded network', base, head, summary => summary.network.totalEncodedBytes, sample => sample.network.totalEncodedBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('Decoded body', base, head, summary => summary.network.totalDecodedBodyBytes, sample => sample.network.totalDecodedBodyBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('Same-origin encoded', base, head, summary => summary.network.sameOriginEncodedBytes, sample => sample.network.sameOriginEncodedBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('Third-party encoded', base, head, summary => summary.network.thirdPartyEncodedBytes, sample => sample.network.thirdPartyEncodedBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('Script encoded', base, head, summary => resourceTypeBytes(summary, ['Script']), sample => resourceTypeSampleBytes(sample, ['Script']), util.formatBytes, 10000, !all),
+		renderMetricRow('Stylesheet encoded', base, head, summary => resourceTypeBytes(summary, ['Stylesheet']), sample => resourceTypeSampleBytes(sample, ['Stylesheet']), util.formatBytes, 10000, !all),
+		renderMetricRow('Fetch/XHR encoded', base, head, summary => resourceTypeBytes(summary, ['Fetch', 'XHR']), sample => resourceTypeSampleBytes(sample, ['Fetch', 'XHR']), util.formatBytes, 10000, !all),
+		renderMetricRow('Image encoded', base, head, summary => resourceTypeBytes(summary, ['Image']), sample => resourceTypeSampleBytes(sample, ['Image']), util.formatBytes, 10000, !all),
+		renderMetricRow('Font encoded', base, head, summary => resourceTypeBytes(summary, ['Font']), sample => resourceTypeSampleBytes(sample, ['Font']), util.formatBytes, 10000, !all),
 		//metricRow('First contentful paint', base, head, summary => summary.performance.webVitals.firstContentfulPaintMs, sample => sample.performance.webVitals.firstContentfulPaintMs, util.formatMs),
 		//metricRow('Load event end', base, head, summary => summary.performance.webVitals.loadEventEndMs, sample => sample.performance.webVitals.loadEventEndMs, util.formatMs),
 		//metricRow('Long tasks', base, head, summary => summary.performance.webVitals.longTaskCount, sample => sample.performance.webVitals.longTaskCount, util.formatNumber),
@@ -170,15 +165,15 @@ function renderSummaryTable(base: BrowserMetricsReport, head: BrowserMetricsRepo
 		//metricRow('Recalc style count', base, head, summary => getMetric(summary, 'RecalcStyleCount'), sample => getMetric(sample, 'RecalcStyleCount'), util.formatNumber),
 		//metricRow('Script duration', base, head, summary => getMetric(summary, 'ScriptDuration'), sample => getMetric(sample, 'ScriptDuration'), util.formatSecondsAsMs),
 		//metricRow('Task duration', base, head, summary => getMetric(summary, 'TaskDuration'), sample => getMetric(sample, 'TaskDuration'), util.formatSecondsAsMs),
-		metricRow('WebSocket connections', base, head, summary => summary.network.webSocketConnectionCount, sample => sample.network.webSocketConnectionCount, util.formatNumber, 1, !all),
-		metricRow('WebSocket sent', base, head, summary => summary.network.webSocketSentBytes, sample => sample.network.webSocketSentBytes, util.formatBytes, 10000, !all),
-		metricRow('WebSocket received', base, head, summary => summary.network.webSocketReceivedBytes, sample => sample.network.webSocketReceivedBytes, util.formatBytes, 10000, !all),
-		metricRow('Page errors', base, head, summary => summary.diagnostics.pageErrorCount, sample => sample.diagnostics.pageErrorCount, util.formatNumber, 1, !all),
-		metricRow('Console log', base, head, summary => summary.diagnostics.console.log, sample => sample.diagnostics.console.log, util.formatNumber, 1, !all),
-		metricRow('Console warnings', base, head, summary => summary.diagnostics.console.warning, sample => sample.diagnostics.console.warning, util.formatNumber, 1, !all),
-		metricRow('Console errors', base, head, summary => summary.diagnostics.console.error, sample => sample.diagnostics.console.error, util.formatNumber, 1, !all),
-		metricRow('Console info', base, head, summary => summary.diagnostics.console.info, sample => sample.diagnostics.console.info, util.formatNumber, 1, !all),
-		metricRow('Page-attributed memory', base, head, summary => summary.performance.tabMemory.totalBytes, sample => sample.performance.tabMemory.totalBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('WebSocket connections', base, head, summary => summary.network.webSocketConnectionCount, sample => sample.network.webSocketConnectionCount, util.formatNumber, 1, !all),
+		renderMetricRow('WebSocket sent', base, head, summary => summary.network.webSocketSentBytes, sample => sample.network.webSocketSentBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('WebSocket received', base, head, summary => summary.network.webSocketReceivedBytes, sample => sample.network.webSocketReceivedBytes, util.formatBytes, 10000, !all),
+		renderMetricRow('Page errors', base, head, summary => summary.diagnostics.pageErrorCount, sample => sample.diagnostics.pageErrorCount, util.formatNumber, 1, !all),
+		renderMetricRow('Console log', base, head, summary => summary.diagnostics.console.log, sample => sample.diagnostics.console.log, util.formatNumber, 1, !all),
+		renderMetricRow('Console warnings', base, head, summary => summary.diagnostics.console.warning, sample => sample.diagnostics.console.warning, util.formatNumber, 1, !all),
+		renderMetricRow('Console errors', base, head, summary => summary.diagnostics.console.error, sample => sample.diagnostics.console.error, util.formatNumber, 1, !all),
+		renderMetricRow('Console info', base, head, summary => summary.diagnostics.console.info, sample => sample.diagnostics.console.info, util.formatNumber, 1, !all),
+		renderMetricRow('Page-attributed memory', base, head, summary => summary.performance.tabMemory.totalBytes, sample => sample.performance.tabMemory.totalBytes, util.formatBytes, 10000, !all),
 	].filter(row => row != null);
 
 	return [
@@ -223,10 +218,10 @@ function renderResourceTypeTable(base: BrowserMetricsReport, head: BrowserMetric
 		lines.push(`<td><b>${key}</b></td>`);
 		lines.push(`<td align="right">${util.formatNumber(baseRow.requests)}</td>`);
 		lines.push(`<td align="right">${util.formatNumber(headRow.requests)}</td>`);
-		lines.push(`<td align="right">${formatDelta(headRow.requests - baseRow.requests, util.formatNumber)}</td>`);
+		lines.push(`<td align="right">${util.formatColoredDelta(headRow.requests - baseRow.requests, util.formatNumber)}</td>`);
 		lines.push(`<td align="right">${util.formatBytes(baseRow.encodedBytes)}</td>`);
 		lines.push(`<td align="right">${util.formatBytes(headRow.encodedBytes)}</td>`);
-		lines.push(`<td align="right">${formatDelta(headRow.encodedBytes - baseRow.encodedBytes, util.formatBytes)}</td>`);
+		lines.push(`<td align="right">${util.formatColoredDelta(headRow.encodedBytes - baseRow.encodedBytes, util.formatBytes)}</td>`);
 		lines.push('</tr>');
 	}
 
