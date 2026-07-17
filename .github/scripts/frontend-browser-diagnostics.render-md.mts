@@ -96,20 +96,9 @@ function formatDelta(delta: number, formatter: (value: number) => string, colorT
 	return util.formatColoredDelta(delta, v => formatter(v), colorThreshold);
 }
 
-function sampleSpread(report: BrowserMetricsReport, getValue: (sample: BrowserMeasurementSample) => number | null | undefined) {
-	function finiteValues(values: (number | null | undefined)[]) {
-		return values.filter(value => Number.isFinite(value)) as number[];
-	}
-
-	const values = finiteValues(report.samples.map(sample => getValue(sample)));
-	if (values.length < 2) return null;
-
-	const center = util.median(values);
-	return util.median(values.map(value => Math.abs(value - center)));
-}
-
 function formatValueWithSpread(report: BrowserMetricsReport, value: number, getSampleValue: (sample: BrowserMeasurementSample) => number | null | undefined, formatter: (value: number) => string) {
-	const spread = sampleSpread(report, getSampleValue);
+	const values = report.samples.map(sample => getSampleValue(sample)).filter(v => Number.isFinite(v)) as number[];
+	const spread = values.length < 2 ? null : util.median(values.map(value => Math.abs(value - util.median(values))));
 	if (spread == null) return formatter(value);
 	return `${formatter(value)}<br>± ${formatter(spread)}`;
 }
@@ -148,11 +137,11 @@ function resourceTypeSampleBytes(sample: BrowserMeasurementSample, resourceTypes
 	return resourceTypeBytes(sample, resourceTypes);
 }
 
-function getMetric(report: BrowserMeasurement, key: string) {
-	return report.performance.cdpMetrics[key];
-}
-
 function renderSummaryTable(base: BrowserMetricsReport, head: BrowserMetricsReport, all = false) {
+	//function getMetric(report: BrowserMeasurement, key: string) {
+	//	return report.performance.cdpMetrics[key];
+	//}
+
 	const rows = [
 		//metricRow('Scenario duration', base, head, summary => summary.durationMs, sample => sample.durationMs, util.formatMs),
 		metricRow('Requests', base, head, summary => summary.network.requestCount, sample => sample.network.requestCount, util.formatNumber, 1, !all),
