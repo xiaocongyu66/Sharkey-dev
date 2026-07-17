@@ -7,8 +7,6 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import * as util from './utility.mts';
 
-const marker = '<!-- misskey-frontend-bundle-diagnostics -->';
-
 const locale = 'ja-JP';
 
 //function sharePercent(value, total) {
@@ -594,8 +592,6 @@ const afterVisualizerReport = collectVisualizerReport(afterStats);
 const visualizerArtifactLink = `[Open treemap HTML](${process.env.FRONTEND_BUNDLE_REPORT_ARTIFACT_URL})`;
 
 const body = [
-	marker,
-	'',
 	`## 📦 Frontend Bundle Report`,
 	'',
 	renderFrontendChunkReport(before, after),
