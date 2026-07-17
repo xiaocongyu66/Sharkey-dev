@@ -700,7 +700,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 								<option value="1"><span style="font-size: 15px;">Aa</span></option>
 								<option value="2"><span style="font-size: 16px;">Aa</span></option>
 								<option value="3"><span style="font-size: 17px;">Aa</span></option>
-								<option value="custom"><span style="font-size: 14px;">Custom</span></option>
+								<option value="custom"><span style="font-size: 14px;">{{ i18n.ts.custom }}</span></option>
 							</MkRadios>
 						</SearchMarker>
 

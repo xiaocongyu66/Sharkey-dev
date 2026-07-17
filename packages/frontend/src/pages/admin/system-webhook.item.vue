@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<div class="_gaps">
 		<MkKeyValue>
-			<template #key>latestStatus</template>
+			<template #key>{{ i18n.ts.latestStatus }}</template>
 			<template #value>{{ entity.latestStatus ?? '-' }}</template>
 		</MkKeyValue>
 	</div>
