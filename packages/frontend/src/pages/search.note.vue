@@ -142,6 +142,7 @@ import MkRadios from '@/components/MkRadios.vue';
 import MkUserCardMini from '@/components/MkUserCardMini.vue';
 import MkSwitch from '@/components/MkSwitch.vue';
 import MkSelect from '@/components/MkSelect.vue';
+import { notesSearchAvailable } from '@/utility/check-permissions.js';
 
 const props = withDefaults(defineProps<{
 	query?: string;
@@ -227,10 +228,18 @@ const searchParams = computed<SearchParams | null>(() => {
 	if (instance.federation !== 'none' && searchScope.value === 'server') {
 		let trimmedHost = hostInput.value?.trim();
 		if (!trimmedHost) return null;
+		// Better sanitize to avoid sending invalid host to backend (causes validation error)
 		if (trimmedHost.startsWith('https://') || trimmedHost.startsWith('http://')) {
 			try {
 				trimmedHost = new URL(trimmedHost).host;
-			} catch (err) { /* empty */ }
+			} catch {
+				trimmedHost = trimmedHost.replace(/^https?:\/\//i, '').split(/[/?#]/)[0];
+			}
+		}
+		// Strip port if present? pattern allows : but to be safe, keep as is.
+		// Validate roughly
+		if (!/^([a-zA-Z0-9._:-]{1,253})$/.test(trimmedHost)) {
+			return null;
 		}
 		return {
 			query: trimmedQuery,
@@ -268,6 +277,14 @@ function removeUser() {
 }
 
 async function search() {
+	if (!notesSearchAvailable) {
+		os.alert({
+			type: 'warning',
+			text: i18n.ts.notesSearchNotAvailable,
+		});
+		return;
+	}
+
 	if (searchParams.value == null) return;
 
 	//#region AP lookup

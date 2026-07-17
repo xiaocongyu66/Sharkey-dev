@@ -9,6 +9,7 @@ import { fileTypeCategories, SearchService } from '@/core/SearchService.js';
 import { NoteEntityService } from '@/core/entities/NoteEntityService.js';
 import { RoleService } from '@/core/RoleService.js';
 import { ApiError } from '../../error.js';
+import type { MiNote } from '@/models/Note.js';
 
 export const meta = {
 	tags: ['notes'],
@@ -86,17 +87,26 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 				throw new ApiError(meta.errors.unavailable);
 			}
 
-			const notes = await this.searchService.searchNote(ps.query, me, {
-				userId: ps.userId,
-				channelId: ps.channelId,
-				host: ps.host,
-				filetype: ps.filetype,
-				order: ps.order,
-			}, {
-				untilId: ps.untilId,
-				sinceId: ps.sinceId,
-				limit: ps.limit,
-			});
+			let notes: MiNote[];
+			try {
+				notes = await this.searchService.searchNote(ps.query, me, {
+					userId: ps.userId,
+					channelId: ps.channelId,
+					host: ps.host,
+					filetype: ps.filetype,
+					order: ps.order,
+				}, {
+					untilId: ps.untilId,
+					sinceId: ps.sinceId,
+					limit: ps.limit,
+				});
+			} catch (err: any) {
+				// MeiliSearch (or other provider) unavailable at runtime -> treat as search unavailable
+				if (err?.message?.includes('MeiliSearch') || err?.message?.includes('not available')) {
+					throw new ApiError(meta.errors.unavailable);
+				}
+				throw err;
+			}
 
 			return await this.noteEntityService.packMany(notes, me);
 		});
