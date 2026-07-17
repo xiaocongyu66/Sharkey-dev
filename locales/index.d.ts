@@ -839,7 +839,7 @@ export interface Locale extends ILocale {
      */
     "annotation": string;
     /**
-     * 連合
+     * Federation
      */
     "federation": string;
     /**
@@ -855,7 +855,7 @@ export interface Locale extends ILocale {
      */
     "latestRequestReceivedAt": string;
     /**
-     * 直近のステータス
+     * Latest status
      */
     "latestStatus": string;
     /**
@@ -2755,7 +2755,7 @@ export interface Locale extends ILocale {
      */
     "smtpSecureInfo": string;
     /**
-     * 配信テスト
+     * Test email
      */
     "testEmail": string;
     /**
@@ -3964,7 +3964,7 @@ export interface Locale extends ILocale {
      */
     "statusbar": string;
     /**
-     * 選択してください
+     * Please select
      */
     "pleaseSelect": string;
     /**
@@ -4524,7 +4524,7 @@ export interface Locale extends ILocale {
      */
     "vertical": string;
     /**
-     * 横
+     * horizontal
      */
     "horizontal": string;
     /**
@@ -15360,10 +15360,6 @@ export interface Locale extends ILocale {
         };
     };
     /**
-     * ID
-     */
-    "id": string;
-    /**
      * Force content warning
      */
     "mandatoryCW": string;
@@ -15935,10 +15931,6 @@ export interface Locale extends ILocale {
      * Are you sure you want to restart this account migration?
      */
     "restartMigrationConfirm": string;
-    /**
-     * Background queue
-     */
-    "backgroundQueue": string;
     "_header": {
         /**
          * Browse
@@ -16297,6 +16289,170 @@ export interface Locale extends ILocale {
          */
         "919c91ac-c6fa-43dc-a423-3cc84fd67d7c": string;
     };
+    /**
+     * Access key
+     */
+    "accessKey": string;
+    /**
+     * Secret key
+     */
+    "secretKey": string;
+    /**
+     * Pro account
+     */
+    "proAccount": string;
+    /**
+     * New decoration
+     */
+    "newDecoration": string;
+    /**
+     * Powered by
+     */
+    "poweredBy": string;
+    /**
+     * Fluent Emoji
+     */
+    "fluentEmoji": string;
+    /**
+     * Note Design
+     */
+    "noteDesign": string;
+    /**
+     * Public key
+     */
+    "publicKey": string;
+    /**
+     * Private key
+     */
+    "privateKey": string;
+    /**
+     * Inbox queue
+     */
+    "inboxQueue": string;
+    /**
+     * Deliver queue
+     */
+    "deliverQueue": string;
+    /**
+     * Background queue
+     */
+    "backgroundQueue": string;
+    /**
+     * New announcement
+     */
+    "newAnnouncement": string;
+    /**
+     * Raw data
+     */
+    "rawData": string;
+    /**
+     * Chat escrow
+     */
+    "chatEscrow": string;
+    /**
+     * Service Worker
+     */
+    "serviceWorker": string;
+    /**
+     * ID
+     */
+    "id": string;
+    /**
+     * chars
+     */
+    "chars": string;
+    /**
+     * Origin
+     */
+    "origin": string;
+    /**
+     * MIME type
+     */
+    "mimeType": string;
+    /**
+     * User ID
+     */
+    "userId": string;
+    /**
+     * Cloudflare Docs
+     */
+    "cloudflareDocs": string;
+    /**
+     * FriendlyCaptcha Docs
+     */
+    "friendlyCaptchaDocs": string;
+    /**
+     * reCAPTCHA FAQ
+     */
+    "recaptchaFaq": string;
+    /**
+     * ref
+     */
+    "reference": string;
+    /**
+     * User list timeline
+     */
+    "userListTimeline": string;
+    /**
+     * square
+     */
+    "square": string;
+    /**
+     * horizontal-big
+     */
+    "horizontalBig": string;
+    /**
+     * Custom
+     */
+    "custom": string;
+    /**
+     * hCaptcha Developer Guide
+     */
+    "hCaptchaDeveloperGuide": string;
+    /**
+     * Pattern Hidden
+     */
+    "patternHidden": string;
+    /**
+     * URL
+     */
+    "url": string;
+    /**
+     * Form
+     */
+    "form": string;
+    /**
+     * Headers
+     */
+    "headers": string;
+    /**
+     * LibreTranslate Translation
+     */
+    "libreTranslateTranslation": string;
+    /**
+     * LibreTranslate URL
+     */
+    "libreTranslateURL": string;
+    /**
+     * LibreTranslate API Key
+     */
+    "libreTranslateApiKey": string;
+    /**
+     * BGM
+     */
+    "bgm": string;
+    /**
+     * DeepL Translation
+     */
+    "deepLTranslation": string;
+    /**
+     * DeepL Auth Key
+     */
+    "deepLAuthKey": string;
+    /**
+     * DeepLX-JS URL
+     */
+    "deepLXJSURL": string;
 }
 export type Locales = {
     [lang: string]: Locale;

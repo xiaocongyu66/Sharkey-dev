@@ -565,8 +565,6 @@ _noteSearch:
     module: "Module"
     flash: "Flash"
 
-id: "ID"
-
 mandatoryCW: "Force content warning"
 mandatoryCWDescription: "Applies a content warning to all posts created by this user. The forced warnings will appear like a word mute to distinguish them from the author's own content warnings."
 mandatoryCWForNote: "Force content warning"
@@ -742,7 +740,6 @@ restartMigration: "Restart account migration"
 restartMigrationDescription: "Account migration was last attempted {date}. If the migration failed or was incomplete, then you may click this button to restart the process."
 restartMigrationConfirm: "Are you sure you want to restart this account migration?"
 
-backgroundQueue: "Background queue"
 _header:
   browse: "Browse"
   manage: "Manage"

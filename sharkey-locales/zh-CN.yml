@@ -558,8 +558,6 @@ _noteSearch:
     module: "模块"
     flash: "Flash"
 
-id: "ID"
-
 mandatoryCW: "强制内容警告"
 mandatoryCWDescription: "为这个用户的所有发帖增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。"
 mandatoryCWForNote: "强制内容警告"
@@ -735,7 +733,6 @@ restartMigration: "重新启动账户迁移"
 restartMigrationDescription: "最近一次账户迁移尝试于 {date}。如果迁移失败或者数据不完整，你可以点击这个按钮来重启迁移。"
 restartMigrationConfirm: "你确定要重启这个账户迁移过程吗？"
 
-backgroundQueue: "后台队列"
 _header:
   browse: "浏览"
   manage: "管理"
@@ -916,7 +913,6 @@ square: "方形"
 horizontal: "横向"
 horizontalBig: "大横向"
 custom: "自定义"
-horizontalBig: "大横向"
 hCaptchaDeveloperGuide: "hCaptcha 开发者指南"
 patternHidden: "模式隐藏"
 url: "URL"
