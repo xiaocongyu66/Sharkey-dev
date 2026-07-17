@@ -6,64 +6,64 @@ SPDX-License-Identifier: AGPL-3.0-only
 <template>
 <div data-cy-mkw-jobQueue class="mkw-jobQueue _monospace" :class="{ _panel: !widgetProps.transparent }">
 	<div class="inbox">
-		<div class="label">Inbox queue<i v-if="current.inbox.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
+		<div class="label">{{ tCommon('inboxQueue') }}<i v-if="current.inbox.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
 		<div class="values">
 			<div>
-				<div>Process</div>
+				<div>{{ tCommon('process') }}</div>
 				<div :class="{ inc: current.inbox.activeSincePrevTick > prev.inbox.activeSincePrevTick, dec: current.inbox.activeSincePrevTick < prev.inbox.activeSincePrevTick }" :title="`${current.inbox.activeSincePrevTick}`">{{ kmg(current.inbox.activeSincePrevTick, 2) }}</div>
 			</div>
 			<div>
-				<div>Active</div>
+				<div>{{ tCommon('active') }}</div>
 				<div :class="{ inc: current.inbox.active > prev.inbox.active, dec: current.inbox.active < prev.inbox.active }" :title="`${current.inbox.active}`">{{ kmg(current.inbox.active, 2) }}</div>
 			</div>
 			<div>
-				<div>Delayed</div>
+				<div>{{ tCommon('delayed') }}</div>
 				<div :class="{ inc: current.inbox.delayed > prev.inbox.delayed, dec: current.inbox.delayed < prev.inbox.delayed }" :title="`${current.inbox.delayed}`">{{ kmg(current.inbox.delayed, 2) }}</div>
 			</div>
 			<div>
-				<div>Waiting</div>
+				<div>{{ tCommon('waiting') }}</div>
 				<div :class="{ inc: current.inbox.waiting > prev.inbox.waiting, dec: current.inbox.waiting < prev.inbox.waiting }" :title="`${current.inbox.waiting}`">{{ kmg(current.inbox.waiting, 2) }}</div>
 			</div>
 		</div>
 	</div>
 	<div class="deliver">
-		<div class="label">Deliver queue<i v-if="current.deliver.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
+		<div class="label">{{ tCommon('deliverQueue') }}<i v-if="current.deliver.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
 		<div class="values">
 			<div>
-				<div>Process</div>
+				<div>{{ tCommon('process') }}</div>
 				<div :class="{ inc: current.deliver.activeSincePrevTick > prev.deliver.activeSincePrevTick, dec: current.deliver.activeSincePrevTick < prev.deliver.activeSincePrevTick }" :title="`${current.deliver.activeSincePrevTick}`">{{ kmg(current.deliver.activeSincePrevTick, 2) }}</div>
 			</div>
 			<div>
-				<div>Active</div>
+				<div>{{ tCommon('active') }}</div>
 				<div :class="{ inc: current.deliver.active > prev.deliver.active, dec: current.deliver.active < prev.deliver.active }" :title="`${current.deliver.active}`">{{ kmg(current.deliver.active, 2) }}</div>
 			</div>
 			<div>
-				<div>Delayed</div>
+				<div>{{ tCommon('delayed') }}</div>
 				<div :class="{ inc: current.deliver.delayed > prev.deliver.delayed, dec: current.deliver.delayed < prev.deliver.delayed }" :title="`${current.deliver.delayed}`">{{ kmg(current.deliver.delayed, 2) }}</div>
 			</div>
 			<div>
-				<div>Waiting</div>
+				<div>{{ tCommon('waiting') }}</div>
 				<div :class="{ inc: current.deliver.waiting > prev.deliver.waiting, dec: current.deliver.waiting < prev.deliver.waiting }" :title="`${current.deliver.waiting}`">{{ kmg(current.deliver.waiting, 2) }}</div>
 			</div>
 		</div>
 	</div>
 	<div class="background">
-		<div class="label">Background queue<i v-if="current.backgroundTask.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
+		<div class="label">{{ tCommon('backgroundQueue') }}<i v-if="current.backgroundTask.waiting > 0" class="ti ti-alert-triangle icon"></i></div>
 		<div class="values">
 			<div>
-				<div>Process</div>
+				<div>{{ tCommon('process') }}</div>
 				<div :class="{ inc: current.backgroundTask.activeSincePrevTick > prev.backgroundTask.activeSincePrevTick, dec: current.backgroundTask.activeSincePrevTick < prev.backgroundTask.activeSincePrevTick }" :title="`${current.backgroundTask.activeSincePrevTick}`">{{ kmg(current.backgroundTask.activeSincePrevTick, 2) }}</div>
 			</div>
 			<div>
-				<div>Active</div>
+				<div>{{ tCommon('active') }}</div>
 				<div :class="{ inc: current.backgroundTask.active > prev.backgroundTask.active, dec: current.backgroundTask.active < prev.backgroundTask.active }" :title="`${current.backgroundTask.active}`">{{ kmg(current.backgroundTask.active, 2) }}</div>
 			</div>
 			<div>
-				<div>Delayed</div>
+				<div>{{ tCommon('delayed') }}</div>
 				<div :class="{ inc: current.backgroundTask.delayed > prev.backgroundTask.delayed, dec: current.backgroundTask.delayed < prev.backgroundTask.delayed }" :title="`${current.backgroundTask.delayed}`">{{ kmg(current.backgroundTask.delayed, 2) }}</div>
 			</div>
 			<div>
-				<div>Waiting</div>
+				<div>{{ tCommon('waiting') }}</div>
 				<div :class="{ inc: current.backgroundTask.waiting > prev.backgroundTask.waiting, dec: current.backgroundTask.waiting < prev.backgroundTask.waiting }" :title="`${current.backgroundTask.waiting}`">{{ kmg(current.backgroundTask.waiting, 2) }}</div>
 			</div>
 		</div>
@@ -81,6 +81,7 @@ import { useStream } from '@/stream.js';
 import kmg from '@/filters/kmg.js';
 import * as sound from '@/utility/sound.js';
 import { deepClone } from '@/utility/clone.js';
+import { tCommon } from '@/utility/ui-fb-i18n.js';
 import { prefer } from '@/preferences.js';
 
 const name = 'jobQueue';

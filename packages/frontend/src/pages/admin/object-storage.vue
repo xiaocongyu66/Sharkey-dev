@@ -40,12 +40,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 					<FormSplit :minWidth="280">
 						<MkInput v-model="objectStorageAccessKey">
 							<template #prefix><i class="ti ti-key"></i></template>
-							<template #label>Access key</template>
+							<template #label>{{ i18n.ts.accessKey }}</template>
 						</MkInput>
 
 						<MkInput v-model="objectStorageSecretKey" type="password">
 							<template #prefix><i class="ti ti-key"></i></template>
-							<template #label>Secret key</template>
+							<template #label>{{ i18n.ts.secretKey }}</template>
 						</MkInput>
 					</FormSplit>
 

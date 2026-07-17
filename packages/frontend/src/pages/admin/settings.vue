@@ -134,12 +134,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 					<template v-if="serviceWorkerForm.state.enableServiceWorker">
 						<MkInput v-model="serviceWorkerForm.state.swPublicKey">
-							<template #label>Public key<span v-if="serviceWorkerForm.modifiedStates.swPublicKey" class="_modified">{{ i18n.ts.modified }}</span></template>
+							<template #label>{{ i18n.ts.publicKey }}<span v-if="serviceWorkerForm.modifiedStates.swPublicKey" class="_modified">{{ i18n.ts.modified }}</span></template>
 							<template #prefix><i class="ti ti-key"></i></template>
 						</MkInput>
 
 						<MkInput v-model="serviceWorkerForm.state.swPrivateKey">
-							<template #label>Private key<span v-if="serviceWorkerForm.modifiedStates.swPrivateKey" class="_modified">{{ i18n.ts.modified }}</span></template>
+							<template #label>{{ i18n.ts.privateKey }}<span v-if="serviceWorkerForm.modifiedStates.swPrivateKey" class="_modified">{{ i18n.ts.modified }}</span></template>
 							<template #prefix><i class="ti ti-key"></i></template>
 						</MkInput>
 

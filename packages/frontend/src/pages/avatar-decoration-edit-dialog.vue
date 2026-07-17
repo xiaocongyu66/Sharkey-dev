@@ -13,7 +13,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	@closed="emit('closed')"
 >
 	<template v-if="avatarDecoration" #header>{{ avatarDecoration.name }}</template>
-	<template v-else #header>New decoration</template>
+	<template v-else #header>{{ i18n.ts.newDecoration }}</template>
 
 	<div style="display: flex; flex-direction: column; min-height: 100%;">
 		<div class="_spacer" style="--MI_SPACER-min: 20px; --MI_SPACER-max: 28px; flex-grow: 1;">

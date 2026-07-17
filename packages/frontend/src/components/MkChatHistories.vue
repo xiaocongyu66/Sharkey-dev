@@ -58,21 +58,27 @@ const initializing = ref(true);
 const fetching = ref(false);
 
 function previewText(message: Misskey.entities.ChatMessage): string {
-	// E2EE ciphertext is not useful in list preview
-	if ((message as any).isE2ee || (message as any).ciphertext) {
-		return (i18n.ts as any)._chat?.encryptedMessage ?? '🔒';
-	}
-	const raw = (message as any).text;
-	if (typeof raw === 'string' && raw.trim().length > 0) {
+	const m = message as any;
+
+	// Prefer server-revealed plaintext for escrow (at-rest encrypted) messages.
+	// Escrow messages have both `text` (revealed) + `isE2ee`/`ciphertext`.
+	// Legacy client E2EE (v1) will have no `text`.
+	if (typeof m.text === 'string' && m.text.trim().length > 0) {
 		// Collapse newlines / excess spaces so list rows stay one line
-		let t = raw.replace(/\s+/g, ' ').trim();
+		let t = m.text.replace(/\s+/g, ' ').trim();
 		if (t.length > PREVIEW_MAX_CHARS) {
 			t = t.slice(0, PREVIEW_MAX_CHARS - 1) + '…';
 		}
 		return t;
 	}
-	if ((message as any).fileId || (message as any).file) {
-		const file = (message as any).file;
+
+	// No plaintext → ciphertext only (legacy 1:1 E2EE or unrevealed)
+	if (m.isE2ee || m.ciphertext) {
+		return (i18n.ts as any)._chat?.encryptedMessage ?? '🔒';
+	}
+
+	if (m.fileId || m.file) {
+		const file = m.file;
 		const type = file?.type as string | undefined;
 		if (type?.startsWith('image/')) return i18n.ts.image;
 		if (type?.startsWith('video/')) return i18n.ts.video;

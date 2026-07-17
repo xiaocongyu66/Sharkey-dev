@@ -105,7 +105,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 									<MkRadios v-model="emojiStyle">
 										<template #label><SearchLabel>{{ i18n.ts.emojiStyle }}</SearchLabel></template>
 										<option value="native">{{ i18n.ts.native }}</option>
-										<option value="fluentEmoji">Fluent Emoji</option>
+										<option value="fluentEmoji">{{ i18n.ts.fluentEmoji }}</option>
 										<option value="twemoji">Twemoji</option>
 										<option value="tossface">Tossface</option>
 									</MkRadios>
@@ -251,7 +251,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<SearchMarker :keywords="['design', 'appear']">
 								<MkPreferenceContainer k="noteDesign">
 									<MkRadios v-model="noteDesign">
-										<template #label><SearchLabel>Note Design</SearchLabel></template>
+										<template #label><SearchLabel>{{ i18n.ts.noteDesign }}</SearchLabel></template>
 										<option value="sharkey"><i class="sk-icons sk-shark sk-icons-lg" style="top: 2px;position: relative;"></i> Sharkey</option>
 										<option value="misskey"><i class="sk-icons sk-misskey sk-icons-lg" style="top: 2px;position: relative;"></i> Misskey</option>
 									</MkRadios>

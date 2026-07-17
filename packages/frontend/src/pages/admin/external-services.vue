@@ -14,15 +14,15 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkInput>
 
 				<MkFolder>
-					<template #label>DeepL Translation</template>
+					<template #label>{{ i18n.ts.deepLTranslation }}</template>
 
 					<div class="_gaps_m">
 						<MkInput v-model="deeplAuthKey">
 							<template #prefix><i class="ti ti-key"></i></template>
-							<template #label>DeepL Auth Key</template>
+							<template #label>{{ i18n.ts.deepLAuthKey }}</template>
 						</MkInput>
 						<MkSwitch v-model="deeplIsPro">
-							<template #label>Pro account</template>
+							<template #label>{{ i18n.ts.proAccount }}</template>
 						</MkSwitch>
 
 						<MkSwitch v-model="deeplFreeMode">
@@ -30,7 +30,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						</MkSwitch>
 						<MkInput v-if="deeplFreeMode" v-model="deeplFreeInstance" :placeholder="'example.com/translate'">
 							<template #prefix><i class="ph-globe-simple ph-bold ph-lg"></i></template>
-							<template #label>DeepLX-JS URL</template>
+							<template #label>{{ i18n.ts.deepLXJSURL }}</template>
 							<template #caption>{{ i18n.ts.deeplFreeModeDescription }}</template>
 						</MkInput>
 
