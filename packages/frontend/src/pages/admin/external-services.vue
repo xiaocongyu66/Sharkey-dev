@@ -34,7 +34,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #caption>{{ i18n.ts.deeplFreeModeDescription }}</template>
 						</MkInput>
 
-						<MkButton primary @click="save_deepl">Save</MkButton>
+						<MkButton primary @click="save_deepl">{{ i18n.ts.save }}</MkButton>
 					</div>
 				</MkFolder>
 
@@ -52,7 +52,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 							<template #label>{{ i18n.ts.libreTranslateApiKey }}</template>
 						</MkInput>
 
-						<MkButton primary @click="save_libre">Save</MkButton>
+						<MkButton primary @click="save_libre">{{ i18n.ts.save }}</MkButton>
 					</div>
 				</MkFolder>
 			</div>

@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkSelect v-model="statusbar.type" placeholder="Please select">
 		<template #label>{{ i18n.ts.type }}</template>
 		<option value="rss">RSS</option>
-		<option v-if="instance.federation !== 'none' && policies.canViewFederation" value="federation">Federation</option>
-		<option value="userList">User list timeline</option>
+		<option v-if="instance.federation !== 'none' && policies.canViewFederation" value="federation">{{ i18n.ts.federation }}</option>
+		<option value="userList">{{ i18n.ts.userListTimeline }}</option>
 	</MkSelect>
 
 	<MkInput v-model="statusbar.name" manualSave>

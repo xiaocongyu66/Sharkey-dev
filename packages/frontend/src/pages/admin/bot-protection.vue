@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div :class="$style.captchaInfoMsg">
 					<div>{{ i18n.ts._captcha.testSiteKeyMessage }}</div>
 					<div>
-						<span>ref: </span><a href="https://docs.hcaptcha.com/#integration-testing-test-keys" target="_blank">hCaptcha Developer Guide</a>
+						<span>ref: </span><a href="https://docs.hcaptcha.com/#integration-testing-test-keys" target="_blank">{{ i18n.ts.hCaptchaDeveloperGuide }}</a>
 					</div>
 				</div>
 			</MkInfo>

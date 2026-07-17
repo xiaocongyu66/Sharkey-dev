@@ -23,9 +23,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 				</MkInput>
 				<MkRadios v-model="ad.place">
 					<template #label>{{ i18n.ts.form }}</template>
-					<option value="square">square</option>
-					<option value="horizontal">horizontal</option>
-					<option value="horizontal-big">horizontal-big</option>
+					<option value="square">{{ i18n.ts.square }}</option>
+					<option value="horizontal">{{ i18n.ts.horizontal }}</option>
+					<option value="horizontal-big">{{ i18n.ts.horizontalBig }}</option>
 				</MkRadios>
 				<!--
 			<div style="margin: 32px 0;">
