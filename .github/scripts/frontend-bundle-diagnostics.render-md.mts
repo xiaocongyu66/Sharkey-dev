@@ -516,7 +516,7 @@ function renderFrontendChunkReport(before: Awaited<ReturnType<typeof collectRepo
 	//	.slice(0, 30);
 
 	return [
-		'<details open>',
+		'<details>',
 		`<summary>${formatChunkChangeSummary('Chunk size diff', diffSummary)}</summary>`,
 		'',
 		chunkMarkdownTable(diffRows, diffTotal, diffGenerated, diffOther),
