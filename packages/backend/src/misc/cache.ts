@@ -284,6 +284,12 @@ export class MemoryKVCache<T> {
 	 * @deprecated これを直接呼び出すべきではない。InternalEventなどで変更を全てのプロセス/マシンに通知するべき
 	 */
 	public set(key: string, value: T): void {
+		// Re-insert so Map iteration order stays oldest→newest.
+		// Without this, updating an existing key keeps its old position and
+		// MemoryKVCache.gc()'s early-break can skip later expired entries forever.
+		if (this.cache.has(key)) {
+			this.cache.delete(key);
+		}
 		this.cache.set(key, {
 			date: this.timeService.now,
 			value,
@@ -372,12 +378,11 @@ export class MemoryKVCache<T> {
 	public gc(): void {
 		const now = this.timeService.now;
 
+		// Map order is oldest→newest because set() re-inserts on update.
+		// Stop at the first still-active entry: everything after it is newer.
 		for (const [key, { date }] of this.cache.entries()) {
-			// The map is ordered from oldest to youngest.
-			// We can stop once we find an entry that's still active, because all following entries must *also* be active.
 			const age = now - date;
 			if (age < this.lifetime) break;
-
 			this.cache.delete(key);
 		}
 	}

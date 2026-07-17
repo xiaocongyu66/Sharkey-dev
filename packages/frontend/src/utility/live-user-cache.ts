@@ -90,16 +90,12 @@ export function applyUserUpdated(payload: UserUpdatedPayload): void {
 	const norm = normalizePatch(payload);
 	if (!norm) return;
 
-	if (patches.size >= MAX_ENTRIES && !patches.has(norm.id)) {
-		let oldestId: string | null = null;
-		let oldestTs = Infinity;
-		for (const [id, e] of patches) {
-			if (e.ts < oldestTs) {
-				oldestTs = e.ts;
-				oldestId = id;
-			}
-		}
-		if (oldestId) {
+	// Re-insert so Map order is oldest→newest (O(1) eviction of the head).
+	if (patches.has(norm.id)) {
+		patches.delete(norm.id);
+	} else if (patches.size >= MAX_ENTRIES) {
+		const oldestId = patches.keys().next().value as string | undefined;
+		if (oldestId != null) {
 			patches.delete(oldestId);
 			userVersions.delete(oldestId);
 		}
@@ -160,9 +156,12 @@ export function installLiveUserCacheFromStream(stream: {
 }): () => void {
 	const onUpdated = (body: any) => applyUserUpdated(body);
 	stream.on('userUpdated', onUpdated);
+	// Keep avatar-only events in sync with the same bounded cache.
+	stream.on('userAvatarUpdated', onUpdated);
 	return () => {
 		try {
 			stream.off?.('userUpdated', onUpdated);
+			stream.off?.('userAvatarUpdated', onUpdated);
 		} catch { /* ignore */ }
 	};
 }

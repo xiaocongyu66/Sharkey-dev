@@ -113,11 +113,14 @@ export async function mainBoot() {
 	});
 
 	// Profile display updates (avatar / name / signature) — patch in-memory without REST
-	stream.on('userUpdated', (body: any) => {
+	const onUserDisplayUpdated = (body: any) => {
 		import('@/utility/live-user-cache.js').then(({ applyUserUpdated }) => {
 			applyUserUpdated(body);
 		}).catch(() => { /* ignore */ });
-	});
+	};
+	stream.on('userUpdated', onUserDisplayUpdated);
+	// Avatar-only WS events must also update live cache (otherwise timeline avatars stay stale).
+	stream.on('userAvatarUpdated', onUserDisplayUpdated);
 
 	launchPlugins();
 

@@ -104,6 +104,11 @@ export default {
 
 	unmounted(el, binding, vn) {
 		const self = el._tooltipDirective_;
+		if (self == null) return;
+		window.clearTimeout(self.showTimer);
+		window.clearTimeout(self.hideTimer);
 		window.clearInterval(self.checkTimer);
+		// Close open tooltip popup so it does not retain the host element.
+		self.close();
 	},
 } as Directive;

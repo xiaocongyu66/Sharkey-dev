@@ -44,20 +44,23 @@ export class AntennaService implements OnModuleInit, OnApplicationShutdown {
 
 	@bindThis
 	private async onAntennaEvent<E extends 'antennaCreated' | 'antennaUpdated' | 'antennaDeleted'>(body: InternalEventTypes[E], type: E): Promise<void> {
-		{
-			{
-				if (type !== 'antennaDeleted') {
-					this.antennas.set(body.id, { // TODO: このあたりのデシリアライズ処理は各modelファイル内に関数としてexportしたい
-						...body,
-						lastUsedAt: new Date(body.lastUsedAt),
-						user: null, // joinなカラムは通常取ってこないので
-						userList: null, // joinなカラムは通常取ってこないので
-					});
-				} else {
-					this.antennas.delete(body.id);
-				}
-			}
+		// Cache only mirrors active antennas (see getAntennas). Drop inactive/deleted entries.
+		if (type === 'antennaDeleted') {
+			this.antennas.delete(body.id);
+			return;
 		}
+		// create/update payloads are full MiAntenna entities (possibly JSON-revived dates).
+		const antenna = body as MiAntenna;
+		if (antenna.isActive === false) {
+			this.antennas.delete(antenna.id);
+			return;
+		}
+		this.antennas.set(antenna.id, { // TODO: このあたりのデシリアライズ処理は各modelファイル内に関数としてexportしたい
+			...antenna,
+			lastUsedAt: new Date(antenna.lastUsedAt),
+			user: null, // joinなカラムは通常取ってこないので
+			userList: null, // joinなカラムは通常取ってこないので
+		});
 	}
 
 	@bindThis
@@ -244,13 +247,17 @@ export class AntennaService implements OnModuleInit, OnApplicationShutdown {
 	public onModuleInit(): void {
 		this.internalEventService.on('antennaCreated', this.onAntennaEvent);
 		this.internalEventService.on('antennaUpdated', this.onAntennaEvent);
-		this.internalEventService.on('antennaUpdated', this.onAntennaEvent);
+		// Must listen for deletes too — otherwise antennas Map retains deleted entries forever.
+		this.internalEventService.on('antennaDeleted', this.onAntennaEvent);
 	}
 
 	@bindThis
 	public onApplicationShutdown(): void {
 		this.internalEventService.off('antennaCreated', this.onAntennaEvent);
 		this.internalEventService.off('antennaUpdated', this.onAntennaEvent);
-		this.internalEventService.off('antennaUpdated', this.onAntennaEvent);
+		this.internalEventService.off('antennaDeleted', this.onAntennaEvent);
+		// Drop in-memory antenna cache on shutdown to avoid retaining references across reloads.
+		this.antennas.clear();
+		this.antennasFetched = false;
 	}
 }

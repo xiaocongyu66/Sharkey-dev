@@ -167,15 +167,17 @@ watch(rootEl, () => {
 });
 
 watch([backed, rootEl], () => {
+	// Always drop previous scroll handler before re-binding (rootEl/backed changes).
+	if (scrollRemove.value) {
+		scrollRemove.value();
+		scrollRemove.value = null;
+	}
 	if (!backed.value) {
 		if (!rootEl.value) return;
 
 		scrollRemove.value = props.pagination.reversed
 			? onScrollBottom(rootEl.value, executeQueue, TOLERANCE)
 			: onScrollTop(rootEl.value, (topVisible) => { if (topVisible) executeQueue(); }, TOLERANCE);
-	} else {
-		if (scrollRemove.value) scrollRemove.value();
-		scrollRemove.value = null;
 	}
 });
 
@@ -486,7 +488,13 @@ onBeforeUnmount(() => {
 		window.clearTimeout(preventAppearFetchMoreTimer.value);
 		preventAppearFetchMoreTimer.value = null;
 	}
+	// Always detach scroll listeners — otherwise keep-alive / route changes leak handlers.
+	if (scrollRemove.value) {
+		scrollRemove.value();
+		scrollRemove.value = null;
+	}
 	scrollObserver.value?.disconnect();
+	scrollObserver.value = undefined;
 });
 
 defineExpose({

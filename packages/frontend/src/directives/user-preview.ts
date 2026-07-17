@@ -67,7 +67,9 @@ export class UserPreview {
 		}, 1000);
 	}
 
-	private close() {
+	public close() {
+		window.clearTimeout(this.showTimer);
+		window.clearTimeout(this.hideTimer);
 		if (this.promise) {
 			window.clearInterval(this.checkTimer);
 			this.promise.cancel();
@@ -121,6 +123,8 @@ export default {
 		if (binding.value == null) return;
 
 		const self = el._userPreviewDirective_;
+		// Detach listeners and close any open popup / pending timers.
 		self.preview.detach();
+		self.preview.close();
 	},
 } as Directive;
