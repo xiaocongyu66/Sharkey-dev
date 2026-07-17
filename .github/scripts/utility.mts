@@ -98,6 +98,10 @@ export function escapeLatex(text: string) {
 		.replaceAll('%', '\\%');
 }
 
+export function escapeMdTableCell(value: string) {
+	return String(value).replaceAll('|', '\\|').replaceAll('\n', '<br>');
+}
+
 export function formatColoredDelta(delta: number, text: (value: number) => string, colorThreshold = 0) {
 	if (delta === 0) return text(0);
 	const sign = delta > 0 ? '+' : '-';

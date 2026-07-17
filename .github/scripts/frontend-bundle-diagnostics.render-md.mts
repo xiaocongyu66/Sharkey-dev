@@ -14,10 +14,6 @@ const locale = 'ja-JP';
 //	return Math.round((value / total) * 100) + '%';
 //}
 
-function escapeCell(value: string) {
-	return String(value).replaceAll('|', '\\|').replaceAll('\n', '<br>');
-}
-
 //function tableCell(value) {
 //	return String(value).replaceAll('|', '\\|').replaceAll('\r', ' ').replaceAll('\n', ' ');
 //}
@@ -460,11 +456,11 @@ function chunkMarkdownTable(
 	for (const row of rows) {
 		const chunkFile = chunkFileDisplay(row);
 		if (row.changeType === 'added') {
-			lines.push(`| <details><summary>\`${escapeCell(row.name)}\`</summary> \`${escapeCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | $\\color{orange}{\\text{( + )}}$ |`);
+			lines.push(`| <details><summary>\`${util.escapeMdTableCell(row.name)}\`</summary> \`${util.escapeMdTableCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | $\\color{orange}{\\text{( + )}}$ |`);
 		} else if (row.changeType === 'removed') {
-			lines.push(`| <details><summary>\`${escapeCell(row.name)}\`</summary> \`${escapeCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | $\\color{green}{\\text{( - )}}$ |`);
+			lines.push(`| <details><summary>\`${util.escapeMdTableCell(row.name)}\`</summary> \`${util.escapeMdTableCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | $\\color{green}{\\text{( - )}}$ |`);
 		} else {
-			lines.push(`| <details><summary>\`${escapeCell(row.name)}\`</summary> \`${escapeCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | ${util.calcAndFormatDeltaPercent(row.beforeSize, row.afterSize, 0.1).replaceAll('\\%', '\\\\%')} |`);
+			lines.push(`| <details><summary>\`${util.escapeMdTableCell(row.name)}\`</summary> \`${util.escapeMdTableCell(chunkFile)}\` </details> | ${util.formatBytes(row.beforeSize)} | ${util.formatBytes(row.afterSize)} | ${util.calcAndFormatDeltaBytes(row.beforeSize, row.afterSize, 1000)} | ${util.calcAndFormatDeltaPercent(row.beforeSize, row.afterSize, 0.1).replaceAll('\\%', '\\\\%')} |`);
 		}
 	}
 	if (hasGenerated) {

@@ -91,10 +91,6 @@ export type BrowserMetricsReport = {
 	samples: BrowserMeasurementSample[];
 };
 
-function escapeCell(value: string) {
-	return String(value).replaceAll('|', '\\|').replaceAll('\n', '<br>');
-}
-
 function truncate(value: string, maxLength = 140) {
 	if (value.length <= maxLength) return value;
 	return `${value.slice(0, maxLength - 3)}...`;
@@ -278,7 +274,7 @@ function renderLargestRequests(report: BrowserMetricsReport, title: string) {
 	];
 
 	for (const request of report.summary.network.largestRequests.slice(0, 10)) {
-		lines.push(`| \`${escapeCell(truncate(request.url))}\` | ${escapeCell(request.resourceType)} | ${request.status ?? '-'} | ${util.formatBytes(request.encodedBytes)} | ${util.formatBytes(request.decodedBodyBytes)} |`);
+		lines.push(`| \`${util.escapeMdTableCell(truncate(request.url))}\` | ${util.escapeMdTableCell(request.resourceType)} | ${request.status ?? '-'} | ${util.formatBytes(request.encodedBytes)} | ${util.formatBytes(request.decodedBodyBytes)} |`);
 	}
 
 	lines.push('', '</details>');
@@ -296,7 +292,7 @@ function renderFailedRequests(report: BrowserMetricsReport, title: string) {
 	];
 
 	for (const request of report.summary.network.failedRequests.slice(0, 20)) {
-		lines.push(`| \`${escapeCell(truncate(request.url))}\` | ${escapeCell(request.resourceType)} | ${request.status ?? '-'} | ${escapeCell(request.errorText ?? '')} |`);
+		lines.push(`| \`${util.escapeMdTableCell(truncate(request.url))}\` | ${util.escapeMdTableCell(request.resourceType)} | ${request.status ?? '-'} | ${util.escapeMdTableCell(request.errorText ?? '')} |`);
 	}
 
 	lines.push('', '</details>');
