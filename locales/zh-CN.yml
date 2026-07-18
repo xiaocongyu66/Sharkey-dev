@@ -3390,7 +3390,6 @@ _adminNotes:
   auditExpand: 展开完整指纹 / UA
   auditCollapse: 收起
   filterUsername: 用户名
-  filterEmail: 邮箱
   includeRemote: 显示联合（远程）帖子
   tabAll: 本站
   tabRemote: 远程
@@ -3429,8 +3428,6 @@ _adminNotes:
   failed: 失败
   activityIp: 活动 IP
   activityIpTip: 来自请求日志与登录记录的 IP（仅管理员可见）。
-  filterFingerprint: 指纹
-  filterIp: IP
   noIpYet: 暂无 IP 记录（用户产生请求后会记录；登录 IP 见下方登录历史）
   ipHistory: IP 历史
   latestIp: 最近 IP
@@ -4323,7 +4320,6 @@ headers: 请求头
 libreTranslateTranslation: LibreTranslate 翻译
 libreTranslateURL: LibreTranslate URL
 libreTranslateApiKey: LibreTranslate API Key
-bgm: 背景音乐
 deepLTranslation: DeepL 翻译
 deepLAuthKey: DeepL Auth Key
 deepLXJSURL: DeepLX-JS URL

@@ -3386,7 +3386,6 @@ _adminNotes:
   auditExpand: Show full fingerprint / UA
   auditCollapse: Collapse
   filterUsername: Username
-  filterEmail: Email
   includeRemote: Show federated (remote) notes
   tabAll: Local
   tabRemote: Remote
@@ -3425,8 +3424,6 @@ _adminNotes:
   failed: Failed
   activityIp: Activity IPs
   activityIpTip: IPs from request logs and login history (admins only).
-  filterFingerprint: Fingerprint
-  filterIp: IP
   noIpYet: No IP records yet (recorded after user activity; login IPs are under Login history).
   ipHistory: IP history
   latestIp: Latest IP
@@ -4319,7 +4316,6 @@ headers: Headers
 libreTranslateTranslation: LibreTranslate Translation
 libreTranslateURL: LibreTranslate URL
 libreTranslateApiKey: LibreTranslate API Key
-bgm: BGM
 deepLTranslation: DeepL Translation
 deepLAuthKey: DeepL Auth Key
 deepLXJSURL: DeepLX-JS URL
