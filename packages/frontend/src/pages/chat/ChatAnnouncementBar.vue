@@ -4,27 +4,30 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <!--
-  NagramX / Telegram pinned-message strip:
-  sticky under page header, compact ~48px collapsed row, expand on tap.
+  Pinned announcement strip (Telegram / NagramX style).
+  Layout only reserves the collapsed row height; expanding overlays the
+  message list with a translucent panel so history is not pushed down.
 -->
 <template>
-<div v-if="text" :class="[$style.root, { [$style.expanded]: expanded }]">
-	<button type="button" class="_button" :class="$style.main" @click="expanded = !expanded">
-		<div :class="$style.accent" aria-hidden="true"></div>
-		<div :class="$style.iconWrap" aria-hidden="true">
-			<i class="ti ti-pinned"></i>
-		</div>
-		<div :class="$style.content">
-			<div :class="$style.title">{{ title }}</div>
-			<div :class="[$style.body, { [$style.clamp]: !expanded }]">{{ text }}</div>
-		</div>
-		<i :class="[$style.chevron, expanded ? 'ti ti-chevron-up' : 'ti ti-chevron-down']" aria-hidden="true"></i>
-	</button>
-	<div v-if="expanded && canEdit" :class="$style.actions">
-		<button type="button" class="_textButton" :class="$style.editBtn" @click.stop="$emit('edit')">
-			<i class="ti ti-pencil"></i>
-			{{ editLabel }}
+<div v-if="text" :class="$style.shell">
+	<div :class="[$style.root, { [$style.expanded]: expanded }]">
+		<button type="button" class="_button" :class="$style.main" @click="expanded = !expanded">
+			<div :class="$style.accent" aria-hidden="true"></div>
+			<div :class="$style.iconWrap" aria-hidden="true">
+				<i class="ti ti-pinned"></i>
+			</div>
+			<div :class="$style.content">
+				<div :class="$style.title">{{ title }}</div>
+				<div :class="[$style.body, { [$style.clamp]: !expanded }]">{{ text }}</div>
+			</div>
+			<i :class="[$style.chevron, expanded ? 'ti ti-chevron-up' : 'ti ti-chevron-down']" aria-hidden="true"></i>
 		</button>
+		<div v-if="expanded && canEdit" :class="$style.actions">
+			<button type="button" class="_textButton" :class="$style.editBtn" @click.stop="$emit('edit')">
+				<i class="ti ti-pencil"></i>
+				{{ editLabel }}
+			</button>
+		</div>
 	</div>
 </div>
 </template>
@@ -47,18 +50,45 @@ const expanded = ref(false);
 </script>
 
 <style lang="scss" module>
-.root {
+/* Only collapsed height participates in document flow — expand does not reflow messages */
+.shell {
 	position: sticky;
-	/* Sit below PageWithHeader sticky chrome (title + tabs), not under it */
 	top: var(--MI-stickyTop, 0px);
-	z-index: 5;
-	border-radius: 8px;
-	background: color-mix(in srgb, var(--MI_THEME-accent) 10%, var(--MI_THEME-panel));
-	border: 1px solid color-mix(in srgb, var(--MI_THEME-accent) 22%, var(--MI_THEME-divider));
-	overflow: hidden;
+	z-index: 20;
+	/* Only collapsed row height in document flow — expand overlays messages below */
+	height: 40px;
 	margin: 0 0 4px;
-	/* Avoid being covered by fixed mobile header */
-	box-shadow: 0 1px 0 color-mix(in srgb, var(--MI_THEME-bg) 80%, transparent);
+	overflow: visible;
+	/* empty shell area lets clicks fall through to messages when not on the bar */
+	pointer-events: none;
+}
+
+.root {
+	pointer-events: auto;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	z-index: 1;
+	border-radius: 8px;
+	/* Translucent so chat under the bar stays visible */
+	background: color-mix(in srgb, var(--MI_THEME-panel) 72%, transparent);
+	border: 1px solid color-mix(in srgb, var(--MI_THEME-accent) 28%, var(--MI_THEME-divider));
+	overflow: hidden;
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	box-shadow: 0 2px 10px color-mix(in srgb, var(--MI_THEME-fg) 8%, transparent);
+	transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.expanded {
+	max-height: min(45vh, 280px);
+	overflow-y: auto;
+	/* Stronger glass so long text is readable, still see messages beneath */
+	background: color-mix(in srgb, var(--MI_THEME-panel) 82%, transparent);
+	box-shadow:
+		0 4px 18px color-mix(in srgb, var(--MI_THEME-fg) 14%, transparent),
+		0 0 0 1px color-mix(in srgb, var(--MI_THEME-accent) 12%, transparent);
 }
 
 .main {
@@ -108,9 +138,9 @@ const expanded = ref(false);
 	line-height: 1.2;
 	letter-spacing: 0.02em;
 	color: var(--MI_THEME-accent);
-	/* Never collapse empty-looking title row */
 	min-height: 1.2em;
 	opacity: 1;
+	text-shadow: 0 0 8px color-mix(in srgb, var(--MI_THEME-bg) 60%, transparent);
 }
 
 .body {
@@ -119,6 +149,7 @@ const expanded = ref(false);
 	white-space: pre-wrap;
 	word-break: break-word;
 	color: var(--MI_THEME-fg);
+	text-shadow: 0 0 6px color-mix(in srgb, var(--MI_THEME-bg) 50%, transparent);
 }
 
 .clamp {
