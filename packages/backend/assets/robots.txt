@@ -1,4 +1,32 @@
-user-agent: *
-allow: /
+# Sharkey-dev crawl policy (open posts, closed chat)
+#
+# 开放：公开帖子 / 用户主页 / 静态资源 — 允许机器人抓取、索引
+# 封闭：聊天（托管加密 + 登录 + 成员权限 + WebSocket 实时）— 禁止爬取
+
+User-agent: *
+Allow: /
+Allow: /notes/
+Allow: /@
+Allow: /users/
+Allow: /api/notes
+Allow: /api/users
+Allow: /api/meta
+Allow: /api/emojis
+
+# Chat is credential + membership + escrow; never for crawlers
+Disallow: /chat
+Disallow: /api/chat
+Disallow: /api/chat/
+Disallow: /my/
+Disallow: /settings
+Disallow: /settings/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /miauth/
+Disallow: /oauth/
+Disallow: /api/i/
+Disallow: /api/auth/
+Disallow: /api/admin/
 
 # todo: sitemap
