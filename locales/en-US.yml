@@ -3323,7 +3323,7 @@ _bootErrors:
   solution3: Clear the browser cache
   solution4: Set the dom.webaudio.enabled to true for Tor Browser
   toolsTitle: Recovery tools
-  toolsHint: Open a built-in tool (recommended first):
+  toolsHint: "Open a built-in tool (recommended first):"
   otherOption: Other options
   otherOption1: Clear preferences and cache
   otherOption2: Start the simple client
