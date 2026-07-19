@@ -1692,7 +1692,7 @@ _initialAccountSetting:
   laterAreYouSure: 要稍后再进行初始设定吗？
 _initialTutorial:
   launchTutorial: 观看教学
-  title: 操作失败
+  title: 教程
   wellDone: 做得好
   skipAreYouSure: 是否退出教学？
   _landing:
@@ -2334,7 +2334,7 @@ _wordMute:
 _instanceMute:
   instanceMuteDescription: 这会隐藏来自这些服务器的所有帖子和转贴，包括这些服务器上用户的回复。
   instanceMuteDescription2: 一行一个
-  title: 操作失败
+  title: 隐藏来自所列实例的帖子
   heading: 已隐藏的服务器
 _theme:
   explore: 寻找主题
@@ -2767,7 +2767,7 @@ _play:
   my: 我的 Play
   liked: 点赞的 Play
   featured: 热门
-  title: 操作失败
+  title: 标题
   script: 脚本
   summary: 描述
   visibilityDescription: 设置为不公开后资料将不再显示，但知道 URL 的人仍可继续访问。
@@ -2791,7 +2791,7 @@ _pages:
   contents: 内容
   content: 页面内容
   variables: 变量
-  title: 操作失败
+  title: 标题
   url: 页面 URL
   summary: 页面摘要
   alignCenter: 居中
@@ -2930,7 +2930,7 @@ _dialog:
   charactersExceeded: 已经超过了最大字符数! 当前字符数 {current} / 限制字符数 {max}
   charactersBelow: 低于最小字符数！当前字符数 {current} / 限制字符数 {min}
 _disabledTimeline:
-  title: 操作失败
+  title: 时间线已禁用
   description: 您不能在当前角色使用时间线。
 _drivecleaner:
   orderBySizeDesc: 按大小降序排列
@@ -3051,7 +3051,7 @@ _moderationLogTypes:
   restartMigration: 为一个用户重启了迁移
   setRoot: 设定了根 (root) 用户
 _fileViewer:
-  title: 操作失败
+  title: 文件详情
   type: 文件类型
   size: 文件大小
   url: URL
@@ -3059,7 +3059,7 @@ _fileViewer:
   attachedNotes: 附加到的帖子
   thisPageCanBeSeenFromTheAuthor: 此页只能被该文件的上传者查看。
 _externalResourceInstaller:
-  title: 操作失败
+  title: 从外部站点安装
   checkVendorBeforeInstall: 请在安装前确保来源可靠
   _plugin:
     title: 要安装此插件吗？
@@ -3161,10 +3161,10 @@ _reversi:
   showBoardLabels: 显示行号和列号
   useAvatarAsStone: 用头像作为棋子
 _offlineScreen:
-  title: 操作失败
+  title: 离线 — 无法连接服务器
   header: 无法连接到服务器
 _urlPreviewSetting:
-  title: 操作失败
+  title: URL 预览设置
   enable: 启用 URL 预览
   timeout: 超时阈值（ms）
   timeoutDescription: 如果获取预览所用时间超过这个值，则不生成预览。
@@ -3182,7 +3182,7 @@ _mediaControls:
   playbackRate: 播放速度
   loop: 循环播放
 _contextMenu:
-  title: 操作失败
+  title: 上下文菜单
   app: 应用
   appWithShift: Shift 键应用
   native: 浏览器的用户界面
@@ -3263,7 +3263,7 @@ _customEmojisManager:
       confirmClearEmojisDescription: 要放弃编辑并将列表内表示的表情符号清空吗？
       confirmUploadEmojisDescription: 要将拖放的 {count} 个文件上传到网盘上吗？
 _embedCodeGen:
-  title: 操作失败
+  title: 自定义嵌入代码
   header: 显示标题
   autoload: 连续加载（不推荐）
   maxHeight: 最大高度
@@ -3278,7 +3278,7 @@ _embedCodeGen:
   codeGeneratedDescription: 将生成的代码贴到网站上来使用。
 _selfXssPrevention:
   warning: 警告
-  title: 操作失败
+  title: “在此粘贴内容”几乎都是诈骗。
   description1: 如果在此处粘贴了什么，恶意用户可能会接管账户或者盗取个人资料。
   description2: 如果不能完全理解将要粘贴的内容，%c 请立即停止操作并关闭这个窗口。
   description3: 详情请看这里。{link}
@@ -3319,7 +3319,7 @@ _captcha:
       title: CAPTCHA 错误
       text: 发生意外错误。
 _bootErrors:
-  title: 操作失败
+  title: 加载失败
   serverError: 请稍等片刻再重试。若问题仍无法解决，请将以下 Error ID 一起发送给管理员。
   solution: 以下方法或许可以解决问题：
   solution1: 将浏览器及操作系统更新到最新版本
@@ -3339,7 +3339,7 @@ _search:
   pleaseSelectUser: 请选择用户
   serverHostPlaceholder: 如：misskey.example.com
 _xAlgorithm:
-  title: 操作失败
+  title: 算法
   info: X Algorithm 必须以原始上游服务运行。Sharkey 通过 HTTP 网关调用 Home Mixer/Scored Posts，不会在本地模拟简化算法。
   enable: 启用 X Algorithm
   enableCaption: 使用 xai-org/x-algorithm 作为推荐后端。
@@ -3440,7 +3440,7 @@ _ai:
   tabModeration: 审核
   tabAbuse: 管控
 _aiTranslation:
-  title: 操作失败
+  title: AI 翻译
   info: 帖子与群聊/私信的 OpenAI 兼容 AI 翻译。可共用或分别配置密钥；可允许用户自带 Key。破甲模式用 SillyTavern 多层 jailbreak（main + nsfw + 历史后指令），不是普通“请翻译”。
   enableNotes: 启用帖子翻译
   enableNotesCaption: 开启后，帖子翻译可走 AI（若已配置 DeepL/Libre 仍可回退）。
@@ -3476,7 +3476,7 @@ _aiTranslation:
   systemPrompt: 自定义系统提示（可选）
   systemPromptCaption: 若填写，将用这一条 system 提示替换整套 ST 破甲栈。留空则使用 Main+NSFW+Jailbreak 分层。
 _aiNoteModeration:
-  title: 操作失败
+  title: AI 帖子审核
   info: 兼容任意 OpenAI /v1 接口。可按情况开启图片识别（仅当帖子带图时发送；模型需支持 vision）。本地帖与远程帖可分别开关。
   enableLocal: 审核本地帖子
   enableLocalCaption: 开启后，本站用户发帖/改帖前会调用 AI 审核。
@@ -3505,7 +3505,7 @@ _aiNoteModeration:
   systemPrompt: 自定义系统提示（可选）
   systemPromptCaption: 留空使用内置 JSON 分类提示词。
 _aiAbuseControl:
-  title: 操作失败
+  title: AI 多账号管控
   info: 默认仅当「同一真实 IP + 同一浏览器指纹」同时匹配才关联账号（可配置）。会把用户身份完整传给 AI 判定。可选自动封禁触发账号。API Key 与帖子审核独立。
   autoSuspendCaption: AI 或强启发式判定滥用时，仅自动封禁触发账号（不连坐全员）。版主/root 不会被自动封。关联账号写入日志供人工复核。
   enabled: 启用 AI 多账号管控
@@ -3534,7 +3534,7 @@ _aiAbuseControl:
   systemPrompt: 自定义系统提示
   systemPromptCaption: 可选。留空使用内置刷号分类提示。
 _aiTranslationSettings:
-  title: 操作失败
+  title: AI 翻译
   info: 目标语言等偏好会同步到账号。可选的 API 基址/密钥只保存在本机，不会上传到服务器。
   userKeyDisabled: 本站未开放用户本地 AI 端点。若管理员已配置实例翻译，仍可使用。
   prefs: 偏好（同步到账号）
