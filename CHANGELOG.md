@@ -51,7 +51,7 @@
     - ジョブキュー（エンキュー元のトレースを含む）
 - Enhance: Sentry バックエンドの自動計装を `sentryForBackend.disabledIntegrations` で個別に無効化できるように
 - Enhance: センシティブメディアの判定を外部サービス ([sensitive-detector](https://github.com/misskey-dev/sensitive-detector)) に分離し、`nsfwjs` / `@tensorflow/tfjs(-node)` の同梱と NSFW 判定モデルを廃止 (#16804)
-- Enhance: Node.js 22.23.0以降、24.17.0以降、26.4.0以降をサポートするように
+- Enhance: Node.js 22.22.2以降、24.17.0以降、26.4.0以降をサポートするように
 - Enhance: Docker Image の Node.js を 26.4.0 に、Debian を trixie (v13) に更新
 - Enhance: URLプレビューの結果を内部でキャッシュするように
 - Enhance: API内部エラーのログに構造化属性と正規化したエラー情報を付与し、認証情報を自動的に秘匿するように（従来形式の表示は維持）
