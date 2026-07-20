@@ -4,16 +4,29 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+      - '20*'
 
 env:
-  REGISTRY_IMAGE: misskey/misskey
+  # GitHub Container Registry — no Docker Hub secrets required
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
   TAGS: |
     type=edge
-    type=ref,event=pr
     type=ref,event=branch
+    type=ref,event=tag
     type=semver,pattern={{version}}
     type=semver,pattern={{major}}.{{minor}}
     type=semver,pattern={{major}}
+    type=sha,prefix=
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   # see https://docs.docker.com/build/ci/github-actions/multi-platform/#distribute-build-across-multiple-runners
@@ -31,8 +44,12 @@ jobs:
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+          # GHCR requires lowercase image names
+          echo "REGISTRY_IMAGE=${REGISTRY}/$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Check out the repo
         uses: actions/checkout@v6.0.3
+        with:
+          submodules: recursive
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Docker meta
@@ -41,12 +58,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: ${{ env.TAGS }}
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Build and Push to Docker Hub
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push to GHCR
         id: build
         uses: docker/build-push-action@v7
         with:
@@ -76,6 +94,9 @@ jobs:
     needs:
       - build
     steps:
+      - name: Prepare image name
+        run: |
+          echo "REGISTRY_IMAGE=${REGISTRY}/$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Download digests
         uses: actions/download-artifact@v8
         with:
@@ -90,11 +111,12 @@ jobs:
         with:
           images: ${{ env.REGISTRY_IMAGE }}
           tags: ${{ env.TAGS }}
-      - name: Login to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
