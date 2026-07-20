@@ -5,7 +5,6 @@
 
 import * as crypto from 'node:crypto';
 import { IncomingMessage } from 'node:http';
-import { format as formatURL } from 'node:url';
 import { Inject, Injectable } from '@nestjs/common';
 import fastifyAccepts from '@fastify/accepts';
 import httpSignature from '@peertube/http-signature';
@@ -14,43 +13,32 @@ import accepts from 'accepts';
 import vary from 'vary';
 import secureJson from 'secure-json-parse';
 import { DI } from '@/di-symbols.js';
-import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UserNotePiningsRepository, UsersRepository, FollowRequestsRepository, MiMeta, MiUserNotePining } from '@/models/_.js';
+import type { FollowingsRepository, NotesRepository, EmojisRepository, NoteReactionsRepository, UserProfilesRepository, UserNotePiningsRepository, UsersRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
 import * as url from '@/misc/prelude/url.js';
 import type { Config } from '@/config.js';
 import { ApRendererService } from '@/core/activitypub/ApRendererService.js';
-import { ApDbResolverService } from '@/core/activitypub/ApDbResolverService.js';
 import { QueueService } from '@/core/QueueService.js';
 import type { MiLocalUser, MiRemoteUser, MiUser } from '@/models/User.js';
-import { isLocalUser } from '@/models/User.js';
 import { UserKeypairService } from '@/core/UserKeypairService.js';
-import type { MiUserPublickey } from '@/models/UserPublickey.js';
 import type { MiFollowing } from '@/models/Following.js';
 import { countIf } from '@/misc/prelude/array.js';
 import type { MiNote } from '@/models/Note.js';
 import { QueryService } from '@/core/QueryService.js';
 import { UtilityService } from '@/core/UtilityService.js';
-import type Logger from '@/logger.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { bindThis } from '@/decorators.js';
-import { IActivity, IAnnounce, ICreate } from '@/core/activitypub/type.js';
-import { isPureRenote, isQuote, isRenote } from '@/misc/is-renote.js';
-import { promiseMap } from '@/misc/promise-map.js';
-import * as Acct from '@/misc/acct.js';
-import { CacheService } from '@/core/CacheService.js';
-import { CustomEmojiService, encodeEmojiKey } from '@/core/CustomEmojiService.js';
-import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import { UserEntityService } from '@/core/entities/UserEntityService.js';
-import type { FindOptionsWhere } from 'typeorm';
+import { bindThis } from '@/decorators.js';
+import { IActivity } from '@/core/activitypub/type.js';
+import { isQuote, isRenote } from '@/misc/is-renote.js';
+import * as Acct from '@/misc/acct.js';
+import { FanoutTimelineEndpointService } from '@/core/FanoutTimelineEndpointService.js';
 import type { FastifyInstance, FastifyRequest, FastifyReply, FastifyPluginOptions, FastifyBodyParser } from 'fastify';
+import type { FindOptionsWhere } from 'typeorm';
 
 const ACTIVITY_JSON = 'application/activity+json; charset=utf-8';
 const LD_JSON = 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"; charset=utf-8';
 
 @Injectable()
 export class ActivityPubServerService {
-	private logger: Logger;
-	private authlogger: Logger;
-
 	constructor(
 		@Inject(DI.config)
 		private config: Config,
@@ -83,20 +71,14 @@ export class ActivityPubServerService {
 		private followRequestsRepository: FollowRequestsRepository,
 
 		private utilityService: UtilityService,
+		private userEntityService: UserEntityService,
 		private apRendererService: ApRendererService,
-		private apDbResolverService: ApDbResolverService,
 		private queueService: QueueService,
 		private userKeypairService: UserKeypairService,
 		private queryService: QueryService,
 		private fanoutTimelineEndpointService: FanoutTimelineEndpointService,
-		private loggerService: LoggerService,
-		private readonly cacheService: CacheService,
-		private readonly customEmojiService: CustomEmojiService,
-		private readonly userEntityService: UserEntityService,
 	) {
 		//this.createServer = this.createServer.bind(this);
-		this.logger = this.loggerService.getLogger('apserv', 'pink');
-		this.authlogger = this.logger.createSubLogger('sigcheck');
 	}
 
 	@bindThis
@@ -112,171 +94,15 @@ export class ActivityPubServerService {
 	/**
 	 * Pack Create<Note> or Announce Activity
 	 * @param note Note
-	 * @param author Author of the note
 	 */
 	@bindThis
-	private async packActivity(note: MiNote, author: MiUser): Promise<ICreate | IAnnounce> {
+	private async packActivity(note: MiNote): Promise<any> {
 		if (isRenote(note) && !isQuote(note)) {
 			const renote = await this.notesRepository.findOneByOrFail({ id: note.renoteId });
 			return this.apRendererService.renderAnnounce(renote.uri ? renote.uri : `${this.config.url}/notes/${renote.id}`, note);
 		}
 
-		return this.apRendererService.renderCreate(await this.apRendererService.renderNote(note, author, false), note);
-	}
-
-	/**
-	 * Checks Authorized Fetch.
-	 * Returns an object with two properties:
-	 * * reject - true if the request should be ignored by the caller, false if it should be processed.
-	 * * redact - true if the caller should redact response data, false if it should return full data.
-	 * When "reject" is true, the HTTP status code will be automatically set to 401 unauthorized.
-	 */
-	private async checkAuthorizedFetch(
-		request: FastifyRequest,
-		reply: FastifyReply,
-		userId?: string,
-		essential?: boolean,
-	): Promise<{ reject: boolean, redact: boolean }> {
-		// Federation disabled => reject
-		if (this.meta.federation === 'none') {
-			reply.code(401);
-			return { reject: true, redact: true };
-		}
-
-		// Auth fetch disabled => accept
-		const allowUnsignedFetch = await this.getUnsignedFetchAllowance(userId);
-		if (allowUnsignedFetch === 'always') {
-			return { reject: false, redact: false };
-		}
-
-		// Valid signature => accept
-		const error = await this.checkSignature(request);
-		if (!error) {
-			return { reject: false, redact: false };
-		}
-
-		// Unsigned, but essential => accept redacted
-		if (allowUnsignedFetch === 'essential' && essential) {
-			return { reject: false, redact: true };
-		}
-
-		// Unsigned, not essential => reject
-		this.authlogger.warn(error);
-		reply.code(401);
-		return { reject: true, redact: true };
-	}
-
-	/**
-	 * Verifies HTTP Signatures for a request.
-	 * Returns null of success (valid signature).
-	 * Returns a string error on validation failure.
-	 */
-	@bindThis
-	private async checkSignature(request: FastifyRequest): Promise<string | null> {
-		/* this code is inspired from the `inbox` function below, and
-			 `queue/processors/InboxProcessorService`
-
-			 those pieces of code also check `digest`, and various bits from the
-			 request body, but that only makes sense for requests with a body:
-			 here we're validating GET requests
-
-			 this is also inspired by FireFish's `checkFetch`
-		*/
-
-		let signature: httpSignature.IParsedSignature;
-
-		try {
-			signature = httpSignature.parseRequest(request.raw, {
-				headers: ['(request-target)', 'host', 'date'],
-				authorizationHeaderName: 'signature',
-			});
-		} catch (e) {
-			// not signed, or malformed signature: refuse
-			return `${request.id} ${request.url} not signed, or malformed signature: refuse`;
-		}
-
-		const keyId = new URL(signature.keyId);
-		const keyHost = this.utilityService.toPuny(keyId.hostname);
-
-		const logPrefix = `${request.id} ${request.url} (by ${request.headers['user-agent']}) claims to be from ${keyHost}:`;
-
-		if (signature.params.headers.indexOf('host') === -1 || request.headers.host !== this.config.host) {
-			// no destination host, or not us: refuse
-			return `${logPrefix} no destination host, or not us: refuse`;
-		}
-
-		if (!this.utilityService.isFederationAllowedHost(keyHost)) {
-			/* blocked instance: refuse (we don't care if the signature is
-				 good, if they even pretend to be from a blocked instance,
-				 they're out) */
-			return `${logPrefix} instance is blocked: refuse`;
-		}
-
-		// do we know the signer already?
-		let authUser: {
-			user: MiRemoteUser;
-			key: MiUserPublickey | null;
-		} | null = await this.apDbResolverService.getAuthUserFromKeyId(signature.keyId);
-
-		if (authUser == null) {
-			/* keyId is often in the shape `${user.uri}#${keyname}`, try
-				 fetching information about the remote user */
-			const candidate = formatURL(keyId, { fragment: false });
-			this.authlogger.info(`${logPrefix} we don't know the user for keyId ${keyId}, trying to fetch via ${candidate}`);
-			authUser = await this.apDbResolverService.getAuthUserFromApId(candidate);
-		}
-
-		if (authUser?.key == null) {
-			// we can't figure out who the signer is, or we can't get their key: refuse
-			return `${logPrefix} we can't figure out who the signer is, or we can't get their key: refuse`;
-		}
-
-		if (authUser.user.isSuspended) {
-			// Signer is suspended locally
-			return `${logPrefix} signer is suspended: refuse`;
-		}
-
-		// some fedi implementations include the query (`?foo=bar`) in the
-		// signature, some don't, so we have to handle both cases
-		function verifyWithOrWithoutQuery() {
-			const httpSignatureValidated = httpSignature.verifySignature(signature, authUser!.key!.keyPem);
-			if (httpSignatureValidated) return true;
-
-			const requestUrl = new URL(`http://whatever${request.raw.url}`);
-			if (! requestUrl.search) return false;
-
-			// verification failed, the request URL contained a query, let's try without
-			const semiRawRequest = request.raw;
-			semiRawRequest.url = requestUrl.pathname;
-
-			// no need for try/catch, if the original request parsed, this
-			// one will, too
-			const signatureWithoutQuery = httpSignature.parseRequest(semiRawRequest, {
-				headers: ['(request-target)', 'host', 'date'],
-				authorizationHeaderName: 'signature',
-			});
-
-			return httpSignature.verifySignature(signatureWithoutQuery, authUser!.key!.keyPem);
-		}
-
-		let httpSignatureValidated = verifyWithOrWithoutQuery();
-
-		// maybe they changed their key? refetch it
-		// TODO rate-limit this using lastFetchedAt
-		if (!httpSignatureValidated) {
-			authUser.key = await this.apDbResolverService.refetchPublicKeyForApId(authUser.user);
-			if (authUser.key != null) {
-				httpSignatureValidated = verifyWithOrWithoutQuery();
-			}
-		}
-
-		if (!httpSignatureValidated) {
-			// bad signature: refuse
-			return `${logPrefix} failed to validate signature: refuse`;
-		}
-
-		// all good, don't refuse
-		return null;
+		return this.apRendererService.renderCreate(await this.apRendererService.renderNote(note, false), note);
 	}
 
 	@bindThis
@@ -290,7 +116,7 @@ export class ActivityPubServerService {
 
 		try {
 			signature = httpSignature.parseRequest(request.raw, { 'headers': ['(request-target)', 'host', 'date'], authorizationHeaderName: 'signature' });
-		} catch (e) {
+		} catch (_) {
 			reply.code(401);
 			return;
 		}
@@ -348,7 +174,17 @@ export class ActivityPubServerService {
 			}
 		}
 
-		this.queueService.inbox(request.body as IActivity, signature);
+		const body = request.body;
+
+		// Reject structurally invalid activities (e.g. missing actor) here instead
+		// of letting them fail deep inside the inbox processor. An actor-less
+		// activity can never be authenticated, so there is no point enqueueing it.
+		if (typeof body !== 'object' || body == null || !('actor' in body) || body.actor == null) {
+			reply.code(400);
+			return;
+		}
+
+		this.queueService.inbox(body as IActivity, signature);
 
 		reply.code(202);
 	}
@@ -363,9 +199,6 @@ export class ActivityPubServerService {
 			return;
 		}
 
-		const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.user);
-		if (reject) return;
-
 		const userId = request.params.user;
 
 		const cursor = request.query.cursor;
@@ -376,22 +209,26 @@ export class ActivityPubServerService {
 
 		const page = request.query.page === 'true';
 
-		const [user, profile] = await Promise.all([
-			this.cacheService.findOptionalUserById(userId),
-			this.cacheService.userProfileCache.fetchMaybe(userId),
-		]);
+		const user = await this.usersRepository.findOneBy({
+			id: userId,
+			host: IsNull(),
+		});
 
-		if (user == null || profile == null || !isLocalUser(user) || !this.utilityService.isActiveUser(user)) {
+		if (user == null) {
 			reply.code(404);
 			return;
 		}
 
 		//#region Check ff visibility
+		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+
 		if (profile.followersVisibility === 'private') {
 			reply.code(403);
+			reply.header('Cache-Control', 'public, max-age=30');
 			return;
 		} else if (profile.followersVisibility === 'followers') {
 			reply.code(403);
+			reply.header('Cache-Control', 'public, max-age=30');
 			return;
 		}
 		//#endregion
@@ -414,19 +251,13 @@ export class ActivityPubServerService {
 				where: query,
 				take: limit + 1,
 				order: { id: -1 },
-				select: { id: true, followerId: true },
 			});
 
 			// 「次のページ」があるかどうか
 			const inStock = followings.length === limit + 1;
 			if (inStock) followings.pop();
 
-			const followerIds = followings.map(f => f.followerId);
-			const followers = await this.cacheService.findUsersById(followerIds);
-			const renderedFollowers = followers
-				.values()
-				.map(follower => this.userEntityService.getUserUri(follower))
-				.toArray();
+			const renderedFollowers = await Promise.all(followings.map(following => this.apRendererService.renderFollowUser(following.followerId)));
 			const rendered = this.apRendererService.renderOrderedCollectionPage(
 				`${partOf}?${url.query({
 					page: 'true',
@@ -449,6 +280,7 @@ export class ActivityPubServerService {
 				user.followersCount,
 				`${partOf}?page=true`,
 			);
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(rendered));
 		}
@@ -464,9 +296,6 @@ export class ActivityPubServerService {
 			return;
 		}
 
-		const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.user);
-		if (reject) return;
-
 		const userId = request.params.user;
 
 		const cursor = request.query.cursor;
@@ -477,22 +306,26 @@ export class ActivityPubServerService {
 
 		const page = request.query.page === 'true';
 
-		const [user, profile] = await Promise.all([
-			this.cacheService.findOptionalUserById(userId),
-			this.cacheService.userProfileCache.fetchMaybe(userId),
-		]);
+		const user = await this.usersRepository.findOneBy({
+			id: userId,
+			host: IsNull(),
+		});
 
-		if (user == null || profile == null || !isLocalUser(user) || !this.utilityService.isActiveUser(user)) {
+		if (user == null) {
 			reply.code(404);
 			return;
 		}
 
 		//#region Check ff visibility
+		const profile = await this.userProfilesRepository.findOneByOrFail({ userId: user.id });
+
 		if (profile.followingVisibility === 'private') {
 			reply.code(403);
+			reply.header('Cache-Control', 'public, max-age=30');
 			return;
 		} else if (profile.followingVisibility === 'followers') {
 			reply.code(403);
+			reply.header('Cache-Control', 'public, max-age=30');
 			return;
 		}
 		//#endregion
@@ -515,19 +348,13 @@ export class ActivityPubServerService {
 				where: query,
 				take: limit + 1,
 				order: { id: -1 },
-				select: { id: true, followeeId: true },
 			});
 
 			// 「次のページ」があるかどうか
 			const inStock = followings.length === limit + 1;
 			if (inStock) followings.pop();
 
-			const followeeIds = followings.map(f => f.followeeId);
-			const followees = await this.cacheService.findUsersById(followeeIds);
-			const renderedFollowees = followees
-				.values()
-				.map(follower => this.userEntityService.getUserUri(follower))
-				.toArray();
+			const renderedFollowees = await Promise.all(followings.map(following => this.apRendererService.renderFollowUser(following.followeeId)));
 			const rendered = this.apRendererService.renderOrderedCollectionPage(
 				`${partOf}?${url.query({
 					page: 'true',
@@ -550,6 +377,7 @@ export class ActivityPubServerService {
 				user.followingCount,
 				`${partOf}?page=true`,
 			);
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(rendered));
 		}
@@ -562,32 +390,28 @@ export class ActivityPubServerService {
 			return;
 		}
 
-		const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.user);
-		if (reject) return;
-
 		const userId = request.params.user;
 
-		const [user, pinings] = await Promise.all([
-			this.cacheService.findOptionalUserById(userId),
+		const user = await this.usersRepository.findOneBy({
+			id: userId,
+			host: IsNull(),
+		});
 
-			// TODO cache this?
-			this.userNotePiningsRepository.find({
-				where: { userId },
-				order: { id: 'DESC' },
-				relations: { note: true },
-			}) as Promise<(MiUserNotePining & { note: MiNote })[]>,
-		]);
-
-		if (user == null || !isLocalUser(user) || !this.utilityService.isActiveUser(user)) {
+		if (user == null) {
 			reply.code(404);
 			return;
 		}
 
-		const pinnedNotes = pinings
-			.map(pin => pin.note)
-			.filter(note => !note.localOnly && ['public', 'home'].includes(note.visibility) && !isPureRenote(note));
+		const pinings = await this.userNotePiningsRepository.find({
+			where: { userId: user.id },
+			order: { id: 'DESC' },
+		});
 
-		const renderedNotes = await promiseMap(pinnedNotes, async note => await this.apRendererService.renderNote(note, user), { limiter: 4 });
+		const pinnedNotes = (await Promise.all(pinings.map(pining =>
+			this.notesRepository.findOneByOrFail({ id: pining.noteId }))))
+			.filter(note => !note.localOnly && ['public', 'home'].includes(note.visibility));
+
+		const renderedNotes = await Promise.all(pinnedNotes.map(note => this.apRendererService.renderNote(note)));
 
 		const rendered = this.apRendererService.renderOrderedCollection(
 			`${this.config.url}/users/${userId}/collections/featured`,
@@ -597,6 +421,7 @@ export class ActivityPubServerService {
 			renderedNotes,
 		);
 
+		reply.header('Cache-Control', 'public, max-age=180');
 		this.setResponseType(request, reply);
 		return (this.apRendererService.addContext(rendered));
 	}
@@ -613,9 +438,6 @@ export class ActivityPubServerService {
 			reply.code(403);
 			return;
 		}
-
-		const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.user);
-		if (reject) return;
 
 		const userId = request.params.user;
 
@@ -638,9 +460,12 @@ export class ActivityPubServerService {
 			return;
 		}
 
-		const user = await this.cacheService.findOptionalUserById(userId);
+		const user = await this.usersRepository.findOneBy({
+			id: userId,
+			host: IsNull(),
+		});
 
-		if (user == null || !isLocalUser(user) || !this.utilityService.isActiveUser(user)) {
+		if (user == null) {
 			reply.code(404);
 			return;
 		}
@@ -668,13 +493,23 @@ export class ActivityPubServerService {
 					return true;
 				},
 				dbFallback: async (untilId, sinceId, limit) => {
-					return await this.getUserNotesFromDb(sinceId, untilId, limit, user.id);
+					return await this.getUserNotesFromDb({
+						untilId,
+						sinceId,
+						limit,
+						userId: user.id,
+					});
 				},
-			}) : await this.getUserNotesFromDb(sinceId ?? null, untilId ?? null, limit, user.id);
+			}) : await this.getUserNotesFromDb({
+				untilId: untilId ?? null,
+				sinceId: sinceId ?? null,
+				limit,
+				userId: user.id,
+			});
 
 			if (sinceId) notes.reverse();
 
-			const activities = await promiseMap(notes, async note => await this.packActivity(note, user));
+			const activities = await Promise.all(notes.map(note => this.packActivity(note)));
 			const rendered = this.apRendererService.renderOrderedCollectionPage(
 				`${partOf}?${url.query({
 					page: 'true',
@@ -702,28 +537,39 @@ export class ActivityPubServerService {
 				`${partOf}?page=true`,
 				`${partOf}?page=true&since_id=000000000000000000000000`,
 			);
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(rendered));
 		}
 	}
 
 	@bindThis
-	private async getUserNotesFromDb(untilId: string | null, sinceId: string | null, limit: number, userId: MiUser['id']) {
-		return await this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), sinceId, untilId)
-			.andWhere('note.userId = :userId', { userId })
+	private async getUserNotesFromDb(ps: {
+		untilId: string | null,
+		sinceId: string | null,
+		limit: number,
+		userId: MiUser['id'],
+	}) {
+		return await this.queryService.makePaginationQuery(this.notesRepository.createQueryBuilder('note'), ps.sinceId, ps.untilId)
+			.andWhere('note.userId = :userId', { userId: ps.userId })
 			.andWhere(new Brackets(qb => {
 				qb
 					.where('note.visibility = \'public\'')
 					.orWhere('note.visibility = \'home\'');
 			}))
 			.andWhere('note.localOnly = FALSE')
-			.limit(limit)
+			.limit(ps.limit)
 			.getMany();
 	}
 
 	@bindThis
-	private async userInfo(request: FastifyRequest, reply: FastifyReply, user: MiUser | null | undefined, redact = false) {
-		if (user == null || !this.utilityService.isActiveUser(user)) {
+	private async userInfo(request: FastifyRequest, reply: FastifyReply, user: MiUser | null) {
+		if (this.meta.federation === 'none') {
+			reply.code(403);
+			return;
+		}
+
+		if (user == null) {
 			reply.code(404);
 			return;
 		}
@@ -738,12 +584,9 @@ export class ActivityPubServerService {
 			return;
 		}
 
+		reply.header('Cache-Control', 'public, max-age=180');
 		this.setResponseType(request, reply);
-
-		const person = redact
-			? await this.apRendererService.renderPersonRedacted(user as MiLocalUser)
-			: await this.apRendererService.renderPerson(user as MiLocalUser);
-		return this.apRendererService.addContext(person);
+		return (this.apRendererService.addContext(await this.apRendererService.renderPerson(user as MiLocalUser)));
 	}
 
 	@bindThis
@@ -796,17 +639,6 @@ export class ActivityPubServerService {
 			reply.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
 			reply.header('Access-Control-Allow-Origin', '*');
 			reply.header('Access-Control-Expose-Headers', 'Vary');
-
-			// Tell crawlers not to index AP endpoints.
-			// https://developers.google.com/search/docs/crawling-indexing/block-indexing
-			reply.header('X-Robots-Tag', 'noindex');
-
-			/* tell any caching proxy that they should not cache these
-				 responses: we wouldn't want the proxy to return a 403 to
-				 someone presenting a valid signature, or return a cached
-				 response body to someone we've blocked!
-			 */
-			reply.header('Cache-Control', 'private, max-age=0, must-revalidate');
 			done();
 		});
 
@@ -830,17 +662,7 @@ export class ActivityPubServerService {
 				localOnly: false,
 			});
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply, note?.userId);
-			if (reject) return;
-
 			if (note == null) {
-				reply.code(404);
-				return;
-			}
-
-			const user = await this.cacheService.findOptionalUserById(note.userId);
-
-			if (user == null || !this.utilityService.isActiveUser(user)) {
 				reply.code(404);
 				return;
 			}
@@ -855,14 +677,9 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			// Boosts don't federate directly - they should only be referenced as an activity
-			if (isPureRenote(note)) {
-				return 404;
-			}
-
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
-
-			return this.apRendererService.addContext(await this.apRendererService.renderNote(note, user, false));
+			return this.apRendererService.addContext(await this.apRendererService.renderNote(note, false));
 		});
 
 		// note activity
@@ -881,70 +698,14 @@ export class ActivityPubServerService {
 				localOnly: false,
 			});
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply, note?.userId);
-			if (reject) return;
-
 			if (note == null) {
 				reply.code(404);
 				return;
 			}
 
-			const user = await this.cacheService.findOptionalUserById(note.userId);
-
-			if (user == null || !this.utilityService.isActiveUser(user)) {
-				reply.code(404);
-				return;
-			}
-
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
-
-			return (this.apRendererService.addContext(await this.packActivity(note, user)));
-		});
-
-		// replies
-		fastify.get<{
-			Params: { note: string; };
-			Querystring: { page?: unknown; until_id?: unknown; };
-		}>('/notes/:note/replies', async (request, reply) => {
-			vary(reply.raw, 'Accept');
-			this.setResponseType(request, reply);
-
-			// Raw query to avoid fetching the while entity just to check access and get the user ID
-			const note = await this.notesRepository
-				.createQueryBuilder('note')
-				.andWhere({
-					id: request.params.note,
-					userHost: IsNull(),
-					visibility: In(['public', 'home']),
-					localOnly: false,
-				})
-				.select(['note.id', 'note.userId'])
-				.getRawOne<{ note_id: string, note_userId: string }>();
-
-			const { reject } = await this.checkAuthorizedFetch(request, reply, note?.note_userId);
-			if (reject) return;
-
-			if (note == null) {
-				reply.code(404);
-				return;
-			}
-
-			const untilId = request.query.until_id;
-			if (untilId != null && typeof(untilId) !== 'string') {
-				reply.code(400);
-				return;
-			}
-
-			// If page is unset, then we just provide the outer wrapper.
-			// This is because the spec doesn't allow the wrapper to contain both elements *and* pages.
-			// We could technically do it anyway, but that may break other instances.
-			if (request.query.page !== 'true') {
-				const collection = await this.apRendererService.renderRepliesCollection(note.note_id);
-				return this.apRendererService.addContext(collection);
-			}
-
-			const page = await this.apRendererService.renderRepliesCollectionPage(note.note_id, untilId ?? undefined);
-			return this.apRendererService.addContext(page);
+			return (this.apRendererService.addContext(await this.packActivity(note)));
 		});
 
 		// outbox
@@ -975,30 +736,31 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.user, true);
-			if (reject) return;
-
 			const userId = request.params.user;
-			const [user, keypair] = await Promise.all([
-				this.cacheService.findOptionalUserById(userId),
-				this.userKeypairService.getUserKeypairMaybe(userId),
-			]);
 
-			if (user == null || keypair == null || !isLocalUser(user) || !this.utilityService.isActiveUser(user)) {
+			const user = await this.usersRepository.findOneBy({
+				id: userId,
+				host: IsNull(),
+			});
+
+			if (user == null) {
 				reply.code(404);
 				return;
 			}
 
-			{
+			const keypair = await this.userKeypairService.getUserKeypair(user.id);
+
+			if (this.userEntityService.isLocalUser(user)) {
+				reply.header('Cache-Control', 'public, max-age=180');
 				this.setResponseType(request, reply);
 				return (this.apRendererService.addContext(this.apRendererService.renderKey(user, keypair)));
+			} else {
+				reply.code(400);
+				return;
 			}
 		});
 
 		fastify.get<{ Params: { user: string; } }>('/users/:user', { constraints: { apOrHtml: 'ap' } }, async (request, reply) => {
-			const { reject, redact } = await this.checkAuthorizedFetch(request, reply, request.params.user, true);
-			if (reject) return;
-
 			vary(reply.raw, 'Accept');
 
 			if (this.meta.federation === 'none') {
@@ -1007,9 +769,13 @@ export class ActivityPubServerService {
 			}
 
 			const userId = request.params.user;
-			const user = await this.cacheService.findOptionalUserById(userId);
 
-			return await this.userInfo(request, reply, user, redact);
+			const user = await this.usersRepository.findOneBy({
+				id: userId,
+				isSuspended: false,
+			});
+
+			return await this.userInfo(request, reply, user);
 		});
 
 		fastify.get<{ Params: { acct: string; } }>('/@:acct', { constraints: { apOrHtml: 'ap' } }, async (request, reply) => {
@@ -1020,12 +786,17 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const user = await this.cacheService.findOptionalUserByAcct(request.params.acct);
+			const acct = Acct.parse(request.params.acct);
+			// normalize acct host
+			if (this.utilityService.isSelfHost(acct.host)) acct.host = null;
 
-			const { reject, redact } = await this.checkAuthorizedFetch(request, reply, user?.id, true);
-			if (reject) return;
+			const user = await this.usersRepository.findOneBy({
+				usernameLower: acct.username.toLowerCase(),
+				host: acct.host ?? IsNull(),
+				isSuspended: false,
+			});
 
-			return await this.userInfo(request, reply, user, redact);
+			return await this.userInfo(request, reply, user);
 		});
 		//#endregion
 
@@ -1036,19 +807,19 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply);
-			if (reject) return;
-
-			const emojiKey = encodeEmojiKey({ name: request.params.emoji, host: null });
-			const emoji = await this.customEmojiService.emojisByKeyCache.fetchMaybe(emojiKey);
+			const emoji = await this.emojisRepository.findOneBy({
+				host: IsNull(),
+				name: request.params.emoji,
+			});
 
 			if (emoji == null || emoji.localOnly) {
 				reply.code(404);
 				return;
 			}
 
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
-			return (this.apRendererService.addContext(this.apRendererService.renderEmoji(emoji)));
+			return (this.apRendererService.addContext(await this.apRendererService.renderEmoji(emoji)));
 		});
 
 		// like
@@ -1059,9 +830,6 @@ export class ActivityPubServerService {
 			}
 
 			const reaction = await this.noteReactionsRepository.findOneBy({ id: request.params.like });
-
-			const { reject } = await this.checkAuthorizedFetch(request, reply, reaction?.userId);
-			if (reject) return;
 
 			if (reaction == null) {
 				reply.code(404);
@@ -1075,6 +843,7 @@ export class ActivityPubServerService {
 				return;
 			}
 
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(await this.apRendererService.renderLike(reaction, note)));
 		});
@@ -1086,15 +855,18 @@ export class ActivityPubServerService {
 				return;
 			}
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply, request.params.follower);
-			if (reject) return;
-
 			// This may be used before the follow is completed, so we do not
 			// check if the following exists.
 
 			const [follower, followee] = await Promise.all([
-				this.cacheService.findLocalUserById(request.params.follower),
-				this.cacheService.findRemoteUserById(request.params.followee),
+				this.usersRepository.findOneBy({
+					id: request.params.follower,
+					host: IsNull(),
+				}),
+				this.usersRepository.findOneBy({
+					id: request.params.followee,
+					host: Not(IsNull()),
+				}),
 			]) as [MiLocalUser | MiRemoteUser | null, MiLocalUser | MiRemoteUser | null];
 
 			if (follower == null || followee == null) {
@@ -1102,6 +874,7 @@ export class ActivityPubServerService {
 				return;
 			}
 
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(this.apRendererService.renderFollow(follower, followee)));
 		});
@@ -1120,17 +893,20 @@ export class ActivityPubServerService {
 				id: request.params.followRequestId,
 			});
 
-			const { reject } = await this.checkAuthorizedFetch(request, reply, followRequest?.followerId);
-			if (reject) return;
-
 			if (followRequest == null) {
 				reply.code(404);
 				return;
 			}
 
 			const [follower, followee] = await Promise.all([
-				this.cacheService.findLocalUserById(followRequest.followerId),
-				this.cacheService.findRemoteUserById(followRequest.followeeId),
+				this.usersRepository.findOneBy({
+					id: followRequest.followerId,
+					host: IsNull(),
+				}),
+				this.usersRepository.findOneBy({
+					id: followRequest.followeeId,
+					host: Not(IsNull()),
+				}),
 			]) as [MiLocalUser | MiRemoteUser | null, MiLocalUser | MiRemoteUser | null];
 
 			if (follower == null || followee == null) {
@@ -1138,21 +914,11 @@ export class ActivityPubServerService {
 				return;
 			}
 
+			reply.header('Cache-Control', 'public, max-age=180');
 			this.setResponseType(request, reply);
 			return (this.apRendererService.addContext(this.apRendererService.renderFollow(follower, followee)));
 		});
 
 		done();
-	}
-
-	private async getUnsignedFetchAllowance(userId: string | undefined) {
-		const user = userId ? await this.cacheService.findLocalUserById(userId) : null;
-
-		// User system value if there is no user, or if user has deferred the choice.
-		if (!user?.allowUnsignedFetch || user.allowUnsignedFetch === 'staff') {
-			return this.meta.allowUnsignedFetch;
-		}
-
-		return user.allowUnsignedFetch;
 	}
 }

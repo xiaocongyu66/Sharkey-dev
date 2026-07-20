@@ -54,7 +54,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<template #value>{{ info.requestIp }}</template>
 			</MkKeyValue>
 			<FormSection v-if="info.requestHeaders">
-				<template #label>Headers</template>
+				<template #label>{{ i18n.ts.headers }}</template>
 				<MkKeyValue v-for="(v, k) in info.requestHeaders" :key="k" class="_monospace">
 					<template #key>{{ k }}</template>
 					<template #value>{{ v }}</template>

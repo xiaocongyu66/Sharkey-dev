@@ -137,7 +137,7 @@ export const paramDef = {
 	type: 'object',
 	properties: {
 		userId: {
-			anyOf: [
+			oneOf: [
 				{ type: 'string', format: 'misskey:id' },
 				{
 					type: 'array',

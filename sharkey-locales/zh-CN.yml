@@ -1,745 +1,909 @@
----
-introMisskey: "欢迎！Sharkey 是一个开源的、去中心化的“微博客”服务。\n通过编写「帖文」来和大家分享你的以及你周围的事情吧！📡\n通过「回应」功能，可以让你快速地对大家的帖文表达反馈👍\n来探索新的世界吧！🚀"
-poweredByMisskeyDescription: "{name} 是开源平台 <b>Sharkey</b> 的服务器之一，它是基于 Misskey 的（称作「Misskey 实例」）。"
-renotedBy: "{user} 转发了"
-approvals: "批准"
-copyLinkRenote: "复制转贴链接"
-deleteAndEditConfirm: "要删除此帖并再次编辑吗？对此帖的所有回应、转发和回复也将被删除。"
-openRemoteProfile: "打开远程用户个人资料"
-trustedLinkUrlPatterns: "打开外部链接警告的忽略列表"
-trustedLinkUrlPatternsDescription: "用空格分割来创建「与」规则，或使用换行来创建「或」规则。使用斜杠把关键词括起来，就能创建一个正则表达式。如果你只写了域名，它会匹配所有子域名。"
-trustedDomainsList: "打开外部网站警告的忽略列表"
-trustedDomainsListDescription: "打开指向这些网站的链接时，不会显示警告。一行一个域名。"
-mutuals: "互相关注"
-isLocked: "锁推账户"
-isAdmin: "管理员"
-isBot: "机器人账号"
-open: "打开"
-emailDestination: "电子邮件地址"
-date: "日期"
-renote: "转发"
-unrenote: "移除转贴"
-renoteShift: "转发（按住 Shift 打开可见性菜单）"
-renoted: "已转发。"
-quoted: "已引用。"
-rmboost: "已移除转贴。"
-renotedToX: "已转发给 {name}"
-cantRenote: "这个帖子不能转发。"
-cantReRenote: "转贴不能再被转发。"
-inChannelRenote: "仅频道可见的转发"
-muted: "已静音"
-renoteMute: "静音转贴"
-renoteMuted: "转贴已静音"
-renoteUnmute: "取消对转贴的静音"
-muteNote: "静音帖子"
-unmuteNote: "取消静音帖子"
-userSaysSomethingInMutedNote: "{name} 在被静音的帖子中说了些什么"
-userSaysSomethingInMutedThread: "{name} 在被静音的帖子列表中说了些什么"
-silencedUserSaysSomething: "{name} 已经被 {host} 管理人员静音"
-silencedInstanceSaysSomething: "{name} 已经被 {host} 管理人员静音"
-userIsFlaggedAs: "{name} 被标记为：「{cw}」"
-noteIsFlaggedAs: "帖子被标记为：「{cw}」"
-instanceIsFlaggedAs: "{name} 被标记为：「{cw}」"
-markAsNSFW: "将该用户的所有媒体文件标记为 NSFW"
-markInstanceAsNSFW: "标记为 NSFW"
-nsfwConfirm: "你确定要将这个账号的所有媒体文件标记为 NSFW 吗？"
-unNsfwConfirm: "你确定要取消将这个账号的所有媒体文件标记为 NSFW 吗？"
-approveConfirm: "你确定要批准这个账号吗？"
-flagAsBotDescription: "如果此账户由程序控制，请启用此项。启用后，此标志可以帮助其他开发人员防止机器人之间产生无限互动的行为，并让 Sharkey 的内部系统将此账户识别为机器人。"
-flagSpeakAsCat: "像猫猫一样说话"
-flagSpeakAsCatDescription: "在猫猫模式下，你的帖子中的「na」会被替换为「nya」。如果这个选项不起作用，请检查「设置/时间线和帖子」下的「禁用像猫猫一样说话」"
-continueOnRemote: "转到所在服务器继续"
-chooseServerOnMisskeyHub: "从 Misskey Hub 选择服务器"
-mediaSilenceThisInstance: "隐藏此服务器的媒体文件"
-rejectReports: "拒绝来自这个服务器的举报"
-rejectQuotesInstance: "拒绝来自这个服务器的帖子引用"
-rejectQuotesRemoteUser: "拒绝来自这个这个用户的帖子引用"
-rejectQuotesLocalUser: "阻止来自这个用户的帖子引用"
-rejectQuotesConfirm: "你确定要拒绝帖子引用吗？"
-allowQuotesConfirm: "你确定要允许帖子引用吗？"
-silencedInstancesDescription: "设置要静音的服务器，以换行分隔。被静音的服务器内所有的账户将默认处于「静音」状态，仅能发送关注请求，并且在未关注状态下无法提及本地账户。被阻止的实例不受影响。"
-mediaSilencedInstances: "已隐藏媒体文件的服务器"
-mediaSilencedInstancesDescription: "设置要隐藏媒体文件的服务器，以换行分隔。被设置为隐藏媒体文件服务器内所有账号的文件均按照「敏感内容」处理，且将无法使用自定义表情符号。被阻止的实例不受影响。"
-intro: "Sharkey 的安装已经完成啦。请创建一个管理员账户。"
-blockedByBase: "这个服务器被隐式屏蔽，因为主域名被屏蔽。要取消对这个服务器的屏蔽，请先取消对于主域名的屏蔽。"
-silencedByBase: "这个服务器被隐式静音，因为主域名被静音。要取消对这个服务器的静音，请先取消对于主域名的静音。"
-mediaSilencedByBase: "这个服务器的媒体文件被隐式隐藏，因为主域名被隐藏了媒体文件。要取消对这个服务器的媒体文件隐藏，请先取消对于主域名的隐藏。"
-driveSearchbarPlaceholder: "搜索网盘"
-fileNotSelected: "未选择文件"
-pleaseSelect: "请选择"
-background: "背景图"
-antennaUsersDescription: "一行一个用户名。使用「*@instance.com」来指定一个服务器的所有用户"
-aboutMisskey: "关于 Sharkey"
-expandAllCws: "展开所有回复的内容"
-collapseAllCws: "折叠所有回复的内容"
-attachAsFileQuestion: "剪贴板内文本很长。你要将文本粘贴为一个文本文件，再附加到帖子吗？"
-signinOrContinueOnRemote: "若要继续，需要转到您的服务器来执行这个操作，或者在您尝试互动的服务器上注册或登录。"
-disableDrawer: "不显示抽屉菜单"
-showReactionsCount: "显示帖子的回应数"
-cornerRadius: "圆角边框"
-warnForMissingAltText: "当你忘记填写替代文本时发出警告"
-deeplFreeMode: "使用 DeepLX-JS（无须密钥）"
-deeplFreeModeDescription: "需要帮助？查看我们的文档来了解如何设置 DeepLX-JS。"
-useSoundOnlyWhenActive: "仅在 Sharkey 活跃时输出声音"
-scratchpadDescription: "AiScript 控制台为 AiScript 提供了实验环境。您可以编写代码与 Sharkey 交互，运行并查看结果。"
-deleteAllFilesQueued: "删除所有队列中的文件"
-systemAccountTitle: "这是一个系统账户"
-systemAccountDescription: "这个账户由系统自动创建和管理，不能登录。"
-postFiltered: "帖子被隐藏，因为触发了内容过滤"
-enableFaviconNotificationDot: "打开站点图标中的通知提醒圆点"
-verifyNotificationDotWorkingButton: "检查通知提醒圆点在你的服务器上是否可用"
-notificationDotNotWorking: "很抱歉，这个服务器暂时不支持通知提醒圆点功能。"
-notificationDotWorking: "该服务器上的通知提醒圆点工作正常。"
-notificationDotNotWorkingAdvice: "如果通知提醒圆点不正常，请询问管理员，让他们检查我们的文档 {link}"
-reportAbuseRenote: "举报转贴"
-forwardReport: "将该举报信息转发给远程服务器"
-forwardReportIsAnonymous: "在远程实例上显示的报告者将是匿名的系统账号，而不是您的账号。"
-abuseMarkAsResolved: "将举报标记为已解决"
-i18nInfoSharkey: "Sharkey 独有的变更在它自己的 {link} 中翻译。"
-renotesCount: "已发送的转贴数量"
-renotedCount: "已收到的转贴数量"
-showTickerOnReplies: "在回复中展示远程服务器横幅"
-disableCatSpeak: "禁用像猫猫一样说话"
-searchEngine: "查询 MFM 的搜索引擎"
-searchEngineOther: "其他"
-searchEngineCustomURIDescription: "自定义 URI 必须像这样填写「https://www.google.com/search?q=\\{query}」或「https://www.google.com/search?q=%s」。"
-searchEngineCusomURI: "自定义 URI"
-makeIndexable: "让公开帖子无法被索引"
-makeIndexableDescription: "拒绝帖子搜索索引你的公开帖子。"
-enableRss: "启用 RSS"
-enableRssDescription: "生成包含你的公开个人资料信息和公开帖子的 RSS 订阅。其他用户无须通过关注请求获得批准，也能通过 RSS 订阅。"
-sendErrorReportsDescription: "启用后，如果出现问题，可以与 Misskey 共享详细的错误信息，从而帮助提高软件的质量。\n错误信息包括操作系统版本、浏览器类型、行为历史记录等。"
-noInquiryUrlWarning: "尚未设置联络地址。"
-misskeyUpdated: "Sharkey 更新完成！"
-usernameInfo: "在服务器上唯一标识您的帐户的名称。您可以使用字母 (a ~ z, A ~ Z)、数字 (0 ~ 9) 和下划线 (_)。用户名以后不能更改。"
-approvalRequiredForSignup: "新用户需取得批准"
-voteConfirmMulti: "确定要投给「{choice}」吗？\n　确认后，你可以选择更多选项。"
-pendingUserApprovals: "有等待批准的用户。"
-approveAccount: "批准"
-denyAccount: "拒绝并删除"
-approved: "已批准"
-notApproved: "未批准"
-approvalStatus: "批准状态"
-numberOfReplies: "一个帖子列表中的回复数量"
-numberOfRepliesDescription: "增加这个数值后会展示更多回复。设置得太大会让回复变得拥挤不可读。"
-boostSettings: "转贴设置"
-showVisibilitySelectorOnBoost: "展示可见性选择菜单"
-showVisibilitySelectorOnBoostDescription: "启用后，点击转发按钮时会显示可见性选择菜单。如果禁用，会使用下方的默认可见性，而不会展示可见性选择菜单。"
-visibilityOnBoost: "默认转发可见性"
-defaultLike: "默认点赞表情符号"
-didYouLikeMisskey: "您喜欢 Sharkey 吗？"
-pleaseDonate: "Sharkey 是 {host} 所使用的免费软件。为了今后也能够维持 Sharkey 的开发，请在有余力的情况下进行捐助！"
-pleaseDonateInstance: "你也可以通过捐助你的服务器管理组，直接支持 {host}。"
-thisPostIsMissingAltTextCancel: "取消"
-thisPostIsMissingAltTextIgnore: "继续发帖"
-thisPostIsMissingAltText: "有一个文件缺少替代文本。请确保所有附件都添加了替代文本。"
-collapseRenotes: "折叠已阅读的转贴"
-collapseRenotesDescription: "折叠已转发过或已回应过的帖子的转贴"
-collapseNotesRepliedTo: "折叠回复过的帖子"
-collapseFiles: "折叠文件"
-clone: "复制"
-uncollapseCW: "展开帖子的内容警告 (CW)"
-expandLongNote: "总是展开长帖子"
-autoloadConversation: "回复时加载整个对话"
-approvalRequiredToRegister: "这个实例只允许提供注册理由的用户注册。"
-limitWidthOfReaction: "限制回应的最大宽度，并将其缩小显示。"
-oneko: "你的猫猫朋友 :3"
-renotesList: "转发列表"
-lookupConfirm: "确定查询？"
-openTagPageConfirm: "确定打开这个话题标签页面？"
-deleteThisAccountConfirm: "这会删除账户，这个操作无法撤销。确定继续吗？"
-specifyHost: "指定主机名"
-goToMisskey: "去往 Sharkey"
-enableAchievements: "启用成就"
-turnOffAchievements: "关闭这个选项会禁用成就系统"
-enableBotTrending: "允许机器人推送标签"
-turnOffBotTrending: "关闭这个选项会阻止机器人在趋势中推送标签"
-replies: "回复"
-renotes: "转发"
-clickToOpen: "点击打开帖子"
-showBots: "在时间线中包含机器人"
-showRenotes: "显示转帖"
-sourceCodeIsNotYetProvided: "源代码暂时不可用。请联系管理员来修复这个问题。"
-repositoryUrlDescription: "若源代码所在的仓库是公开的，请填入对应的 URL。若并未追加或者修改 Sharkey 的代码，请填入 https://activitypub.software/TransFem-org/Sharkey/."
-donation: "捐赠"
-donationUrl: "捐赠 URL"
-showBelowAvatar: "在头像下方显示"
-seasonalScreenEffect: "符合当前季节的画面效果"
-noDescription: "没有描述"
-sensitiveMediaRevealConfirm: "这个媒体文件可能是敏感内容。是否显示？"
-severAllFollowRelations: "切断所有关注联系"
-severAllFollowRelationsConfirm: "确定要切断所有关注联系吗？这是不可撤销的！操作后，会移除 {instanceName} 上的 {followingCount} 个「关注中」联系和 {followersCount} 个「关注者」联系！"
-severAllFollowRelationsQueued: "已将与 {host} 解除所有关注联系的任务加入队列。"
-pendingFollowRequests: "等待中的关注请求"
-undoFollowRequestConfirm: "你确定要取消关注请求吗？"
-showQuotes: "显示引用"
-showReplies: "显示回复"
-showNonPublicNotes: "显示非公开帖子"
-allowClickingNotifications: "允许点击弹出通知"
-pinnedOnly: "已置顶"
-blockingYou: "屏蔽了你"
-warnExternalUrl: "打开外部 URL 时显示警告"
-flash: "Flash"
-filesRemoved: "文件已移除"
-fileImported: "文件已导入"
-cannotLoadNote: "加载帖子失败"
-clickToUnsubscribe: "请点击「OK」来取消订阅公告电子邮件。"
-unsubscribeError: "取消订阅出了点问题。"
-_flash:
-  contentHidden: "Flash 内容已隐藏"
-  poweredByRuffle: "由 Ruffle 提供支持。"
-  arbitraryCodeExecutionWarning: 对二进制代码的执行，请保持谨慎！"
-  failedToLoad: "Flash 内容加载失败："
-  isLoading: "Flash 内容正在加载"
-  loadingRufflePlayer: "Ruffle 加载中"
-  loadingFlashFile: "加载 Flash 文件中"
-  cspError: "无法访问 raw.esm.sh，这意味着本服务器的内容安全策略 (CSP) 很可能已过期。请联系服务器管理员。"
-_delivery:
-  stop: "停止投递"
-  resume: "继续投递"
-_initialAccountSetting:
-  youCanContinueTutorial: "您可以继续了解 {name} (Sharkey) 的使用教程，也可以在此停止教程并立即开始使用它。"
-_initialTutorial:
-  _landing:
-    description: "在这里，您可以查看 Sharkey 的基本使用方法和功能。"
-  _note:
-    description: "在 Sharkey 上发表的文章称为「帖子」。帖子在时间线上按照时间顺序排列，并实时更新。"
-  _reaction:
-    letsTryReacting: "回应可以通过点击帖子中的「{reaction}」按钮来添加。试着给这个示例帖子添加一个回应！"
-    reactDone: "通过按下「{undo}」按钮，可以取消已经添加的回应。"
-  _timeline:
-    description1: "Sharkey 提供多种基于使用情况的时间线（根据服务器设定的策略，一些可能不可用）。"
-    bubble: "可以查看管理员们精选的已连接的服务器中的帖子。"
-  _postNote:
-    description1: "在 Sharkey 发布帖子时，您可以设置各种选项。发帖窗口看起来是这样的。"
-    _visibility:
-      home: "仅在首页时间线上发布。关注者、从个人资料页查看过来的用户、以及被转发后看到转贴的用户都可见。"
-      followers: "仅对关注者可见。只有您和您的关注者能看见这些帖子，并且除了您以外的任何人都无法转发。"
-  _done:
-    title: "恭喜您，已经完成了教程🎉"
-    description: "这里介绍的只是其中一小部分的功能。 要了解更多有关如何使用 Sharkey 的详细信息，请访问 {link}。"
-_timelineDescription:
-  bubble: "在精选 (Bubble) 时间线中，你可以看到服务器管理员们精选的已连接的服务器中的帖子。"
-_serverSettings:
-  sidebarLogoUrl: "图标 URL"
-  sidebarLogoDescription: "指定使用的高清图标，以替代低分辨率的图标，这样在动态宽度的情境下显示效果更佳。"
-  sidebarLogoUsageExample: "比如，在边栏中显示，以及在「关于」页面中对访客展示。"
-  inquiryUrl: "联络地址"
-  inquiryUrlDescription: "用来指定诸如向服务运营商咨询的论坛地址，或记载了运营商联系方式之类的网页地址。"
-  aboutInstance: "关于服务器"
-  aboutInstanceDescription: "更长的介绍文本，会展示在「服务器信息」页面，替代服务器描述。支持 HTML。"
-  deliverSuspendedSoftwareDescription: "可因安全漏洞之类的原因，停止向指定的服务器及服务器版本送信。版本信息由服务器提供，不保证可靠性。可使用 semver 范围来指定版本，但指定 >= 2024.3.1 将不包括如 2024.3.1-custom.0 等自定义版本，因此建议像 >= 2024.3.1-0 这样指定 prerelease 版本。指定为 * 会匹配任何名称或版本，即使服务器没有提供任何信息也会匹配上。你也可以提供一个正则表达式，比如 /^sharkey-/i 或 /^1-/"
+_mfm:
+  blur: 模糊
+  x2: 放大内容
+  tada: 动画（锵锵）
+  dummy: Sharkey 扩展了联邦宇宙的世界
+  foreground: 前景色
+  jellyDescription: 给内容一个果冻样式的动画。
+  plain: 纯文本
+  bounceDescription: 给内容一个弹跳的动画。
+  quoteDescription: 以引用方式展示内容。
+  followMouse: 跟随鼠标
+  small: 缩小
+  x3Description: 将内容放的更大。
+  background: 背景色
+  sparkleDescription: 给内容一个闪光粒子特效。
+  scaleDescription: 对内容应用指定倍数的放缩。
+  url: URL
+  spinDescription: 给内容一个旋转动画。
+  rotateDescription: 将内容旋转特定角度。
+  blockMath: 数学（公式块）
+  unixtime: Unix 时间
+  inlineCode: 代码（行内）
+  foregroundDescription: 改变文本的前景色。
+  search: 搜索
+  twitchDescription: 给内容一个非常强的颤抖效果。
+  rainbowDescription: 给内容附加一层彩虹变色滤镜。
+  borderDescription: 在内容边缘画出边框。
+  hashtagDescription: 你可以使用井号和文本来创建标签。
+  twitch: 动画（颤抖）
+  smallDescription: 将内容缩小。
+  bold: 粗体
+  cropDescription: 对内容进行裁剪。
+  shakeDescription: 给内容一个摇晃的动画。
+  blockCodeDescription: 在多行代码块中，展示语法高亮的（程序）代码。
+  bounce: 动画（弹性）
+  boldDescription: 通过加粗字母来高亮它们。
+  hashtag: 标签
+  shake: 动画（摇晃）
+  inlineMathDescription: 在行内展示数学公式 (KaTeX)
+  blurDescription: 为内容增加模糊效果。当光标悬浮在内容上时，模糊效果将暂时解除。
+  mentionDescription: 你可以用 @ 符号和一个用户名，来指定提及的用户
+  unixtimeDescription: 基于观察者当前的时区，展示一个时间戳。
+  mention: 提及
+  jump: 动画（跳动）
+  x2Description: 将内容放大。
+  tadaDescription: 给内容一个「锵锵！」样式的动画。
+  uncommonFeature: 这不是一个广泛传播的功能，它可能无法在其它的联邦宇宙应用程序上正常显示（包括其它 Misskey 分支）
+  position: 位置
+  blockCode: 代码（代码块）
+  inlineMath: 数学（行内）
+  linkDescription: 特定部分的文本可以作为 URL 来展示。
+  quote: 引用
+  font: 字体
+  flip: 翻转
+  x4Description: 将内容放大到难以置信的大小。
+  crop: 裁剪
+  fontDescription: 设置展示内容的字体。
+  centerDescription: 居中展示内容。
+  followMouseDescription: 内容会跟随鼠标。在手机上，用户点哪里，内容就会出现在哪里。
+  intro: MFM 是一种在 Misskey，Sharkey，Firefish，Akkoma 和其它更多地方使用的标记语言。在此处，你可以查看可用的 MFM 语法的列表。
+  backgroundDescription: 改变文本的背景色。
+  fade: 过渡
+  fadeDescription: 为文本提供淡入淡出效果。
+  jumpDescription: 给内容一个跳动的动画。
+  searchDescription: 展示一个包含已输入文本的搜索框。
+  jelly: 动画（果冻）
+  positionDescription: 给内容一个指定的偏移量，移动到另一个位置。
+  link: 链接
+  urlDescription: 可以展示 URL
+  x4: 巨无霸
+  blockMathDescription: 在公式块中展示数学公式 (KaTeX)
+  flipDescription: 水平或竖直翻转内容。
+  rotate: 旋转
+  x3: 非常大
+  border: 边框
+  inlineCodeDescription: 在行内，展示语法高亮的（程序）代码。
+  scale: 放缩
+  spin: 动画（旋转）
+  center: 居中
+  plainDescription: 这个 MFM 标记内部的所有文本，将不再作为 MFM 解析，而是视为纯文本。
+  emoji: 自定义表情符号
+  rainbow: 彩虹效果
+  emojiDescription: 通过使用冒号包住一个自定义表情符号的名称，可以展示自定义表情符号。
+  sparkle: 闪光
+unmuteNote: 取消静音帖子
+secretKey: 密钥
+isAdmin: 管理员
+_deck:
+  _columns:
+    following: 关注中
+bubbleTimelineMustBeEnabled: 注意：精选时间线默认隐藏，可以从「角色」页面开启它。
+_moderationLogTypes:
+  unSilenceUser: 将用户取消设置为静音
+  setRoot: 设定了根 (root) 用户
+  unNsfwUser: 将用户取消标记为 NSFW
+  removeRelay: 移除了一个中继
+  clearOwnerlessFiles: 清除了无主的网盘文件
+  clearUserFiles: 清除了一个用户的网盘文件
+  decline: 已拒绝
+  clearRemoteFiles: 清除了远程的网盘文件
+  setMandatoryCWForInstance: 为实例设置内容警告
+  rejectRemoteInstanceReports: 已拒绝来自该远程实例的举报
+  silenceUser: 将用户设置为静音
+  setMandatoryCWForNote: 为帖子设置内容警告
+  acceptRemoteInstanceReports: 已接受来自该远程实例的举报
+  createAccount: 创建了一个账户
+  severFollowRelations: 切断了与一个服务器的关注联系
+  rejectQuotesUser: 已阻止/拒绝来自该用户的帖子引用
+  restartMigration: 为一个用户重启了迁移
+  clearInstanceFiles: 清除了一个服务器的网盘文件
+  approve: 已批准
+  addRelay: 添加了一个中继
+  importCustomEmojis: 导入了自定义表情符号
+  allowQuotesUser: 已允许来自该用户的帖子引用
+  setMandatoryCW: 为用户设置内容警告
+  nsfwUser: 将用户标记为 NSFW
+  createPromo: 创建了一个宣传帖子
+  updateCustomEmojis: 更新了自定义表情符号
+_apiErrors:
+  AI_BAD_REQUEST: AI 服务拒绝了请求（HTTP 400 错误请求）。请检查模型名称与请求参数。
+  AI_PAYMENT_REQUIRED: AI 服务需要付费或额度不足（HTTP 402）。请检查账单/套餐余额。
+  AI_BAD_GATEWAY: AI 网关错误（HTTP 502 坏网关）。上游可能宕机或配置有误。
+  AI_ORIGIN_UNREACHABLE: 无法连接到 AI 源站（HTTP 522）。请检查网络、DNS、防火墙或服务商状态。
+  TRANSLATION_FAILED: 翻译失败，请稍后再试。
+  AI_NOT_CONFIGURED: AI 翻译未配置（缺少接口地址或 API 密钥）。
+  AI_AUTH_FAILED: AI 服务拒绝了 API 密钥（HTTP 401 未授权）。请检查后台配置的密钥。
+  AI_FORBIDDEN: AI 服务拒绝访问（HTTP 403 禁止）。请检查套餐、IP 白名单或模型权限。
+  AI_RATE_LIMITED: AI 服务请求过于频繁（HTTP 429）。请稍后再试。
+  AI_TIMEOUT: AI 翻译超时。请重试，或在后台调高超时时间。
+  AI_UPSTREAM_ERROR: AI 服务返回错误。请检查接口地址与模型名称。
+  AI_EMPTY_RESPONSE: AI 返回了空的翻译结果。
+  AI_SCOPE_DISABLED: 该场景的 AI 翻译已关闭。
+  CANNOT_TRANSLATE_INVISIBLE_NOTE: 无法翻译你不可见的帖子。
+  EMPTY_MESSAGE: 消息没有可翻译的文本。
+  title: 操作失败
+  generic: 出错了，请稍后重试。
+  network: 网络异常或服务器暂时不可用，请检查连接后重试。
+  aborted: 请求已取消。
+  NO_SUCH_USER: 找不到该用户。
+  USER_NOT_FOUND: 找不到该用户。
+  NO_SUCH_NOTE: 找不到该帖子。
+  NO_SUCH_FILE: 找不到该文件。
+  NO_SUCH_FOLDER: 找不到该文件夹。
+  NO_SUCH_ROOM: 找不到该群聊。
+  NO_SUCH_MESSAGE: 找不到该消息。
+  NO_SUCH_CHANNEL: 找不到该频道。
+  NO_SUCH_CLIP: 找不到该摘录。
+  NO_SUCH_LIST: 找不到该列表。
+  NO_SUCH_USER_LIST: 找不到该列表。
+  NO_SUCH_ANTENNA: 找不到该天线。
+  NO_SUCH_PAGE: 找不到该页面。
+  NO_SUCH_ROLE: 找不到该角色。
+  NO_SUCH_REPLY: 找不到回复目标。
+  ACCESS_DENIED: 访问被拒绝。
+  PERMISSION_DENIED: 没有权限执行此操作。
+  ROLE_PERMISSION_DENIED: 没有权限执行此操作。
+  CREDENTIAL_REQUIRED: 请先登录后再操作。
+  SIGNIN_REQUIRED: 请先登录后再操作。
+  RATE_LIMIT_EXCEEDED: 操作过于频繁，请稍后再试。
+  ROOM_RATE_LIMITED: 发言过快，请稍后再发。
+  ROOM_MUTED_ALL: 全体禁言中，无法发言。
+  INVALID_PARAM: 请求参数无效。
+  INTERNAL_ERROR: 服务器内部错误，请稍后重试。
+  CONTENT_REQUIRED: 请填写内容。
+  EMPTY_FILE: 不能上传空文件。
+  TOO_BIG_FILE: 文件过大。
+  UNEXPECTED_FILE_TYPE: 不支持的文件类型。
+  MAX_LENGTH: 内容过长。
+  YOU_HAVE_BEEN_BLOCKED: 你已被该用户屏蔽。
+  ALREADY_FOLLOWING: 已经关注了该用户。
+  ALREADY_FAVORITED: 已经收藏过了。
+  NOT_FOLLOWING: 你尚未关注该用户。
+  INCORRECT_PASSWORD: 密码不正确。
+  INCORRECT_TOTP: 两步验证码不正确。
+  UNAVAILABLE: 该功能暂不可用。
+  PROHIBITED_WORD: 内容包含禁止词，无法发布。
+  CONTAINS_PROHIBITED_WORDS: 内容包含禁止词，无法发布。
+  NOT_A_MEMBER: 你不是该群成员。
+  SEND_FAILED: 发送失败，请检查网络后重试。
+rawApDescription: 以原始形式呈现 ActivityPub 用户数据。这些字段是公开的，可被其它实例访问。
+change: 更改
+rawData: 原始数据
+_confirmPollEdit:
+  text: 编辑投票会导致其失去所有已经收到的投票
+  title: 你确定要编辑这个投票吗
+recaptchaFaq: reCAPTCHA FAQ
+background: 背景图
+schedulePostList: 定时发布帖子列表
+searchEngine: 查询 MFM 的搜索引擎
+userId: 用户 ID
+keepCwPrependRe: 启用（按原样复制内容警告，并在开头附加「RE:」）
+staffNotes: 管理组帖子
+boostSettings: 转贴设置
+approved: 已批准
+mandatoryCWDescription: 为这个用户的所有发帖增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。
+overrideRankDescription: 限制使用这个令牌访问的目标用户的角色权限（管理员，监察员或用户）。
+pleaseDonateInstance: 你也可以通过捐助你的服务器管理组，直接支持 {host}。
+approveConfirm: 你确定要批准这个账号吗？
+renoted: 已转发。
+isBot: 机器人账号
+newAccount: 新账户
+confirmRevokeSharedToken: 你确定要撤销这个访问令牌吗？{num} 个用户会失去共享访问权限。
+replies: 回复
+systemAccountTitle: 这是一个系统账户
+warnExternalUrl: 打开外部 URL 时显示警告
+nsfwConfirm: 你确定要将这个账号的所有媒体文件标记为 NSFW 吗？
+schedulePost: 定时发布帖子
+noInquiryUrlWarning: 尚未设置联络地址。
+rejectQuotesRemoteUser: 拒绝来自这个这个用户的帖子引用
+restartMigration: 重新启动账户迁移
+pollsOnLocal: '{name} 上的热门投票'
+ip: IP
+signupReason: 注册理由
+unsubscribeError: 取消订阅出了点问题。
 _accountMigration:
-  moveAccountDescription: "这个操作会让您迁移到新帐户。\n　・现有的关注者自动关注新帐户\n　・此帐户的所有关注者都将被删除\n　・您将无法再使用此帐户发帖。\n\n关注者迁移是自动的，但关注中迁移必须手动完成。请在迁移前在此帐户上导出关注列表，并在迁移后立即在目标帐户上执行导入。\n列表、屏蔽列表、禁止与我互动的列表也是如此，因此您必须手动迁移它。\n\n（此描述适用于服务器 Sharkey v13.12.0 或更高版本。其他 ActivityPub 软件（例如 Mastodon）的行为可能有所不同。）"
+  moveAccountDescription: '这个操作会让您迁移到新帐户。
+
+    　・现有的关注者自动关注新帐户
+
+    　・此帐户的所有关注者都将被删除
+
+    　・您将无法再使用此帐户发帖。
+
+
+    关注者迁移是自动的，但关注中迁移必须手动完成。请在迁移前在此帐户上导出关注列表，并在迁移后立即在目标帐户上执行导入。
+
+    列表、屏蔽列表、禁止与我互动的列表也是如此，因此您必须手动迁移它。
+
+
+    （此描述适用于服务器 Sharkey v13.12.0 或更高版本。其他 ActivityPub 软件（例如 Mastodon）的行为可能有所不同。）'
+reportAbuseRenote: 举报转贴
+wordMuteTestTest: 测试
+attributionDomains: 域名归属
+loginWithSharedAccessDescription: 通过共享访问权限，登录一个共享账户
+_role:
+  remoteDataWarning: 对于远程用户，条件判断可能不正确。
+  _options:
+    scheduleNoteMax: 最大可定时发布的帖子数量
+    canTrend: 是否能展示在推荐帖子/推荐用户列表中
+    canImportNotes: 是否可导入帖子
+    canUpdateBioMedia: 允许更新头像和横幅
+    canViewFederation: 是否能查看联合状态和远程实例的详细信息
+    btlAvailable: 是否可查看精选 (bubble) 时间线
+  selectTestUser: 选择一个用户来测试条件。
+  _condition:
+    isLocked: 锁推用户
+    remoteFollowingMoreThanOrEq: 关注了～或更多远程账户
+    isFromInstance: 来自特定实例
+    isFromInstanceHost: 主机名（大小写不敏感）
+    localFollowersLessThanOrEq: 有～或更少本地关注者
+    remoteFollowersMoreThanOrEq: 有～或更多远程关注者
+    fromBubbleInstance: 用户来自精选 (bubble) 服务器
+    isExplorable: 账户可被发现
+    remoteFollowingLessThanOrEq: 关注了～或更少远程账户
+    localFollowingLessThanOrEq: 关注了～或更少本地账户
+    localFollowingMoreThanOrEq: 关注了～或更多本地账户
+    isFromInstanceSubdomains: 匹配子域名
+    localFollowersMoreThanOrEq: 有～或更多本地关注者
+    remoteFollowersLessThanOrEq: 有～或更少远程关注者
+_aboutMisskey:
+  donate_sharkey: 赞助 Sharkey
+  testers: 测试人员
+  original: 原版 Misskey
+  thisIsModifiedVersion: '{name} 正在使用修改后的 Sharkey。'
+  translation: 翻译 Sharkey
+  about: Sharkey 是一个开源软件，基于由 syuilo 于 2014 年开发的 Misskey。
+  ourLovelySponsors: 我们的捐助支持者（感谢你们）
+  misskeyContributors: Misskey 贡献者
+  original_sharkey: 原版 Sharkey
+wellKnownResources: Well-known 资源
+_chartSeries:
+  received: 已接收
+  delivered: 已投递
+  stalled: 停滞
+  pubActive: 发布活跃
+  subActive: 订阅活跃
+  pubAndSub: 发布与订阅
+  pub: 发布
+  sub: 订阅
+  in: 接收
+  outSucc: 发出（成功）
+  outFail: 发出（失败）
+  combined: 合计
+  readWrite: 读写
+  write: 写入
+  read: 读取
+  withinWeek: 注册未满一周
+  withinMonth: 注册未满一月
+  withinYear: 注册未满一年
+  outsideWeek: 注册超过一周
+  outsideMonth: 注册超过一月
+  outsideYear: 注册超过一年
+  localInc: 本地 +
+  localDec: 本地 -
+  remoteInc: 远程 +
+  remoteDec: 远程 -
+  driveUsage: 网盘用量
+  driveFiles: 网盘文件
+  inc: 增加
+  dec: 减少
+  other: 其他
+flagSpeakAsCatDescription: 在猫猫模式下，你的帖子中的「na」会被替换为「nya」。如果这个选项不起作用，请检查「设置/时间线和帖子」下的「禁用像猫猫一样说话」
+denyAccount: 拒绝并删除
 _achievements:
   _types:
-    _notes1:
-      title: "初来乍到"
-      flavor: "祝您在 Sharkey 玩的愉快～"
-    _login1000:
-      flavor: "感谢您使用 Sharkey！"
-    _iLoveMisskey:
-      title: "I Love Sharkey"
-      description: "发布 \"I ❤ #Sharkey\" 帖子"
-      flavor: "感谢您使用 Sharkey ！ by 开发团队"
-    _client30min:
-      description: "启动客户端超过 30 分钟"
-    _client60min:
-      title: "Sharkey 重度依赖"
-      description: "启动客户端超过 60 分钟"
-    _brainDiver:
-      flavor: "Sharkey-Sharkey La-Tu-Ma"
     _tutorialCompleted:
-      title: "Sharkey 初学者课程 结业证书"
-_role:
-  _options:
-    btlAvailable: "是否可查看精选 (bubble) 时间线"
-    canImportNotes: "是否可导入帖子"
-    canUpdateBioMedia: "允许更新头像和横幅"
-    scheduleNoteMax: "最大可定时发布的帖子数量"
-    canTrend: "是否能展示在推荐帖子/推荐用户列表中"
-    canViewFederation: "是否能查看联合状态和远程实例的详细信息"
-  _condition:
-    isLocked: "锁推用户"
-    isExplorable: "账户可被发现"
-    isFromInstance: "来自特定实例"
-    isFromInstanceHost: "主机名（大小写不敏感）"
-    isFromInstanceSubdomains: "匹配子域名"
-    fromBubbleInstance: "用户来自精选 (bubble) 服务器"
-    localFollowersLessThanOrEq: "有～或更少本地关注者"
-    localFollowersMoreThanOrEq: "有～或更多本地关注者"
-    localFollowingLessThanOrEq: "关注了～或更少本地账户"
-    localFollowingMoreThanOrEq: "关注了～或更多本地账户"
-    remoteFollowersLessThanOrEq: "有～或更少远程关注者"
-    remoteFollowersMoreThanOrEq: "有～或更多远程关注者"
-    remoteFollowingLessThanOrEq: "关注了～或更少远程账户"
-    remoteFollowingMoreThanOrEq: "关注了～或更多远程账户"
-  remoteDataWarning: "对于远程用户，条件判断可能不正确。"
-  selectTestUser: "选择一个用户来测试条件。"
-_emailUnavailable:
-  banned: "该电子邮件地址已被禁用"
+      title: Sharkey 初学者课程 结业证书
+    _brainDiver:
+      flavor: Sharkey-Sharkey La-Tu-Ma
+    _client30min:
+      description: 启动客户端超过 30 分钟
+    _login1000:
+      flavor: 感谢您使用 Sharkey！
+    _iLoveMisskey:
+      title: I Love Sharkey
+      description: '发布 "I ❤ #Sharkey" 帖子'
+      flavor: 感谢您使用 Sharkey ！ by 开发团队
+    _notes1:
+      flavor: 祝您在 Sharkey 玩的愉快～
+      title: 初来乍到
+    _client60min:
+      description: 启动客户端超过 60 分钟
+      title: Sharkey 重度依赖
+allowQuotesConfirm: 你确定要允许帖子引用吗？
+wordMuteWarning: 所有敏感词都是*大小写敏感*的，并且会匹配任何子字符串（包括更长的词或名字的一部分）。你可以使用正则表达式，来更精确地控制。
+sharedAccessLogin: '{target} 通过共享访问权限登录了。'
+donationUrl: 捐赠 URL
+repositoryUrlDescription: 若源代码所在的仓库是公开的，请填入对应的 URL。若并未追加或者修改 Sharkey 的代码，请填入 https://activitypub.software/TransFem-org/Sharkey/.
+oneko: 你的猫猫朋友 :3
+adminPermissionsDescription: 拥有这个访问令牌的应用程序没有管理员权限，除了下方的功能。
+headers: 请求头
+accountMigratedAt: 已迁移于
+uncollapseCW: 展开帖子的内容警告 (CW)
+grantSharedAccessButton: 授予共享访问权限
+date: 日期
+localFollowing: 本地关注中
+wordMuteTestMatch: 匹配到的词：{words}
+renotes: 转发
+enableRss: 启用 RSS
+enableAchievements: 启用成就
+numberOfRepliesDescription: 增加这个数值后会展示更多回复。设置得太大会让回复变得拥挤不可读。
+renoteShift: 转发（按住 Shift 打开可见性菜单）
+_announcement:
+  confetti: 丢出五彩纸屑
+  onlyForRoles: 仅限指定角色
+  onlyForRolesChange: 修改角色限制
+  new: 新建
+  onlyForRolesRestricted: 仅对 {roles} 角色的成员展示
+  onlyForRolesUnrestricted: 对任何人展示
+  confettiDescription: 如果启用这个选项，查看该公告时，会展示一个五彩纸屑的效果。
+chooseServerOnMisskeyHub: 从 Misskey Hub 选择服务器
+renotedToX: 已转发给 {name}
+square: 方形
+remoteFollowers: 远程关注者
+cornerRadius: 圆角边框
+showTickerOnReplies: 在回复中展示远程服务器横幅
+sharedAccessGranted: 你有角色权限为 {rank} 的 {target} 的 {perms} 共享访问权限。
+inChannelRenote: 仅频道可见的转发
+pendingFollowRequests: 等待中的关注请求
+libreTranslateURL: LibreTranslate URL
+defaultCWPriority: 自动内容警告优先级
+alsoKnownAs: 账户别名
+totalFollowing: 总计关注中
+publicKey: 公钥
+authorizedFetchLegacyWarning: 配置中的属性「checkActivityPubGetSignature」已过时，由新的「受信任的拉取」设置取代。请从你的配置文件中移除它。
+expand: 展开
+horizontal: 横向
+collapseRenotesDescription: 折叠已转发过或已回应过的帖子的转贴
+_themeNames:
+  4eea646f-7afa-4645-83e9-83af0333cd37: 浅色（默认）
+  8050783a-7f63-445a-b270-36d0f6ba1677: 深色（默认）
+  6ed80faa-74f0-42c2-98e4-a64d9e138eab: 咖啡浅色
+  0ff48d43-aab3-46e7-ab12-8492110d2e2b: 杏子浅色
+  a58a0abb-ff8c-476a-8dec-0ad7837e7e96: 雨天浅色
+  1100673c-f902-4ccd-93aa-7cb88be56178: 植物浅色
+  6128c2a9-5c54-43fe-a47d-17942356470b: 鲜艳浅色
+  ac168876-f737-4074-a3fc-a370c732ef48: 樱桃浅色
+  213273e5-7d20-d5f0-6e36-1b6a4f67115c: 寿司浅色
+  e2c940b5-6e9a-4c03-b738-261c720c426d: U0 浅色
+  c503d768-7c70-4db2-a4e6-08264304bc8d: 柿子深色
+  080a01c5-377d-4fbb-88cc-6bb5d04977ea: 星空深色
+  32a637ef-b47a-4775-bb7b-bacbb823f865: 未来深色
+  504debaf-4912-6a4c-5059-1db08a76b737: 植物深色
+  02816013-8107-440f-877e-865083ffe194: 绿+青柠深色
+  dc489603-27b5-424a-9b25-1ff6aec9824a: 绿+橙深色
+  679b3b87-a4e9-4789-8696-b56c15cc33b0: 樱桃深色
+  66e7e5a9-cd43-42cd-837d-12f47841fa34: 冰蓝深色
+  7a5bc13b-df8f-4d44-8e94-4452f0c634bb: U0 深色
+  3cdfd635-4d5e-4d06-9ba3-20f123f0999b: Rosé Pine
+  919c91ac-c6fa-43dc-a423-3cc84fd67d7c: Rosé Pine 黎明
+popularUsersGlobal: 全局热门用户
+grantSharedAccessSuccess: 已授予共享访问权限
+approvalStatus: 批准状态
+collapseRenotes: 折叠已阅读的转贴
+accessTokenNameDescription: 用于描述该访问令牌作用的唯一名称
+wordMuteTestLabel: 测试规则
+autoloadConversation: 回复时加载整个对话
+_initialTutorial:
+  _done:
+    description: 这里介绍的只是其中一小部分的功能。 要了解更多有关如何使用 Sharkey 的详细信息，请访问 {link}。
+    title: 恭喜您，已经完成了教程🎉
+  _timeline:
+    description1: Sharkey 提供多种基于使用情况的时间线（根据服务器设定的策略，一些可能不可用）。
+    bubble: 可以查看管理员们精选的已连接的服务器中的帖子。
+  _reaction:
+    reactDone: 通过按下「{undo}」按钮，可以取消已经添加的回应。
+    letsTryReacting: 回应可以通过点击帖子中的「{reaction}」按钮来添加。试着给这个示例帖子添加一个回应！
+  _postNote:
+    description1: 在 Sharkey 发布帖子时，您可以设置各种选项。发帖窗口看起来是这样的。
+    _visibility:
+      followers: 仅对关注者可见。只有您和您的关注者能看见这些帖子，并且除了您以外的任何人都无法转发。
+      home: 仅在首页时间线上发布。关注者、从个人资料页查看过来的用户、以及被转发后看到转贴的用户都可见。
+  _landing:
+    description: 在这里，您可以查看 Sharkey 的基本使用方法和功能。
+  _note:
+    description: 在 Sharkey 上发表的文章称为「帖子」。帖子在时间线上按照时间顺序排列，并实时更新。
+libreTranslateTranslation: LibreTranslate 翻译
+trendingPollsDisabledLogIn: 请登录后查看热门投票。
 _signup:
-  approvalPending: "你的账户已创建，正在等待批准。"
-  reasonInfo: "请输入一个你想要加入这个服务器的原因。"
-_aboutMisskey:
-  about: "Sharkey 是一个开源软件，基于由 syuilo 于 2014 年开发的 Misskey。"
-  original: "原版 Misskey"
-  original_sharkey: "原版 Sharkey"
-  thisIsModifiedVersion: "{name} 正在使用修改后的 Sharkey。"
-  translation: "翻译 Sharkey"
-  donate_sharkey: "赞助 Sharkey"
-  testers: "测试人员"
-  misskeyContributors: "Misskey 贡献者"
-  ourLovelySponsors: "我们的捐助支持者（感谢你们）"
-_serverDisconnectedBehavior:
-  disabled: "禁用警告"
+  approvalPending: 你的账户已创建，正在等待批准。
+  reasonInfo: 请输入一个你想要加入这个服务器的原因。
+expandAllCws: 展开所有回复的内容
+mandatoryCWForInstanceDescription: 为这个实例的所有帖子增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。
+mediaSilencedByBase: 这个服务器的媒体文件被隐式隐藏，因为主域名被隐藏了媒体文件。要取消对这个服务器的媒体文件隐藏，请先取消对于主域名的隐藏。
+seasonalScreenEffect: 符合当前季节的画面效果
+scheduledNotes: 定时发布的帖子
+trendingPollsDisabled: 本服务器已禁用热门投票。
+collapse: 折叠
+cantRenote: 这个帖子不能转发。
+useSoundOnlyWhenActive: 仅在 Sharkey 活跃时输出声音
+addGrantee: 共享访问权限
+deleted: 已删除
+backgroundQueue: 后台队列
+_poll:
+  multiple: 多选
+sharedAccount: 共享账户
+trustedLinkUrlPatterns: 打开外部链接警告的忽略列表
 _channel:
-  allowRenoteToExternal: "允许频道外的转发和引用"
-_instanceMute:
-  instanceMuteDescription: "这会隐藏来自这些服务器的所有帖子和转贴，包括这些服务器上用户的回复。"
+  allowRenoteToExternal: 允许频道外的转发和引用
+popularUsersLocal: '{name} 上的热门用户'
+voteConfirmMulti: '确定要投给「{choice}」吗？
+
+  　确认后，你可以选择更多选项。'
+donation: 捐赠
+approveAccount: 批准
+severAllFollowRelationsQueued: 已将与 {host} 解除所有关注联系的任务加入队列。
+trustedDomainsList: 打开外部网站警告的忽略列表
+authorizedFetchSection: 受信任的拉取
+patternHidden: 模式隐藏
+enableProxyAccount: 启用代理账户。
+verified: 已认证
+previousRootUser: 先前的根用户
+severAllFollowRelations: 切断所有关注联系
+_emailUnavailable:
+  banned: 该电子邮件地址已被禁用
+lookupConfirm: 确定查询？
+pleaseSelect: 请选择
+renote: 转发
+defaultCWPriorityDescription: 当默认内容警告和「回复时维持隐藏内容」设定都打开时，选择一个操作。
+clickToOpen: 点击打开帖子
+_soundSettings:
+  driveFileDurationWarnDescription: 使用长音频可能会影响 Sharkey 的使用。即使这样也要继续吗？
+  driveFileError: 无法读取声音。确认你已经选择的是一个音频文件。
+renotedBy: '{user} 转发了'
+raw: Raw
+deeplFreeMode: 使用 DeepLX-JS（无须密钥）
+open: 打开
+quoted: 已引用。
+_flash:
+  cspError: 无法访问 raw.esm.sh，这意味着本服务器的内容安全策略 (CSP) 很可能已过期。请联系服务器管理员。
+  loadingFlashFile: 加载 Flash 文件中
+  poweredByRuffle: 由 Ruffle 提供支持。
+  isLoading: Flash 内容正在加载
+  arbitraryCodeExecutionWarning: 对二进制代码的执行，请保持谨慎！"
+  failedToLoad: Flash 内容加载失败：
+  loadingRufflePlayer: Ruffle 加载中
+  contentHidden: Flash 内容已隐藏
+antennaUsersDescription: 一行一个用户名。使用「*@instance.com」来指定一个服务器的所有用户
+enableAllRead: 启用所有只读权限
+_animatedMFM:
+  stop: 停止 MFM 动画
+  play: 播放 MFM 动画
+  _alert:
+    confirm: 打开动画
+    text: MFM 动画可能包含闪光和快速移动的文本或表情符号。
+writtenBy: 由 {user} 创作
+deliverQueue: 投递队列
 _theme:
   keys:
-    renote: "转发"
-_soundSettings:
-  driveFileDurationWarnDescription: "使用长音频可能会影响 Sharkey 的使用。即使这样也要继续吗？"
-  driveFileError: "无法读取声音。确认你已经选择的是一个音频文件。"
-_2fa:
-  moreDetailedGuideHere: "点击此处查看详细指南"
-_widgets:
-  search: "搜索"
-_poll:
-  multiple: "多选"
-_profile:
-  updateAvatar: "上传头像"
-  removeAvatar: "移除头像"
-  updateBanner: "更新横幅"
-  removeBanner: "移除横幅"
-  changeBackground: "修改背景"
-  updateBackground: "更新背景"
-  removeBackground: "移除背景"
-  listenbrainz: "ListenBrainz 用户名"
+    renote: 转发
+_noteSearch:
+  fileType: 文件类型
+  newestToOldest: 从新到旧排序
+  _fileType:
+    flash: Flash
+    audio: 音频
+    image: 图片
+    video: 视频
+    none: 无
+    module: 模块
+sharedAccessDescription: 此处列出的所有账户都可查看这个令牌，并且可使用令牌访问这个账户。
+i18nInfoSharkey: Sharkey 独有的变更在它自己的 {link} 中翻译。
+rejectReports: 拒绝来自这个服务器的举报
+_authorizedFetchValueDescription:
+  staff: 使用服务器管理员所推荐的「{value}」默认设置。
+  essential: 允许部分未签名的请求。考虑到较老的实例软件，只暴露最少必须的账户元数据来进行联合，对于「从不」和「总是」是一个折中的方案。
+  never: 阻止所有未签名的请求。增强隐私，提升屏蔽的效果，但是对于某些非常老的或者不常见的实例软件，可能产生兼容性问题。
+  always: 总是允许所有未签名的请求。可以提供与其它实例的最大兼容性，但是会影响隐私并弱化屏蔽的效果。
+searchEngineCustomURIDescription: 自定义 URI 必须像这样填写「https://www.google.com/search?q=\{query}」或「https://www.google.com/search?q=%s」。
+_followRequest:
+  sent: 已发送的请求
+  recieved: 已收到的请求
+_processErrors:
+  quoteUnavailable: 处理引用失败。这个帖子可能缺少上下文。
+  attachmentFailed: 一个或多个媒体附件加载失败，暂时无法显示。
+translationFailed: 翻译帖子失败。请稍后再试，或者联系管理员取得帮助。
+rolePeriod: 时间段
+disableCatSpeak: 禁用像猫猫一样说话
+noteIsFlaggedAs: 帖子被标记为：「{cw}」
+silenced: 已静音
+wordMuteTestNoMatch: 文本并未匹配到任何规则。
+rawInfoDescription: 以原始形式呈现的扩展用户数据。这些字段是私有的，只能被管理员查看。
+clone: 复制
+renotesList: 转发列表
+thisPostIsMissingAltText: 有一个文件缺少替代文本。请确保所有附件都添加了替代文本。
+rmboost: 已移除转贴。
+flagSpeakAsCat: 像猫猫一样说话
 _timelines:
-  bubble: "精选"
+  bubble: 精选
+mandatoryCWForNoteDescription: 为这个帖子增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。
+accountMigratedTo: 已迁移到
+defaultLike: 默认点赞表情符号
+attachAsFileQuestion: 剪贴板内文本很长。你要将文本粘贴为一个文本文件，再附加到帖子吗？
+_timelineDescription:
+  bubble: 在精选 (Bubble) 时间线中，你可以看到服务器管理员们精选的已连接的服务器中的帖子。
+makeIndexable: 让公开帖子无法被索引
+_urlPreviewSetting:
+  requireContentLength: 仅在能取得 Content-Length 时才生成预览
+  summaryProxyDescription2: 下面的参数将作为查询字符串发送至代理。代理侧如果不支持此设置，则它会被忽略。
+  summaryProxy: 用来生成预览的代理的终结点 (Endpoint)
+  summaryProxyDescription: 不使用 Sharkey 本体，而是通过 Summaly Proxy 生成预览。
+  timeoutDescription: 如果获取预览所用时间超过这个值，则不生成预览。
+confirmRevokeToken: 你确定要撤销这个访问令牌吗？
+_activity:
+  uniquePvUser: 独立访问（登录用户）
+  uniquePvVisitor: 独立访问（访客）
+  pvUser: 访问量（登录用户）
+  pvVisitor: 访问量（访客）
+  pvChartTitle: 独立 / 总访问量
+  followLocal: 关注（本地）
+  followRemote: 关注（远程）
+  followedLocal: 被关注（本地）
+  followedRemote: 被关注（远程）
+accessKey: 访问密钥
+notificationDotNotWorkingAdvice: 如果通知提醒圆点不正常，请询问管理员，让他们检查我们的文档 {link}
+renoteMuted: 转贴已静音
+_webhookSettings:
+  _systemEvents:
+    abuseReportResolved: 当举报已被解决
+  _events:
+    renote: 当被转发
+renoteUnmute: 取消对转贴的静音
+approvalRequiredForSignup: 新用户需取得批准
+pollsExpired: 最近截止的投票
+proAccount: 专业账户
+federation: 联邦
+sourceCodeIsNotYetProvided: 源代码暂时不可用。请联系管理员来修复这个问题。
+pendingUserApprovals: 有等待批准的用户。
+wordMuteTestDescription: 在此处输入一些文本，来测试你的文本规则。如果匹配到了目标文本，那么会展示在下面。
+signinOrContinueOnRemote: 若要继续，需要转到您的服务器来执行这个操作，或者在您尝试互动的服务器上注册或登录。
+inboxQueue: 收件队列
+showVisibilitySelectorOnBoostDescription: 启用后，点击转发按钮时会显示可见性选择菜单。如果禁用，会使用下方的默认可见性，而不会展示可见性选择菜单。
+noDescription: 没有描述
+_dataSaver:
+  _avatar:
+    description: 停止头像的动画。动画头像文件会比一般的头像大，因此可以进一步减少潜在的数据流量消耗。
+notVerified: 未认证
+remoteFollowing: 远程关注中
+thisPostIsMissingAltTextCancel: 取消
+translationTimeoutCaption: 翻译 API 请求的超时时长，以毫秒计算。
+deleteAndEditConfirm: 要删除此帖并再次编辑吗？对此帖的所有回应、转发和回复也将被删除。
+_defaultCWPriority:
+  parentDefault: 先继承再默认（使用继承的内容警告，然后将默认的内容警告添加到后面）
+  parent: 使用继承（使用继承来的内容警告，忽略默认的内容警告）
+  defaultParent: 先默认再继承（使用默认的内容警告，然后将继承的内容警告添加到后面）
+  default: 使用默认（使用默认的内容警告，忽略继承来的内容警告）
+chars: 字符
+thisPostIsMissingAltTextIgnore: 继续发帖
+reference: 参考
+fileNotSelected: 未选择文件
+renotesCount: 已发送的转贴数量
+robotsTxtDescription: 向此处增加内容，会覆盖 Sharkey 默认附带的 robots.txt。
+overrideRank: 限制角色权限
+form: 表单
+_widgets:
+  search: 搜索
+localFollowers: 本地关注者
+_instanceMute:
+  instanceMuteDescription: 这会隐藏来自这些服务器的所有帖子和转贴，包括这些服务器上用户的回复。
+sendErrorReportsDescription: '启用后，如果出现问题，可以与 Misskey 共享详细的错误信息，从而帮助提高软件的质量。
+
+  错误信息包括操作系统版本、浏览器类型、行为历史记录等。'
+permissions: 权限
+enableAllWrite: 启用所有写入权限
+showReactionsCount: 显示帖子的回应数
+warnForMissingAltText: 当你忘记填写替代文本时发出警告
+loginWithSharedAccess: 以共享访问权限登录
+userIsFlaggedAs: '{name} 被标记为：「{cw}」'
+abuseMarkAsResolved: 将举报标记为已解决
+collapseFiles: 折叠文件
+deeplFreeModeDescription: 需要帮助？查看我们的文档来了解如何设置 DeepLX-JS。
+authorizedFetchLabel: 允许未签名的 ActivityPub 请求：
+expandLongNote: 总是展开长帖子
+undoFollowRequestConfirm: 你确定要取消关注请求吗？
+permissionsDescription: 拥有这个访问令牌的应用程序无法访问 API，除了下方的功能。
+authorizedFetchDescription: 这个设置会影响来自远程请求的策略，即远程实例或用户在不认证身份的情况下，尝试访问你的内容时的处理方式。如果关闭，任何远程用户都能访问你的用户资料和帖子——那些被屏蔽或断开联合的也是如此。
+unNsfwConfirm: 你确定要取消将这个账号的所有媒体文件标记为 NSFW 吗？
+ipTip: 该 IP 地址首次使用的日期。
+rejectQuotesConfirm: 你确定要拒绝帖子引用吗？
+tokenHasNoPermissionsConfirm: 你确定你要创建一个访问令牌，但是不添加权限吗？
+friendlyCaptchaDocs: FriendlyCaptcha 文档
+mandatoryCWForNote: 强制内容警告
+rawUserDescription: 以原始形式打包的用户数据。这些字段的大部分都是公开的，可被所有用户查看。
+silencedInstanceSaysSomething: '{name} 已经被 {host} 管理人员静音'
+noteFooterLabel: 帖子控制
+postFiltered: 帖子被隐藏，因为触发了内容过滤
+forwardReport: 将该举报信息转发给远程服务器
+scratchpadDescription: AiScript 控制台为 AiScript 提供了实验环境。您可以编写代码与 Sharkey 交互，运行并查看结果。
+didYouLikeMisskey: 您喜欢 Sharkey 吗？
+openRemoteProfile: 打开远程用户个人资料
+instanceIconAlt: '{name} 的图标'
+_serverSettings:
+  aboutInstanceDescription: 更长的介绍文本，会展示在「服务器信息」页面，替代服务器描述。支持 HTML。
+  sidebarLogoUrl: 图标 URL
+  aboutInstance: 关于服务器
+  sidebarLogoDescription: 指定使用的高清图标，以替代低分辨率的图标，这样在动态宽度的情境下显示效果更佳。
+  deliverSuspendedSoftwareDescription: 可因安全漏洞之类的原因，停止向指定的服务器及服务器版本送信。版本信息由服务器提供，不保证可靠性。可使用 semver 范围来指定版本，但指定 >= 2024.3.1 将不包括如 2024.3.1-custom.0 等自定义版本，因此建议像 >= 2024.3.1-0 这样指定 prerelease 版本。指定为 * 会匹配任何名称或版本，即使服务器没有提供任何信息也会匹配上。你也可以提供一个正则表达式，比如 /^sharkey-/i 或 /^1-/
+  inquiryUrl: 联络地址
+  sidebarLogoUsageExample: 比如，在边栏中显示，以及在「关于」页面中对访客展示。
+  inquiryUrlDescription: 用来指定诸如向服务运营商咨询的论坛地址，或记载了运营商联系方式之类的网页地址。
+keepCwEnabled: 启用（按原样复制内容警告）
+poweredByMisskeyDescription: '{name} 是开源平台 <b>Sharkey</b> 的服务器之一，它是基于 Misskey 的（称作「Misskey 实例」）。'
+_2fa:
+  moreDetailedGuideHere: 点击此处查看详细指南
+grantSharedAccessNoSelection: 没有已添加的共享访问权限
+custom: 自定义
+misskeyUpdated: Sharkey 更新完成！
+showBots: 在时间线中包含机器人
+setRootUserWarning: 你现在已经是根 (root) 用户了；你可以把它交给别人。如果你想在这么做之后继续当管理员，你应该在移交<em>之前</em>，通过「角色」给自己添加管理员权限
+makeIndexableDescription: 拒绝帖子搜索索引你的公开帖子。
+_externalNavigationWarning:
+  title: 打开外部网站
+  trustThisDomain: 在本设备上永久信任该网站
+  description: 离开 {host}，然后打开外部网站
+enableRssDescription: 生成包含你的公开个人资料信息和公开帖子的 RSS 订阅。其他用户无须通过关注请求获得批准，也能通过 RSS 订阅。
+renoteMute: 静音转贴
+forwardReportIsAnonymous: 在远程实例上显示的报告者将是匿名的系统账号，而不是您的账号。
+unrenote: 移除转贴
+mandatoryCWForInstance: 强制内容警告
+origin: 来源
+flash: Flash
+translationTimeoutLabel: 翻译超时
+newAnnouncement: 新公告
+goToMisskey: 去往 Sharkey
+userSaysSomethingInMutedNote: '{name} 在被静音的帖子中说了些什么'
+trustedLinkUrlPatternsDescription: 用空格分割来创建「与」规则，或使用换行来创建「或」规则。使用斜杠把关键词括起来，就能创建一个正则表达式。如果你只写了域名，它会匹配所有子域名。
+showTranslationButtonInNoteFooter: 向帖子菜单中添加「翻译」按钮
+showReplies: 显示回复
+showVisibilitySelectorOnBoost: 展示可见性选择菜单
+lastPosted: 最后发帖：{at}
+deepLXJSURL: DeepLX-JS URL
+grantSharedAccessSuccess2: 已对 {num} 个用户授予共享访问权限。
+blockingYou: 屏蔽了你
+severAllFollowRelationsConfirm: 确定要切断所有关注联系吗？这是不可撤销的！操作后，会移除 {instanceName} 上的 {followingCount} 个「关注中」联系和 {followersCount} 个「关注者」联系！
+muteNote: 静音帖子
+clickToUnsubscribe: 请点击「OK」来取消订阅公告电子邮件。
+pollsOnRemote: 全局热门投票
+showQuotes: 显示引用
+mediaSilencedInstancesDescription: 设置要隐藏媒体文件的服务器，以换行分隔。被设置为隐藏媒体文件服务器内所有账号的文件均按照「敏感内容」处理，且将无法使用自定义表情符号。被阻止的实例不受影响。
 _pages:
   blocks:
-    dynamicDescription: "这个内容块类型已经被移除。以后请使用 {play}。"
-_notification:
-  youRenoted: "来自 {name} 的转发"
-  renotedBySomeUsers: "{n} 人转发了"
-  edited: "帖子已编辑"
-  scheduledNoteFailed: "发送定时帖子失败"
-  scheduledNotePosted: "已发送定时帖子"
-  importOfXCompleted: "{x} 的导入已经完成"
-  sharedAccessGranted: "共享访问权限已创建"
-  sharedAccessRevoked: "共享访问权限已撤销"
-  sharedAccessLogin: "来自共享访问的登录"
-  _types:
-    renote: "转发"
-    edited: "编辑"
-    scheduledNoteFailed: "发送定时帖子失败"
-    scheduledNotePosted: "已发送定时帖子"
-    importCompleted: "导入完成"
-  _actions:
-    renote: "转发"
-_webhookSettings:
-  _events:
-    renote: "当被转发"
-  _systemEvents:
-    abuseReportResolved: "当举报已被解决"
+    dynamicDescription: 这个内容块类型已经被移除。以后请使用 {play}。
+cw: CW
+fluentEmoji: Fluent Emoji
 _abuseReport:
   _notificationRecipient:
     _recipientType:
       _captions:
-        mail: "当收到举报时，向管理组发送电子邮件。"
-        webhook: "当收到或解决举报时，向 SystemWebhook 发送通知。"
-_moderationLogTypes:
-  approve: "已批准"
-  decline: "已拒绝"
-  setMandatoryCW: "为用户设置内容警告"
-  setMandatoryCWForNote: "为帖子设置内容警告"
-  setMandatoryCWForInstance: "为实例设置内容警告"
-  rejectRemoteInstanceReports: "已拒绝来自该远程实例的举报"
-  acceptRemoteInstanceReports: "已接受来自该远程实例的举报"
-  rejectQuotesUser: "已阻止/拒绝来自该用户的帖子引用"
-  allowQuotesUser: "已允许来自该用户的帖子引用"
-  clearUserFiles: "清除了一个用户的网盘文件"
-  nsfwUser: "将用户标记为 NSFW"
-  unNsfwUser: "将用户取消标记为 NSFW"
-  silenceUser: "将用户设置为静音"
-  unSilenceUser: "将用户取消设置为静音"
-  createAccount: "创建了一个账户"
-  clearRemoteFiles: "清除了远程的网盘文件"
-  clearOwnerlessFiles: "清除了无主的网盘文件"
-  updateCustomEmojis: "更新了自定义表情符号"
-  importCustomEmojis: "导入了自定义表情符号"
-  clearInstanceFiles: "清除了一个服务器的网盘文件"
-  severFollowRelations: "切断了与一个服务器的关注联系"
-  createPromo: "创建了一个宣传帖子"
-  addRelay: "添加了一个中继"
-  removeRelay: "移除了一个中继"
-  restartMigration: "为一个用户重启了迁移"
-  setRoot: "设定了根 (root) 用户"
-
-_mfm:
-  uncommonFeature: "这不是一个广泛传播的功能，它可能无法在其它的联邦宇宙应用程序上正常显示（包括其它 Misskey 分支）"
-  intro: "MFM 是一种在 Misskey，Sharkey，Firefish，Akkoma 和其它更多地方使用的标记语言。在此处，你可以查看可用的 MFM 语法的列表。"
-  dummy: "Sharkey 扩展了联邦宇宙的世界"
-  mention: "提及"
-  mentionDescription: "你可以用 @ 符号和一个用户名，来指定提及的用户"
-  hashtag: "标签"
-  hashtagDescription: "你可以使用井号和文本来创建标签。"
-  url: "URL"
-  urlDescription: "可以展示 URL"
-  link: "链接"
-  linkDescription: "特定部分的文本可以作为 URL 来展示。"
-  bold: "粗体"
-  boldDescription: "通过加粗字母来高亮它们。"
-  small: "缩小"
-  smallDescription: "将内容缩小。"
-  center: "居中"
-  centerDescription: "居中展示内容。"
-  unixtime: "Unix 时间"
-  unixtimeDescription: "基于观察者当前的时区，展示一个时间戳。"
-  inlineCode: "代码（行内）"
-  inlineCodeDescription: "在行内，展示语法高亮的（程序）代码。"
-  blockCode: "代码（代码块）"
-  blockCodeDescription: "在多行代码块中，展示语法高亮的（程序）代码。"
-  inlineMath: "数学（行内）"
-  inlineMathDescription: "在行内展示数学公式 (KaTeX)"
-  blockMath: "数学（公式块）"
-  blockMathDescription: "在公式块中展示数学公式 (KaTeX)"
-  quote: "引用"
-  quoteDescription: "以引用方式展示内容。"
-  emoji: "自定义表情符号"
-  emojiDescription: "通过使用冒号包住一个自定义表情符号的名称，可以展示自定义表情符号。"
-  search: "搜索"
-  searchDescription: "展示一个包含已输入文本的搜索框。"
-  flip: "翻转"
-  flipDescription: "水平或竖直翻转内容。"
-  jelly: "动画（果冻）"
-  jellyDescription: "给内容一个果冻样式的动画。"
-  tada: "动画（锵锵）"
-  tadaDescription: "给内容一个「锵锵！」样式的动画。"
-  jump: "动画（跳动）"
-  jumpDescription: "给内容一个跳动的动画。"
-  bounce: "动画（弹性）"
-  bounceDescription: "给内容一个弹跳的动画。"
-  shake: "动画（摇晃）"
-  shakeDescription: "给内容一个摇晃的动画。"
-  twitch: "动画（颤抖）"
-  twitchDescription: "给内容一个非常强的颤抖效果。"
-  spin: "动画（旋转）"
-  spinDescription: "给内容一个旋转动画。"
-  x2: "放大内容"
-  x2Description: "将内容放大。"
-  x3: "非常大"
-  x3Description: "将内容放的更大。"
-  x4: "巨无霸"
-  x4Description: "将内容放大到难以置信的大小。"
-  blur: "模糊"
-  blurDescription: "为内容增加模糊效果。当光标悬浮在内容上时，模糊效果将暂时解除。"
-  font: "字体"
-  fontDescription: "设置展示内容的字体。"
-  rainbow: "彩虹效果"
-  rainbowDescription: "给内容附加一层彩虹变色滤镜。"
-  sparkle: "闪光"
-  sparkleDescription: "给内容一个闪光粒子特效。"
-  rotate: "旋转"
-  rotateDescription: "将内容旋转特定角度。"
-  position: "位置"
-  positionDescription: "给内容一个指定的偏移量，移动到另一个位置。"
-  crop: "裁剪"
-  cropDescription: "对内容进行裁剪。"
-  followMouse: "跟随鼠标"
-  followMouseDescription: "内容会跟随鼠标。在手机上，用户点哪里，内容就会出现在哪里。"
-  scale: "放缩"
-  scaleDescription: "对内容应用指定倍数的放缩。"
-  foreground: "前景色"
-  foregroundDescription: "改变文本的前景色。"
-  fade: '过渡'
-  fadeDescription: '为文本提供淡入淡出效果。'
-  background: "背景色"
-  backgroundDescription: "改变文本的背景色。"
-  border: "边框"
-  borderDescription: "在内容边缘画出边框。"
-  plain: "纯文本"
-  plainDescription: "这个 MFM 标记内部的所有文本，将不再作为 MFM 解析，而是视为纯文本。"
-_animatedMFM:
-  play: "播放 MFM 动画"
-  stop: "停止 MFM 动画"
-  _alert:
-    text: "MFM 动画可能包含闪光和快速移动的文本或表情符号。"
-    confirm: "打开动画"
-_dataRequest:
-  title: "请求数据"
-  warn: "数据导出请求每三天只能发送一次。"
-  text: "一旦数据准备好可以下载，您用于注册的电子邮件地址将收到一封电子邮件。"
-  button: "请求数据"
-_dataSaver:
-  _avatar:
-    description: "停止头像的动画。动画头像文件会比一般的头像大，因此可以进一步减少潜在的数据流量消耗。"
-_urlPreviewSetting:
-  timeoutDescription: "如果获取预览所用时间超过这个值，则不生成预览。"
-  requireContentLength: "仅在能取得 Content-Length 时才生成预览"
-  summaryProxy: "用来生成预览的代理的终结点 (Endpoint)"
-  summaryProxyDescription: "不使用 Sharkey 本体，而是通过 Summaly Proxy 生成预览。"
-  summaryProxyDescription2: "下面的参数将作为查询字符串发送至代理。代理侧如果不支持此设置，则它会被忽略。"
-_externalNavigationWarning:
-  title: "打开外部网站"
-  description: "离开 {host}，然后打开外部网站"
-  trustThisDomain: "在本设备上永久信任该网站"
-
-remoteFollowersWarning: "远程用户的活动记录可能不完整或已过时"
-
-_auth:
-  allowed: "已允许"
-_announcement:
-  new: "新建"
-  onlyForRoles: "仅限指定角色"
-  onlyForRolesChange: "修改角色限制"
-  onlyForRolesUnrestricted: "对任何人展示"
-  onlyForRolesRestricted: "仅对 {roles} 角色的成员展示"
-  confetti: "丢出五彩纸屑"
-  confettiDescription: "如果启用这个选项，查看该公告时，会展示一个五彩纸屑的效果。"
-_deck:
-  _columns:
-    following: "关注中"
-
-selectFollowRelationship: "选择一个关注关系……"
-
-schedulePost: "定时发布帖子"
-schedulePostList: "定时发布帖子列表"
-postOn: "在何时发出"
-scheduledNotes: "定时发布的帖子"
-
-_permissions:
-  "write:admin:approve-user": "批准新用户申请"
-  "write:admin:decline-user": "拒绝新用户申请"
-  "write:admin:nsfw-user": "将用户标记为 NSFW"
-  "write:admin:unnsfw-user": "取消将用户标记为 NSFW"
-  "write:admin:cw-user": "对用户增加强制内容警告"
-  "write:admin:cw-note": "对帖子增加强制内容警告"
-  "write:admin:cw-instance": "对服务器增加强制内容警告"
-  "write:admin:silence-user": "静音用户"
-  "write:admin:unsilence-user": "取消静音用户"
-  "write:admin:reject-quotes": "允许/拒绝来自某个用户的贴文引用"
-  "read:notes-schedule": "查看定时发布的帖子列表"
-  "write:notes-schedule": "创建或删除定时帖子"
-  "read:admin:abuse-report:notification-recipient": "读取接收举报通知的用户"
-  "write:admin:abuse-report:notification-recipient": "修改接收举报通知的用户"
-
-robotsTxt: "自定义 robots.txt"
-robotsTxtDescription: "向此处增加内容，会覆盖 Sharkey 默认附带的 robots.txt。"
-
-defaultCW: "新帖子的默认内容警告"
-defaultCWDescription: "此处的内容会作为内容警告，自动附加到所有新的贴文和回复。"
-defaultCWPriority: "自动内容警告优先级"
-defaultCWPriorityDescription: "当默认内容警告和「回复时维持隐藏内容」设定都打开时，选择一个操作。"
-_defaultCWPriority:
-  default: "使用默认（使用默认的内容警告，忽略继承来的内容警告）"
-  parent: "使用继承（使用继承来的内容警告，忽略默认的内容警告）"
-  defaultParent: "先默认再继承（使用默认的内容警告，然后将继承的内容警告添加到后面）"
-  parentDefault: "先继承再默认（使用继承的内容警告，然后将默认的内容警告添加到后面）"
-
-genKeys: "生成密钥"
-_genKeysDialog:
-  text: "你确定要生成新的密钥吗？对于已经启用的用户来说，推送通知会停止。"
-  title: "生成新的密钥"
-
-_noteSearch:
-  newestToOldest: "从新到旧排序"
-  fileType: "文件类型"
-  _fileType:
-    none: "无"
-    image: "图片"
-    video: "视频"
-    audio: "音频"
-    module: "模块"
-    flash: "Flash"
-
-id: "ID"
-
-mandatoryCW: "强制内容警告"
-mandatoryCWDescription: "为这个用户的所有发帖增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。"
-mandatoryCWForNote: "强制内容警告"
-mandatoryCWForNoteDescription: "为这个帖子增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。"
-mandatoryCWForInstance: "强制内容警告"
-mandatoryCWForInstanceDescription: "为这个实例的所有帖子增加一个内容警告。强制的内容警告会像「敏感词」一样呈现，来将它们和作者自己的内容警告区别开。"
-fetchLinkedNote: "拉取链接到的帖子"
-showTranslationButtonInNoteFooter: "向帖子菜单中添加「翻译」按钮"
-translationFailed: "翻译帖子失败。请稍后再试，或者联系管理员取得帮助。"
-
-_processErrors:
-  quoteUnavailable: "处理引用失败。这个帖子可能缺少上下文。"
-  attachmentFailed: "一个或多个媒体附件加载失败，暂时无法显示。"
-
-authorizedFetchSection: "受信任的拉取"
-authorizedFetchLabel: "允许未签名的 ActivityPub 请求："
-authorizedFetchDescription: "这个设置会影响来自远程请求的策略，即远程实例或用户在不认证身份的情况下，尝试访问你的内容时的处理方式。如果关闭，任何远程用户都能访问你的用户资料和帖子——那些被屏蔽或断开联合的也是如此。"
+        mail: 当收到举报时，向管理组发送电子邮件。
+        webhook: 当收到或解决举报时，向 SystemWebhook 发送通知。
+restartMigrationDescription: 最近一次账户迁移尝试于 {date}。如果迁移失败或者数据不完整，你可以点击这个按钮来重启迁移。
+followingPub: 关注中 (Pub)
+keepCwDescription: 当回应一个包含内容警告 (CW) 的帖子时，自动在回复中使用相同的内容警告。
+genKeys: 生成密钥
+updateRemoteUser: 更新远程用户信息
+mediaSilenced: 已隐藏媒体文件
+disableDrawer: 不显示抽屉菜单
+collapseNotesRepliedTo: 折叠回复过的帖子
+latestStatus: 最新状态
+continueOnRemote: 转到所在服务器继续
+sensitiveMediaRevealConfirm: 这个媒体文件可能是敏感内容。是否显示？
 _authorizedFetchValue:
-  never: "从不"
-  always: "总是"
-  essential: "仅允许必要的元数据"
-  staff: "使用管理员推荐设置"
-_authorizedFetchValueDescription:
-  never: "阻止所有未签名的请求。增强隐私，提升屏蔽的效果，但是对于某些非常老的或者不常见的实例软件，可能产生兼容性问题。"
-  always: "总是允许所有未签名的请求。可以提供与其它实例的最大兼容性，但是会影响隐私并弱化屏蔽的效果。"
-  essential: "允许部分未签名的请求。考虑到较老的实例软件，只暴露最少必须的账户元数据来进行联合，对于「从不」和「总是」是一个折中的方案。"
-  staff: "使用服务器管理员所推荐的「{value}」默认设置。"
-authorizedFetchLegacyWarning: "配置中的属性「checkActivityPubGetSignature」已过时，由新的「受信任的拉取」设置取代。请从你的配置文件中移除它。"
-
-_followRequest:
-  recieved: "已收到的请求"
-  sent: "已发送的请求"
-
-deleted: "已删除"
-
-enableProxyAccount: "启用代理账户。"
-enableProxyAccountDescription: "如果禁用，代理账户将不会被使用。用户列表仅会包含来自本地或关注中的用户的帖子。"
-
-_confirmPollEdit:
-  title: 你确定要编辑这个投票吗
-  text: 编辑投票会导致其失去所有已经收到的投票
-
-wordMuteTestLabel: "测试规则"
-wordMuteTestDescription: "在此处输入一些文本，来测试你的文本规则。如果匹配到了目标文本，那么会展示在下面。"
-wordMuteTestTest: "测试"
-wordMuteTestMatch: "匹配到的词：{words}"
-wordMuteTestNoResults: "暂时没有结果。输入一些文本然后点击「测试」来检查它。"
-wordMuteTestNoMatch: "文本并未匹配到任何规则。"
-wordMuteWarning: "所有敏感词都是*大小写敏感*的，并且会匹配任何子字符串（包括更长的词或名字的一部分）。你可以使用正则表达式，来更精确地控制。"
-
-bubbleTimeline: "精选 (Bubble) 时间线"
-bubbleTimelineDescription: "选择这个时间线应该展示的服务器。"
-bubbleTimelineMustBeEnabled: "注意：精选时间线默认隐藏，可以从「角色」页面开启它。"
-
-popularUsersGlobal: "全局热门用户"
-popularUsersLocal: "{name} 上的热门用户"
-
-pollsOnLocal: "{name} 上的热门投票"
-pollsOnRemote: "全局热门投票"
-pollsExpired: "最近截止的投票"
-trendingPollsDisabled: "本服务器已禁用热门投票。"
-trendingPollsDisabledLogIn: "请登录后查看热门投票。"
-
-silenced: "已静音"
-totalFollowers: "总计关注者"
-totalFollowing: "总计关注中"
-localFollowers: "本地关注者"
-localFollowing: "本地关注中"
-remoteFollowers: "远程关注者"
-remoteFollowing: "远程关注中"
-updateRemoteUser: "更新远程用户信息"
-activityPub: "Activity Pub"
-ip: "IP"
-ipTip: "该 IP 地址首次使用的日期。"
-rolePeriod: "时间段"
-roleAssigned: "已分配"
-roleAutomatic: "自动角色"
-
-translationTimeoutLabel: "翻译超时"
-translationTimeoutCaption: "翻译 API 请求的超时时长，以毫秒计算。"
-
-staffNotes: "管理组帖子"
-instanceIconAlt: "{name} 的图标"
-
-attributionDomains: "域名归属"
-attributionDomainsDescription: "一个域名列表，当展示链接预览时，提示网站上的内容归属于你，用换行分隔。任何子域名也是如此。你的网页中应该包含以下内容："
-writtenBy: "由 {user} 创作"
-
-followingPub: "关注中 (Pub)"
-followersSub: "关注者 (Sub)"
-wellKnownResources: "Well-known 资源"
-lastPosted: "最后发帖：{at}"
-nsfw: "NSFW"
-raw: "Raw"
-cw: "CW"
-mediaSilenced: "已隐藏媒体文件"
-bubble: "精选 (Bubble)"
-verified: "已认证"
-notVerified: "未认证"
-hibernated: "已停用"
-
-keepCwDescription: "当回应一个包含内容警告 (CW) 的帖子时，自动在回复中使用相同的内容警告。"
-keepCwDisabled: "禁用（不复制内容警告）"
-keepCwEnabled: "启用（按原样复制内容警告）"
-keepCwPrependRe: "启用（按原样复制内容警告，并在开头附加「RE:」）"
-
-noteFooterLabel: "帖子控制"
-
-rawUserDescription: "以原始形式打包的用户数据。这些字段的大部分都是公开的，可被所有用户查看。"
-rawInfoDescription: "以原始形式呈现的扩展用户数据。这些字段是私有的，只能被管理员查看。"
-rawApDescription: "以原始形式呈现 ActivityPub 用户数据。这些字段是公开的，可被其它实例访问。"
-
-signupReason: "注册理由"
-
+  staff: 使用管理员推荐设置
+  essential: 仅允许必要的元数据
+  never: 从不
+  always: 总是
+visibilityOnBoost: 默认转发可见性
+totalFollowers: 总计关注者
+enableProxyAccountDescription: 如果禁用，代理账户将不会被使用。用户列表仅会包含来自本地或关注中的用户的帖子。
+_permissions:
+  write:admin:approve-user: 批准新用户申请
+  write:admin:cw-user: 对用户增加强制内容警告
+  write:notes-schedule: 创建或删除定时帖子
+  write:admin:decline-user: 拒绝新用户申请
+  write:admin:silence-user: 静音用户
+  write:admin:unsilence-user: 取消静音用户
+  write:admin:cw-note: 对帖子增加强制内容警告
+  write:admin:reject-quotes: 允许/拒绝来自某个用户的贴文引用
+  write:admin:abuse-report:notification-recipient: 修改接收举报通知的用户
+  read:admin:abuse-report:notification-recipient: 读取接收举报通知的用户
+  write:admin:unnsfw-user: 取消将用户标记为 NSFW
+  read:notes-schedule: 查看定时发布的帖子列表
+  write:admin:cw-instance: 对服务器增加强制内容警告
+  write:admin:nsfw-user: 将用户标记为 NSFW
+robotsTxt: 自定义 robots.txt
+cannotLoadNote: 加载帖子失败
+_customEmojisManagerLegacy:
+  selectMode: 选择模式
+  selectAll: 全选
+  setCategory: 设置分类
+  setTag: 设置标签
+  addTag: 添加标签
+  removeTag: 移除标签
+  setLicense: 设置许可信息
+newDecoration: 新装饰
+userSaysSomethingInMutedThread: '{name} 在被静音的帖子列表中说了些什么'
+silencedByBase: 这个服务器被隐式静音，因为主域名被静音。要取消对这个服务器的静音，请先取消对于主域名的静音。
+flagAsBotDescription: 如果此账户由程序控制，请启用此项。启用后，此标志可以帮助其他开发人员防止机器人之间产生无限互动的行为，并让 Sharkey 的内部系统将此账户识别为机器人。
+attributionDomainsDescription: 一个域名列表，当展示链接预览时，提示网站上的内容归属于你，用换行分隔。任何子域名也是如此。你的网页中应该包含以下内容：
+carefulBot: 来自机器人的关注请求需要批准
+mediaSilencedInstances: 已隐藏媒体文件的服务器
+testEmail: 测试邮件
+copyLinkRenote: 复制转贴链接
+roleAutomatic: 自动角色
 clearCachedFilesOptions:
-  title: "删除所有缓存的远程文件"
-  olderThan: "仅删除以下时间之前的文件："
-  now: "现在"
-  oneWeek: "一周"
-  oneMonth: "一个月"
-  oneYear: "一年"
-  keepFilesInUse: "不要删除用作头像的文件"
-  keepFilesInUseDescription: "这个操作需要更佳复杂的数据库请求，你可能需要在配置文件中，增大 db.extra.statement_timeout 的值"
+  keepFilesInUseDescription: 这个操作需要更佳复杂的数据库请求，你可能需要在配置文件中，增大 db.extra.statement_timeout 的值
+  now: 现在
+  oneWeek: 一周
+  olderThan: 仅删除以下时间之前的文件：
+  title: 删除所有缓存的远程文件
+  keepFilesInUse: 不要删除用作头像的文件
+  oneYear: 一年
+  oneMonth: 一个月
+trustedDomainsListDescription: 打开指向这些网站的链接时，不会显示警告。一行一个域名。
+enableFaviconNotificationDot: 打开站点图标中的通知提醒圆点
+defaultCW: 新帖子的默认内容警告
+fetchLinkedNote: 拉取链接到的帖子
+showBelowAvatar: 在头像下方显示
+remoteFollowersWarning: 远程用户的活动记录可能不完整或已过时
+horizontalBig: 大横向
+noSharedAccess: 你暂未获得任何账户的共享访问权限
+aboutMisskey: 关于 Sharkey
+markAsNSFW: 将该用户的所有媒体文件标记为 NSFW
+introMisskey: '欢迎！Sharkey 是一个开源的、去中心化的“微博客”服务。
 
-customFontSize: "自定义文本大小"
+  通过编写「帖文」来和大家分享你的以及你周围的事情吧！📡
 
-hideAds: "隐藏广告"
+  通过「回应」功能，可以让你快速地对大家的帖文表达反馈👍
 
-permissionsDescription: "拥有这个访问令牌的应用程序无法访问 API，除了下方的功能。"
-adminPermissionsDescription: "拥有这个访问令牌的应用程序没有管理员权限，除了下方的功能。"
-sharedAccount: "共享账户"
-sharedAccess: "共享访问权限"
-sharedAccessDescription: "此处列出的所有账户都可查看这个令牌，并且可使用令牌访问这个账户。"
-sharedAccessDescription2: "共享账户允许其它用户访问你的账户，无需输入密码。对于访客用户，你应该选择授权哪些功能和数据。"
-addGrantee: "共享访问权限"
-removeGrantee: "移除访问权限"
-loginWithSharedAccess: "以共享访问权限登录"
-loginWithSharedAccessDescription: "通过共享访问权限，登录一个共享账户"
-noSharedAccess: "你暂未获得任何账户的共享访问权限"
-expand: "展开"
-collapse: "折叠"
-permissions: "权限"
-overrideRank: "限制角色权限"
-overrideRankDescription: "限制使用这个令牌访问的目标用户的角色权限（管理员，监察员或用户）。"
-rank: "角色权限"
+  来探索新的世界吧！🚀'
+url: URL
+mandatoryCW: 强制内容警告
+bubble: 精选 (Bubble)
 _ranks:
-  admin: "管理员"
-  mod: "监察员"
-  user: "用户"
-  default: "默认"
-permissionsLabel: "权限：{num}"
-sharedAccessGranted: "你有角色权限为 {rank} 的 {target} 的 {perms} 共享访问权限。"
-sharedAccessRevoked: "访问 {target} 的共享访问权限已被撤销。"
-sharedAccessLogin: "{target} 通过共享访问权限登录了。"
-accessTokenNameDescription: "用于描述该访问令牌作用的唯一名称"
-confirmRevokeToken: "你确定要撤销这个访问令牌吗？"
-confirmRevokeSharedToken: "你确定要撤销这个访问令牌吗？{num} 个用户会失去共享访问权限。"
-grantSharedAccessButton: "授予共享访问权限"
-grantSharedAccessNoSelection: "没有已添加的共享访问权限"
-grantSharedAccessNoSelection2: "未选择共享访问用户。请在「共享访问权限」中，选择至少一个用户。"
-grantSharedAccessSuccess: "已授予共享访问权限"
-grantSharedAccessSuccess2: "已对 {num} 个用户授予共享访问权限。"
-tokenHasNoPermissionsConfirm: "你确定你要创建一个访问令牌，但是不添加权限吗？"
-enableAllRead: "启用所有只读权限"
-enableAllWrite: "启用所有写入权限"
-
-newAccount: "新账户"
-alsoKnownAs: "账户别名"
-accountMigratedAt: "已迁移于"
-accountMigratedTo: "已迁移到"
-accountMigrationUri: "迁移 URI"
-restartMigration: "重新启动账户迁移"
-restartMigrationDescription: "最近一次账户迁移尝试于 {date}。如果迁移失败或者数据不完整，你可以点击这个按钮来重启迁移。"
-restartMigrationConfirm: "你确定要重启这个账户迁移过程吗？"
-
-backgroundQueue: "后台队列"
+  user: 用户
+  mod: 监察员
+  admin: 管理员
+  default: 默认
+markInstanceAsNSFW: 标记为 NSFW
+_initialAccountSetting:
+  youCanContinueTutorial: 您可以继续了解 {name} (Sharkey) 的使用教程，也可以在此停止教程并立即开始使用它。
+sharedAccessDescription2: 共享账户允许其它用户访问你的账户，无需输入密码。对于访客用户，你应该选择授权哪些功能和数据。
+muted: 已静音
+_profile:
+  listenbrainz: ListenBrainz 用户名
+  removeBackground: 移除背景
+  updateBanner: 更新横幅
+  changeBackground: 修改背景
+  updateAvatar: 上传头像
+  removeBanner: 移除横幅
+  removeAvatar: 移除头像
+  updateBackground: 更新背景
+mediaSilenceThisInstance: 隐藏此服务器的媒体文件
+keepCwDisabled: 禁用（不复制内容警告）
+wordMuteTestNoResults: 暂时没有结果。输入一些文本然后点击「测试」来检查它。
+libreTranslateApiKey: LibreTranslate API Key
+accountMigrationUri: 迁移 URI
+removeGrantee: 移除访问权限
+hibernated: 已停用
+isLocked: 锁推账户
+mimeType: MIME 类型
+restartMigrationConfirm: 你确定要重启这个账户迁移过程吗？
+rejectQuotesLocalUser: 阻止来自这个用户的帖子引用
+deleteAllFilesQueued: 删除所有队列中的文件
+turnOffAchievements: 关闭这个选项会禁用成就系统
+silencedInstancesDescription: 设置要静音的服务器，以换行分隔。被静音的服务器内所有的账户将默认处于「静音」状态，仅能发送关注请求，并且在未关注状态下无法提及本地账户。被阻止的实例不受影响。
+hideAds: 隐藏广告
+selectFollowRelationship: 选择一个关注关系……
+noteDesign: 帖子设计
+specifyHost: 指定主机名
+activityPub: Activity Pub
+sharedAccessRevoked: 访问 {target} 的共享访问权限已被撤销。
+grantSharedAccessNoSelection2: 未选择共享访问用户。请在「共享访问权限」中，选择至少一个用户。
+verifyNotificationDotWorkingButton: 检查通知提醒圆点在你的服务器上是否可用
+postOn: 在何时发出
+deepLAuthKey: DeepL Auth Key
+_auth:
+  allowed: 已允许
+silencedUserSaysSomething: '{name} 已经被 {host} 管理人员静音'
+roleAssigned: 已分配
+deleteThisAccountConfirm: 这会删除账户，这个操作无法撤销。确定继续吗？
+notificationDotWorking: 该服务器上的通知提醒圆点工作正常。
+cantReRenote: 转贴不能再被转发。
+_serverDisconnectedBehavior:
+  disabled: 禁用警告
+showRenotes: 显示转帖
+customEmojisBeta: 自定义表情符号（测试版）
+notApproved: 未批准
+usernameInfo: 在服务器上唯一标识您的帐户的名称。您可以使用字母 (a ~ z, A ~ Z)、数字 (0 ~ 9) 和下划线 (_)。用户名以后不能更改。
+chatEscrow: 聊天托管
+filesRemoved: 文件已移除
+systemAccountDescription: 这个账户由系统自动创建和管理，不能登录。
+openTagPageConfirm: 确定打开这个话题标签页面？
+sharedAccess: 共享访问权限
+newRootUser: 新的根用户
+_genKeysDialog:
+  title: 生成新的密钥
+  text: 你确定要生成新的密钥吗？对于已经启用的用户来说，推送通知会停止。
+_notification:
+  sharedAccessGranted: 共享访问权限已创建
+  youRenoted: 来自 {name} 的转发
+  importOfXCompleted: '{x} 的导入已经完成'
+  renotedBySomeUsers: '{n} 人转发了'
+  scheduledNotePosted: 已发送定时帖子
+  sharedAccessLogin: 来自共享访问的登录
+  scheduledNoteFailed: 发送定时帖子失败
+  _actions:
+    renote: 转发
+  edited: 帖子已编辑
+  sharedAccessRevoked: 共享访问权限已撤销
+  _types:
+    renote: 转发
+    importCompleted: 导入完成
+    scheduledNotePosted: 已发送定时帖子
+    scheduledNoteFailed: 发送定时帖子失败
+    edited: 编辑
+numberOfReplies: 一个帖子列表中的回复数量
+userListTimeline: 用户列表时间线
+bubbleTimeline: 精选 (Bubble) 时间线
+pleaseDonate: Sharkey 是 {host} 所使用的免费软件。为了今后也能够维持 Sharkey 的开发，请在有余力的情况下进行捐助！
+notificationDotNotWorking: 很抱歉，这个服务器暂时不支持通知提醒圆点功能。
+bubbleTimelineDescription: 选择这个时间线应该展示的服务器。
+renotedCount: 已收到的转贴数量
+approvals: 批准
+hCaptchaDeveloperGuide: hCaptcha 开发者指南
+showNonPublicNotes: 显示非公开帖子
+_dataRequest:
+  warn: 数据导出请求每三天只能发送一次。
+  button: 请求数据
+  text: 一旦数据准备好可以下载，您用于注册的电子邮件地址将收到一封电子邮件。
+  title: 请求数据
+searchEngineOther: 其他
+bgm: 背景音乐
+intro: Sharkey 的安装已经完成啦。请创建一个管理员账户。
+driveSearchbarPlaceholder: 搜索网盘
+emailDestination: 电子邮件地址
+deepLTranslation: DeepL 翻译
+pinnedOnly: 已置顶
 _header:
-  browse: "浏览"
-  manage: "管理"
-
-setRootUser: "设定根 (root) 用户"
-setRootUserWarning: "你现在已经是根 (root) 用户了；你可以把它交给别人。如果你想在这么做之后继续当管理员，你应该在移交<em>之前</em>，通过「角色」给自己添加管理员权限"
-previousRootUser: "先前的根用户"
-newRootUser: "新的根用户"
+  browse: 浏览
+  manage: 管理
+fileImported: 文件已导入
+limitWidthOfReaction: 限制回应的最大宽度，并将其缩小显示。
+enableBotTrending: 允许机器人推送标签
+followersSub: 关注者 (Sub)
+searchEngineCusomURI: 自定义 URI
+poweredBy: 由
+nsfw: NSFW
+instanceIsFlaggedAs: '{name} 被标记为：「{cw}」'
+collapseAllCws: 折叠所有回复的内容
+defaultCWDescription: 此处的内容会作为内容警告，自动附加到所有新的贴文和回复。
+rejectQuotesInstance: 拒绝来自这个服务器的帖子引用
+setRootUser: 设定根 (root) 用户
+allowClickingNotifications: 允许点击弹出通知
+blockedByBase: 这个服务器被隐式屏蔽，因为主域名被屏蔽。要取消对这个服务器的屏蔽，请先取消对于主域名的屏蔽。
+mutuals: 互相关注
+turnOffBotTrending: 关闭这个选项会阻止机器人在趋势中推送标签
+rank: 角色权限
+_delivery:
+  resume: 继续投递
+  stop: 停止投递
+permissionsLabel: 权限：{num}
+approvalRequiredToRegister: 这个实例只允许提供注册理由的用户注册。
+cloudflareDocs: Cloudflare 文档
+id: ID
+privateKey: 私钥
+serviceWorker: Service Worker
+systemWebhook: 系统 Webhook
+customFontSize: 自定义文本大小

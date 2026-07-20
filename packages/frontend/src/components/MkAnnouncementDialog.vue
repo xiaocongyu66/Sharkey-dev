@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 -->
 
 <template>
-<MkModal ref="modal" :zPriority="'middle'" :preferType="'dialog'" @closed="$emit('closed')" @click="onBgClick">
+<MkModal ref="modal" :zPriority="'middle'" :preferType="'dialog'" @closed="emit('closed')" @click="onBgClick">
 	<div ref="rootEl" :class="$style.root">
 		<div :class="$style.header">
 			<span :class="$style.icon">
@@ -43,6 +43,10 @@ import { confetti } from '@/utility/confetti.js';
 
 const props = defineProps<{
 	announcement: Misskey.entities.Announcement;
+}>();
+
+const emit = defineEmits<{
+	(ev: 'closed'): void;
 }>();
 
 const rootEl = useTemplateRef('rootEl');

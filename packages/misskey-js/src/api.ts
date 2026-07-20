@@ -90,7 +90,7 @@ export class APIClient {
 
 			if (mediaType === 'application/json') {
 				payload = JSON.stringify({
-					...params,
+					...(this.assertIsRecord(params) ? params : {}),
 					i: credential !== undefined ? credential : this.credential,
 				});
 			} else if (mediaType === 'multipart/form-data') {
@@ -119,7 +119,7 @@ export class APIClient {
 			this.fetch(`${this.origin}/api/${endpoint}`, {
 				method: 'POST',
 				body: payload,
-				headers: {
+				headers: mediaType === 'multipart/form-data' ? {} : {
 					'Content-Type': mediaType,
 				},
 				credentials: 'omit',

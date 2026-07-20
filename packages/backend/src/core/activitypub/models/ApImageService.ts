@@ -50,7 +50,7 @@ export class ApImageService {
 		// 投稿者が凍結されていたらスキップ
 		this.utilityService.assertActiveRemoteUser(actor);
 
-		const image = await this.apResolverService.createResolver().resolve(value);
+		const image = await (await this.apResolverService.createResolver()).resolve(value);
 
 		if (!isDocument(image)) return null;
 

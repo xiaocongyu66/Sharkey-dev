@@ -48,7 +48,7 @@ export class ApQuestionService {
 	@bindThis
 	public async extractPollFromQuestion(source: string | IObject, resolver?: Resolver): Promise<IPoll> {
 		// eslint-disable-next-line no-param-reassign
-		if (resolver == null) resolver = this.apResolverService.createResolver();
+		if (resolver == null) resolver = await this.apResolverService.createResolver();
 
 		const question = await resolver.resolve(source);
 		if (!isQuestion(question)) throw new UnrecoverableError(`invalid type ${getApType(question)}: ${getNullableApId(question)}`);
@@ -92,7 +92,7 @@ export class ApQuestionService {
 
 		// resolve new Question object
 		// eslint-disable-next-line no-param-reassign
-		if (resolver == null) resolver = this.apResolverService.createResolver();
+		if (resolver == null) resolver = await this.apResolverService.createResolver();
 		const question = await resolver.resolve(value);
 
 		if (!isQuestion(question)) throw new UnrecoverableError(`object ${getApType(question)} is not a Question: ${uri}`);

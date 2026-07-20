@@ -46,11 +46,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 import { onBeforeUnmount, onMounted, provide, watch, useTemplateRef, ref, computed } from 'vue';
 import type { Column } from '@/deck.js';
 import type { MenuItem } from '@/types/menu.js';
-import { updateColumn, swapLeftColumn, swapRightColumn, swapUpColumn, swapDownColumn, stackLeftColumn, popRightColumn, removeColumn, swapColumn } from '@/deck.js';
+import { deckGlobalEvents, updateColumn, swapLeftColumn, swapRightColumn, swapUpColumn, swapDownColumn, stackLeftColumn, popRightColumn, removeColumn, swapColumn } from '@/deck.js';
 import * as os from '@/os.js';
 import { i18n } from '@/i18n.js';
 import { prefer } from '@/preferences.js';
-import { DI } from '@/di.js';
+import { checkDragDataType, getDragData, setDragData } from '@/drag-and-drop.js';
 
 provide('shouldHeaderThin', true);
 provide('shouldOmitHeaderTitle', true);
@@ -61,21 +61,24 @@ const props = withDefaults(defineProps<{
 	column: Column;
 	isStacked?: boolean;
 	naked?: boolean;
+	handleScrollToTop?: boolean;
 	menu?: MenuItem[];
 	refresher?: () => Promise<void>;
 }>(), {
 	isStacked: false,
 	naked: false,
+	handleScrollToTop: true,
 });
 
 const emit = defineEmits<{
 	(ev: 'headerWheel', ctx: WheelEvent): void;
+	(ev: 'headerClick', ctx: MouseEvent): void;
 }>();
 
 const body = useTemplateRef('body');
 
 const dragging = ref(false);
-watch(dragging, v => os.deckGlobalEvents.emit(v ? 'column.dragStart' : 'column.dragEnd'));
+watch(dragging, v => deckGlobalEvents.emit(v ? 'column.dragStart' : 'column.dragEnd'));
 
 const draghover = ref(false);
 const dropready = ref(false);
@@ -84,13 +87,13 @@ const isMainColumn = computed(() => props.column.type === 'main');
 const active = computed(() => props.column.active !== false);
 
 onMounted(() => {
-	os.deckGlobalEvents.on('column.dragStart', onOtherDragStart);
-	os.deckGlobalEvents.on('column.dragEnd', onOtherDragEnd);
+	deckGlobalEvents.on('column.dragStart', onOtherDragStart);
+	deckGlobalEvents.on('column.dragEnd', onOtherDragEnd);
 });
 
 onBeforeUnmount(() => {
-	os.deckGlobalEvents.off('column.dragStart', onOtherDragStart);
-	os.deckGlobalEvents.off('column.dragEnd', onOtherDragEnd);
+	deckGlobalEvents.off('column.dragStart', onOtherDragStart);
+	deckGlobalEvents.off('column.dragEnd', onOtherDragEnd);
 });
 
 function onOtherDragStart() {
@@ -243,15 +246,18 @@ function getMenu() {
 	return menuItems;
 }
 
-function showSettingsMenu(ev: MouseEvent) {
+function showSettingsMenu(ev: PointerEvent) {
 	os.popupMenu(getMenu(), ev.currentTarget ?? ev.target);
 }
 
-function onContextmenu(ev: MouseEvent) {
+function onContextmenu(ev: PointerEvent) {
 	os.contextMenu(getMenu(), ev);
 }
 
-function goTop() {
+function goTop(ev: PointerEvent) {
+	emit('headerClick', ev);
+	if (!props.handleScrollToTop) return;
+
 	if (body.value) {
 		body.value.scrollTo({
 			top: 0,
@@ -260,9 +266,11 @@ function goTop() {
 	}
 }
 
-function onDragstart(ev) {
+function onDragstart(ev: DragEvent) {
+	if (ev.dataTransfer == null) return;
+
 	ev.dataTransfer.effectAllowed = 'move';
-	ev.dataTransfer.setData(_DATA_TRANSFER_DECK_COLUMN_, props.column.id);
+	setDragData(ev, 'deckColumn', props.column.id);
 
 	// Chromeのバグで、Dragstartハンドラ内ですぐにDOMを変更する(=リアクティブなプロパティを変更する)とDragが終了してしまう
 	// SEE: https://stackoverflow.com/questions/19639969/html5-dragend-event-firing-immediately
@@ -271,17 +279,19 @@ function onDragstart(ev) {
 	}, 10);
 }
 
-function onDragend(ev) {
+function onDragend(ev: DragEvent) {
 	dragging.value = false;
 }
 
-function onDragover(ev) {
+function onDragover(ev: DragEvent) {
+	if (ev.dataTransfer == null) return;
+
 	// 自分自身がドラッグされている場合
 	if (dragging.value) {
 		// 自分自身にはドロップさせない
 		ev.dataTransfer.dropEffect = 'none';
 	} else {
-		const isDeckColumn = ev.dataTransfer.types[0] === _DATA_TRANSFER_DECK_COLUMN_;
+		const isDeckColumn = checkDragDataType(ev, ['deckColumn']);
 
 		ev.dataTransfer.dropEffect = isDeckColumn ? 'move' : 'none';
 
@@ -293,12 +303,12 @@ function onDragleave() {
 	draghover.value = false;
 }
 
-function onDrop(ev) {
+function onDrop(ev: DragEvent) {
 	draghover.value = false;
-	os.deckGlobalEvents.emit('column.dragEnd');
+	deckGlobalEvents.emit('column.dragEnd');
 
-	const id = ev.dataTransfer.getData(_DATA_TRANSFER_DECK_COLUMN_);
-	if (id != null && id !== '') {
+	const id = getDragData(ev, 'deckColumn');
+	if (id != null) {
 		swapColumn(props.column.id, id);
 	}
 }
@@ -367,10 +377,6 @@ function onDrop(ev) {
 		> .body {
 			background: transparent !important;
 			scrollbar-color: var(--MI_THEME-scrollbarHandle) transparent;
-
-			&::-webkit-scrollbar-track {
-				background: transparent;
-			}
 		}
 	}
 
@@ -396,10 +402,6 @@ function onDrop(ev) {
 		> .body {
 			background: var(--MI_THEME-bg) !important;
 			scrollbar-color: var(--MI_THEME-scrollbarHandle) transparent;
-
-			&::-webkit-scrollbar-track {
-				background: inherit;
-			}
 		}
 	}
 }
@@ -486,9 +488,5 @@ function onDrop(ev) {
 	container-type: size;
 	background-color: var(--MI_THEME-bg);
 	scrollbar-color: var(--MI_THEME-scrollbarHandle) var(--MI_THEME-panel);
-
-	&::-webkit-scrollbar-track {
-		background: var(--MI_THEME-panel);
-	}
 }
 </style>

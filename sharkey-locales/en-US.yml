@@ -1,766 +1,924 @@
----
-introMisskey: "Welcome! Sharkey is an open source, decentralized microblogging service.\nCreate \"notes\" to share your thoughts with everyone around you. 📡\nWith \"reactions\", you can also quickly express your feelings about everyone's notes. 👍\nLet's explore a new world! 🚀"
-poweredByMisskeyDescription: "{name} is one of the services powered by the open source platform <b>Sharkey</b> which is based on Misskey (referred to as a \"Misskey instance\")."
-renotedBy: "Boosted by {user}"
-approvals: "Approvals"
-copyLinkRenote: "Copy boost link"
-deleteAndEditConfirm: "Are you sure you want to redraft this note? This means you will lose all reactions, boosts, and replies to it."
-openRemoteProfile: "Open remote profile"
-trustedLinkUrlPatterns: "Link to external site warning exclusion list"
-trustedLinkUrlPatternsDescription: "Separate with spaces for an AND condition or with line breaks for an OR condition. Using surrounding keywords with slashes will turn them into a regular expression. If you write only the domain name, it will be a backward match."
-trustedDomainsList: "Link to external site warning exclusion list"
-trustedDomainsListDescription: "Following links to these domains will not show a warning. Write one domain per line."
-mutuals: "Mutuals"
-isLocked: "Private account"
-isAdmin: "Administrator"
-isBot: "Bot user"
-open: "Open"
-emailDestination: "Destination address"
-date: "Date"
-renote: "Boost"
-unrenote: "Remove boost"
-renoteShift: "Boost (hold Shift for visibility menu)"
-renoted: "Boosted."
-quoted: "Quoted."
-rmboost: "Unboosted."
-renotedToX: "Boosted to {name}"
-cantRenote: "This post can't be boosted."
-cantReRenote: "A boost can't be boosted."
-inChannelRenote: "Channel-only Boost"
-muted: "Muted"
-renoteMute: "Mute Boosts"
-renoteMuted: "Boosts muted"
-renoteUnmute: "Unmute Boosts"
-muteNote: "Mute note"
-unmuteNote: "Unmute note"
-userSaysSomethingInMutedNote: "{name} said something in a muted post"
-userSaysSomethingInMutedThread: "{name} said something in a muted thread"
-silencedUserSaysSomething: "{name} has been silenced by {host} staff"
-silencedInstanceSaysSomething: "{name} has been silenced by {host} staff"
-userIsFlaggedAs: "{name} is flagged: \"{cw}\""
-noteIsFlaggedAs: "Note is flagged: \"{cw}\""
-instanceIsFlaggedAs: "{name} is flagged: \"{cw}\""
-markAsNSFW: "Mark all media from user as NSFW"
-markInstanceAsNSFW: "Mark as NSFW"
-nsfwConfirm: "Are you sure that you want to mark all media from this account as NSFW?"
-unNsfwConfirm: "Are you sure that you want to unmark all media from this account as NSFW?"
-approveConfirm: "Are you sure that you want to approve this account?"
-flagAsBotDescription: "Enable this option if this account is controlled by a program. If enabled, it will act as a flag for other developers to prevent endless interaction chains with other bots and adjust Sharkey's internal systems to treat this account as a bot."
-flagSpeakAsCat: "Speak as a cat"
-flagSpeakAsCatDescription: "Your posts will get nyanified when in cat mode. If this isn't working, then please check that you dont have 'Disable cat speak' on under General/Note Display"
-continueOnRemote: "Continue on remote instance"
-chooseServerOnMisskeyHub: "Choose a instance from Misskey Hub"
-mediaSilenceThisInstance: "Silence media from this instance"
-rejectReports: "Reject reports from this instance"
-rejectQuotesInstance: "Strip quote posts from this instance"
-rejectQuotesRemoteUser: "Strip quote posts from this user"
-rejectQuotesLocalUser: "Block quote posts from this user"
-rejectQuotesConfirm: "Are you sure you wish to strip quote posts?"
-allowQuotesConfirm: "Are you sure you wish to allow quote posts?"
-silencedInstancesDescription: "List the host names of the instances that you want to silence, separated by a new line. All accounts belonging to the listed instances will be treated as silenced, and can only make follow requests, and cannot mention local accounts if not followed. This will not affect the blocked instances."
-mediaSilencedInstances: "Media-silenced instances"
-mediaSilencedInstancesDescription: "List the host names of the instances that you want to media-silence, separated by a new line. All accounts belonging to the listed instances will be treated as sensitive, and can't use custom emojis. This will not affect the blocked instances."
-intro: "Installation of Sharkey has been finished! Please create an admin user."
-blockedByBase: "This host is blocked implicitly because a base domain is blocked. To unblock this host, first unblock the base domain(s)."
-silencedByBase: "This host is silenced implicitly because a base domain is silenced. To un-silence this host, first un-silence the base domain(s)."
-mediaSilencedByBase: "This host's media is silenced implicitly because a base domain's media is silenced. To un-silence this host, first un-silence the base domain(s)."
-driveSearchbarPlaceholder: "Search drive"
-fileNotSelected: "No file selected"
-pleaseSelect: "Please select"
-background: "Background"
-antennaUsersDescription: "List one username per line. Use \"*@instance.com\" to specify all users of an instance"
-aboutMisskey: "About Sharkey"
-expandAllCws: "Show content for all replies"
-collapseAllCws: "Hide content for all replies"
-attachAsFileQuestion: "The text in clipboard is long. Would you like to attach it as a text file?"
-signinOrContinueOnRemote: "To continue, you need to go to your instance to perform this action or sign up / log in to the instance you are trying to interact with."
-disableDrawer: "Don't use drawer-style menus"
-showReactionsCount: "Show the number of reactions in notes"
-cornerRadius: "Corner roundness"
-warnForMissingAltText: "Warn you when you forget to put alt text"
-deeplFreeMode: "Use DeepLX-JS (No Auth Key)"
-deeplFreeModeDescription: "Need Help? Check our documentation to know how to setup DeepLX-JS."
-useSoundOnlyWhenActive: "Output sounds only if Sharkey is active."
-scratchpadDescription: "The Scratchpad provides an environment for AiScript experiments. You can write, execute, and check the results of it interacting with Sharkey in it."
-deleteAllFilesQueued: "Deletion of all files queued"
-systemAccountTitle: "This is a system account"
-systemAccountDescription: "This account is created and managed automatically by the system, and cannot be logged into."
-postFiltered: "post is hidden by a filter"
-enableFaviconNotificationDot: "Enable favicon notification dot"
-verifyNotificationDotWorkingButton: "Check if the notification dot works on your instance"
-notificationDotNotWorking: "Unfortunately, this instance does not support the notification dot feature at this time."
-notificationDotWorking: "The notification dot is functioning properly on this instance."
-notificationDotNotWorkingAdvice: "If the notification dot doesn't work, ask an admin to check our documentation {link}"
-reportAbuseRenote: "Report boost"
-forwardReport: "Forward report to remote instance"
-forwardReportIsAnonymous: "Instead of your account, an anonymous system account will be displayed as reporter at the remote instance."
-abuseMarkAsResolved: "Mark report as resolved"
-i18nInfoSharkey: "Sharkey specific changes are translated in its own {link}."
-renotesCount: "Number of boosts sent"
-renotedCount: "Number of boosts received"
-showTickerOnReplies: "Show instance ticker on replies"
-disableCatSpeak: "Disable cat speak"
-searchEngine: "Search Engine For Search MFM"
-searchEngineOther: "Other"
-searchEngineCustomURIDescription: "The custom URI must be input in the format like \"https://www.google.com/search?q=\\{query}\" or \"https://www.google.com/search?q=%s\"."
-searchEngineCusomURI: "Custom URI"
-makeIndexable: "Make public notes not indexable"
-makeIndexableDescription: "Stop note search from indexing your public notes."
-enableRss: "Enable RSS feed"
-enableRssDescription: "Generate an RSS feed containing your basic profile details and public notes. Users can subscribe to the feed without a follow request or approval."
-sendErrorReportsDescription: "When turned on, detailed error information will be shared with Sharkey when a problem occurs, helping to improve the quality of Sharkey.\nThis will include information such the version of your OS, what browser you're using, your activity in Sharkey, etc."
-noInquiryUrlWarning: "Contact URL is not set."
-misskeyUpdated: "Sharkey has been updated!"
-usernameInfo: "A name that identifies your account from others on this server. You can use the alphabet (a~z, A~Z), digits (0~9) or underscores (_). Usernames cannot be changed later."
-approvalRequiredForSignup: "Require approval for new users"
-voteConfirmMulti: "Confirm your vote for \"{choice}\"?\n　You can choose more options after confirmation."
-pendingUserApprovals: "There are users awaiting approval."
-approveAccount: "Approve"
-denyAccount: "Deny & Delete"
-approved: "Approved"
-notApproved: "Not Approved"
-approvalStatus: "Approval Status"
-numberOfReplies: "Number of replies in a thread"
-numberOfRepliesDescription: "Increasing this number will display more replies. Setting this too high can cause replies to be cramped and unreadable."
-boostSettings: "Boost Settings"
-showVisibilitySelectorOnBoost: "Show Visibility Selector"
-showVisibilitySelectorOnBoostDescription: "Shows the visiblity selector if enabled when clicking boost, if disabled it will use the default visiblity defined below and the selector will not show up."
-visibilityOnBoost: "Default boost visibility"
-defaultLike: "Default like emoji"
-didYouLikeMisskey: "Have you taken a liking to Sharkey?"
-pleaseDonate: "{host} uses the free software, Sharkey. We would highly appreciate your donations so development of Sharkey can continue!"
-pleaseDonateInstance: "You can also support {host} directly by donating to your instance administration."
-thisPostIsMissingAltTextCancel: "Cancel"
-thisPostIsMissingAltTextIgnore: "Post anyway"
-thisPostIsMissingAltText: "One of the files attached to this post is missing alt text. Please ensure all the attachments have alt text."
-collapseRenotes: "Collapse boosts you've already seen"
-collapseRenotesDescription: "Collapse boosts that you have boosted or reacted to"
-collapseNotesRepliedTo: "Collapse notes replied to"
-collapseFiles: "Collapse files"
-clone: "Clone"
-uncollapseCW: "Uncollapse CWs on notes"
-expandLongNote: "Always expand long notes"
-autoloadConversation: "Load conversation on replies"
-approvalRequiredToRegister: "This instance is only accepting users who specify a reason for registration."
-limitWidthOfReaction: "Limits the maximum width of reactions and display them in reduced size."
-oneko: "Cat friend :3"
-renotesList: "Boosts"
-lookupConfirm: "Are you sure that you want to look this up?"
-openTagPageConfirm: "Are you sure you want to open this hashtags page?"
-deleteThisAccountConfirm: "This will irreversibly delete this account. Proceed?"
-specifyHost: "Specify a host"
-goToMisskey: "To Sharkey"
-enableAchievements: "Enable Achievements"
-turnOffAchievements: "Turning this off will disable the achievement system"
-enableBotTrending: "Populate Hashtags with Bots"
-turnOffBotTrending: "Turning this off will stop Bots from populating Hashtags"
-replies: "Replies"
-renotes: "Boosts"
-clickToOpen: "Click to open notes"
-showBots: "Show bots in timeline"
-showRenotes: "Show boosts"
-sourceCodeIsNotYetProvided: "The source code is not yet available. Please contact your administrator to fix this problem."
-repositoryUrlDescription: "If there is a repository where the source code is publicly available, enter its URL. If you are using Sharkey as-is (without any changes to the source code), enter https://activitypub.software/TransFem-org/Sharkey/."
-donation: "Donate"
-donationUrl: "Donation URL"
-showBelowAvatar: "Show Below Avatar"
-seasonalScreenEffect: "Seasonal screen effects"
-noDescription: "No description"
-sensitiveMediaRevealConfirm: "This media might be sensitive. Are you sure you want to reveal it?"
-severAllFollowRelations: "Break following relationships"
-severAllFollowRelationsConfirm: "Really break all follow relationships? This is irreversible! This will break {followingCount} following and {followersCount} follower relations on {instanceName}!"
-severAllFollowRelationsQueued: "Severing all follow relations with {host} queued."
-pendingFollowRequests: "Pending follow requests"
-undoFollowRequestConfirm: "Are you sure you want to cancel your follow request?"
-showQuotes: "Show quotes"
-showReplies: "Show replies"
-showNonPublicNotes: "Show non-public"
-allowClickingNotifications: "Allow clicking on pop-up notifications"
-pinnedOnly: "Pinned"
-blockingYou: "Blocking you"
-warnExternalUrl: "Show warning when opening external URLs"
-flash: "Flash"
-filesRemoved: "Files removed"
-fileImported: "File imported"
-cannotLoadNote: "Failed to load note"
-clickToUnsubscribe: "Please click [OK] to unsubscribe from announcement e-mails."
-unsubscribeError: "There was a problem unsubscribing."
-_flash:
-  contentHidden: "Flash Content Hidden"
-  poweredByRuffle: "Powered by Ruffle."
-  arbitraryCodeExecutionWarning: "Always be wary of arbitrary code execution!"
-  failedToLoad: "Flash Content Failed To Load:"
-  isLoading: "Flash Content Is Loading"
-  loadingRufflePlayer: "Loading Ruffle player"
-  loadingFlashFile: "Loading Flash file"
-  cspError: "raw.esm.sh could not be accessed, meaning this instance's Content Security Policy is likely out of date. Please contact your instance administrators."
-_delivery:
-  stop: "Suspend delivery"
-  resume: "Resume delivery"
-_initialAccountSetting:
-  youCanContinueTutorial: "You can proceed to a tutorial on how to use {name} (Sharkey) or you can exit the setup here and start using it immediately."
-_initialTutorial:
-  _landing:
-    description: "Here, you can learn the basics of using Sharkey and its features."
-  _note:
-    description: "Posts on Sharkey are called 'Notes.' Notes are arranged chronologically on the timeline and are updated in real-time."
-  _reaction:
-    letsTryReacting: "Reactions can be added by clicking the '{reaction}' button on the note. Try reacting to this sample note!"
-    reactDone: "You can undo a reaction by pressing the '{undo}' button."
-  _timeline:
-    description1: "Sharkey provides multiple timelines based on usage (some may not be available depending on the server's policies)."
-    bubble: "You can view notes from connected servers picked by your admins."
-  _postNote:
-    description1: "When posting a note on Sharkey, various options are available. The posting form looks like this."
-    _visibility:
-      home: "Public only on the Home timeline. People visiting your profile, via followers, and through boosts can see it."
-      followers: "Visible to followers only. Only followers can see it and no one else, and it cannot be boosted by others."
-  _done:
-    title: "The tutorial is complete! 🎉"
-    description: "The functions introduced here are just a small part. For a more detailed understanding of using Sharkey, please refer to {link}."
-_timelineDescription:
-  bubble: "In the Bubble timeline, you can see notes from connected servers picked by your admins."
-_serverSettings:
-  sidebarLogoUrl: "Logo URL"
-  sidebarLogoDescription: "Specifies the logo to use instead of the regular icon in high definition, dynamic-width scenarios."
-  sidebarLogoUsageExample: "E.g. In the sidebar, to visitors and in the \"About\" page."
-  inquiryUrl: "Contact URL"
-  inquiryUrlDescription: "Specify the URL of a web page that contains a contact form or the instance operators' contact information."
-  aboutInstance: "About instance"
-  aboutInstanceDescription: "A longer description that will be displayed in the 'Instance Information' page, going in place of the regular instance description. Supports HTML."
-  deliverSuspendedSoftwareDescription: "You can specify a range of names and versions of the server's software to stop delivery for vulnerability or other reasons. This version information is provided by the server and is not guaranteed to be reliable. A semver range specification can be used to specify the version, but specifying >= 2024.3.1 will not include custom versions such as 2024.3.1-custom.0, so it is recommended that a prerelease specification be used, such as >= 2024.3.1-0. Specifying * will match any name or version, even when the server doesn't provide one. You can also provide a regular expression like /^sharkey-/i or /^1-/"
+_mfm:
+  blur: Blur
+  x2: Big
+  tada: Animation (Tada)
+  dummy: Sharkey expands the world of the Fediverse
+  foreground: Foreground color
+  jellyDescription: Gives content a jelly-like animation.
+  plain: Plain
+  bounceDescription: Gives content a bouncy animation.
+  quoteDescription: Displays content as a quote.
+  followMouse: Follow Mouse
+  small: Small
+  x3Description: Displays content even bigger.
+  background: Background color
+  sparkleDescription: Gives content a sparkling particle effect.
+  scaleDescription: Scale content by a specified amount.
+  url: URL
+  spinDescription: Gives content a spinning animation.
+  rotateDescription: Turns content by a specified angle.
+  blockMath: Math (Block)
+  unixtime: Unix Time
+  inlineCode: Code (Inline)
+  foregroundDescription: Change the foreground color of text.
+  search: Search
+  twitchDescription: Gives content a strongly twitching animation.
+  rainbowDescription: Makes the content appear in rainbow colors.
+  borderDescription: Draw a border around the content.
+  hashtagDescription: You can specify a hashtag using a number sign and text.
+  twitch: Animation (Twitch)
+  smallDescription: Displays content small and thin.
+  bold: Bold
+  cropDescription: Crop content.
+  shakeDescription: Gives content a shaking animation.
+  blockCodeDescription: Displays syntax highlighting for multi-line (program) code in a block.
+  bounce: Animation (Bounce)
+  boldDescription: Highlights letters by making them thicker.
+  hashtag: Hashtag
+  shake: Animation (Shake)
+  inlineMathDescription: Display math formulas (KaTeX) in-line
+  blurDescription: Blurs content. It will be displayed clearly when hovered over.
+  mentionDescription: You can specify a user by using an At-Symbol and a username.
+  unixtimeDescription: Displays a timestamp in the viewer's current timezone.
+  mention: Mention
+  jump: Animation (Jump)
+  x2Description: Displays content bigger.
+  tadaDescription: Gives content a "Tada!"-like animation.
+  uncommonFeature: This is not a widespread feature, it may not display properly on most other fedi software, including other Misskey forks
+  position: Position
+  blockCode: Code (Block)
+  inlineMath: Math (Inline)
+  linkDescription: Specific parts of text can be displayed as a URL.
+  quote: Quote
+  font: Font
+  flip: Flip
+  x4Description: Displays content even bigger than bigger than big.
+  crop: Crop
+  fontDescription: Sets the font to display content in.
+  centerDescription: Displays content centered.
+  followMouseDescription: Content will follow the mouse. On mobile it will follow wherever the user taps.
+  intro: MFM is a markup language used on Misskey, Sharkey, Firefish, Akkoma, and more that can be used in many places. Here you can view a list of all available MFM syntax.
+  backgroundDescription: Change the background color of text.
+  fade: Fade
+  fadeDescription: Fade text in and out.
+  jumpDescription: Gives content a jumping animation.
+  searchDescription: Displays a search box with pre-entered text.
+  jelly: Animation (Jelly)
+  positionDescription: Move content by a specified amount.
+  link: Link
+  urlDescription: URLs can be displayed.
+  x4: Unbelievably big
+  blockMathDescription: Display math formulas (KaTeX) in a block
+  flipDescription: Flips content horizontally or vertically.
+  rotate: Rotate
+  x3: Very big
+  border: Border
+  inlineCodeDescription: Displays inline syntax highlighting for (program) code.
+  scale: Scale
+  spin: Animation (Spin)
+  center: Center
+  plainDescription: Deactivates the effects of all MFM contained within this MFM effect.
+  emoji: Custom Emoji
+  rainbow: Rainbow
+  emojiDescription: By surrounding a custom emoji name with colons, custom emoji can be displayed.
+  sparkle: Sparkle
+unmuteNote: Unmute note
+secretKey: Secret key
+isAdmin: Administrator
+_deck:
+  _columns:
+    following: Following
+bubbleTimelineMustBeEnabled: 'Note: the bubble timeline is hidden by default, and must be enabled via roles.'
+_moderationLogTypes:
+  unSilenceUser: Un-silenced user
+  setRoot: Set the root user
+  unNsfwUser: Un-marked user as NSFW
+  removeRelay: Removed a relay
+  clearOwnerlessFiles: Cleared owner-less drive files
+  clearUserFiles: Cleared a user's drive files
+  decline: Declined
+  clearRemoteFiles: Cleared remote drive files
+  setMandatoryCWForInstance: Set content warning for instance
+  rejectRemoteInstanceReports: Rejected reports from remote instance
+  silenceUser: Silenced user
+  setMandatoryCWForNote: Set content warning for note
+  acceptRemoteInstanceReports: Accepted reports from remote instance
+  createAccount: Created an account
+  severFollowRelations: Severed follow relations with an instance
+  rejectQuotesUser: Blocked/Stripped quote posts from user
+  restartMigration: Restarted migration for a user
+  clearInstanceFiles: Cleared an instance's drive files
+  approve: Approved
+  addRelay: Added a relay
+  importCustomEmojis: Imported custom emojis
+  allowQuotesUser: Allowed quote posts from user
+  setMandatoryCW: Set content warning for user
+  nsfwUser: Marked user as NSFW
+  createPromo: Created a note promo
+  updateCustomEmojis: Updated custom emojis
+_apiErrors:
+  AI_BAD_REQUEST: AI provider rejected the request (HTTP 400). Check model name and request parameters.
+  AI_PAYMENT_REQUIRED: AI provider requires payment or has no remaining quota (HTTP 402).
+  AI_BAD_GATEWAY: AI gateway error (HTTP 502 Bad Gateway). Upstream may be down or misconfigured.
+  AI_ORIGIN_UNREACHABLE: AI origin unreachable (HTTP 522). Check network, DNS, firewall, or provider status.
+  TRANSLATION_FAILED: Translation failed. Please try again later.
+  AI_NOT_CONFIGURED: AI translation is not configured (missing endpoint or API key).
+  AI_AUTH_FAILED: AI provider rejected the API key (HTTP 401 Unauthorized). Check the key in admin settings.
+  AI_FORBIDDEN: AI provider denied access (HTTP 403 Forbidden). Check plan / IP allowlist / model permission.
+  AI_RATE_LIMITED: AI provider rate limit exceeded (HTTP 429). Please wait and try again.
+  AI_TIMEOUT: AI translation timed out. Try again or raise the timeout in admin settings.
+  AI_UPSTREAM_ERROR: AI provider returned an error. Check the endpoint URL and model name.
+  AI_EMPTY_RESPONSE: AI returned an empty translation.
+  AI_SCOPE_DISABLED: AI translation is disabled for this feature.
+  CANNOT_TRANSLATE_INVISIBLE_NOTE: Cannot translate a note you cannot see.
+  EMPTY_MESSAGE: Message has no text to translate.
+  title: Operation failed
+  generic: Something went wrong. Please try again later.
+  network: Network error or server unreachable. Please check your connection and try again.
+  aborted: Request cancelled.
+  NO_SUCH_USER: User not found.
+  USER_NOT_FOUND: User not found.
+  NO_SUCH_NOTE: Note not found.
+  NO_SUCH_FILE: File not found.
+  NO_SUCH_FOLDER: Folder not found.
+  NO_SUCH_ROOM: Chat room not found.
+  NO_SUCH_MESSAGE: Message not found.
+  NO_SUCH_CHANNEL: Channel not found.
+  NO_SUCH_CLIP: Clip not found.
+  NO_SUCH_LIST: List not found.
+  NO_SUCH_USER_LIST: List not found.
+  NO_SUCH_ANTENNA: Antenna not found.
+  NO_SUCH_PAGE: Page not found.
+  NO_SUCH_ROLE: Role not found.
+  NO_SUCH_REPLY: Reply target not found.
+  ACCESS_DENIED: Access denied.
+  PERMISSION_DENIED: Permission denied.
+  ROLE_PERMISSION_DENIED: Permission denied.
+  CREDENTIAL_REQUIRED: Please sign in to continue.
+  SIGNIN_REQUIRED: Please sign in to continue.
+  RATE_LIMIT_EXCEEDED: Too many requests. Please wait and try again.
+  ROOM_RATE_LIMITED: Sending too fast. Please wait a moment.
+  ROOM_MUTED_ALL: This room is muted for all members.
+  INVALID_PARAM: Invalid request parameters.
+  INTERNAL_ERROR: Internal server error. Please try again later.
+  CONTENT_REQUIRED: Content is required.
+  EMPTY_FILE: Empty file is not allowed.
+  TOO_BIG_FILE: File is too large.
+  UNEXPECTED_FILE_TYPE: Unsupported file type.
+  MAX_LENGTH: Text is too long.
+  YOU_HAVE_BEEN_BLOCKED: You have been blocked by this user.
+  ALREADY_FOLLOWING: Already following this user.
+  ALREADY_FAVORITED: Already favorited.
+  NOT_FOLLOWING: You are not following this user.
+  INCORRECT_PASSWORD: Incorrect password.
+  INCORRECT_TOTP: Incorrect two-factor code.
+  UNAVAILABLE: This feature is unavailable.
+  PROHIBITED_WORD: Contains prohibited words.
+  CONTAINS_PROHIBITED_WORDS: Contains prohibited words.
+  NOT_A_MEMBER: You are not a member of this room.
+  SEND_FAILED: Failed to send. Check your connection and try again.
+rawApDescription: ActivityPub user data in its raw form. These fields are public and accessible to other instances.
+never: Never
+change: Change
+rawData: Raw data
+_confirmPollEdit:
+  text: Editing this poll will cause it to lose all previous votes
+  title: Are you sure you want to edit this poll
+recaptchaFaq: reCAPTCHA FAQ
+background: Background
+schedulePostList: List of scheduled notes
+searchEngine: Search Engine For Search MFM
+userId: User ID
+keepCwPrependRe: Enabled (copy CW and prepend "RE:")
+staffNotes: Staff notes
+boostSettings: Boost Settings
+approved: Approved
+mandatoryCWDescription: Applies a content warning to all posts created by this user. The forced warnings will appear like a word mute to distinguish them from the author's own content warnings.
+overrideRankDescription: Limits the user rank (admin, moderator, or user) for apps using this token.
+_timeIn:
+  never: Never
+  now: Now
+pleaseDonateInstance: You can also support {host} directly by donating to your instance administration.
+approveConfirm: Are you sure that you want to approve this account?
+renoted: Boosted.
+isBot: Bot user
+newAccount: New account
+confirmRevokeSharedToken: Are you sure you want to revoke this token? {num} shared other users will lose shared access.
+replies: Replies
+systemAccountTitle: This is a system account
+warnExternalUrl: Show warning when opening external URLs
+nsfwConfirm: Are you sure that you want to mark all media from this account as NSFW?
+schedulePost: Schedule a note
+noInquiryUrlWarning: Contact URL is not set.
+rejectQuotesRemoteUser: Strip quote posts from this user
+restartMigration: Restart account migration
+pollsOnLocal: Polls trending on {name}
+ip: IP
+signupReason: Signup Reason
+unsubscribeError: There was a problem unsubscribing.
 _accountMigration:
-  moveAccountDescription: "This will migrate your account to a different one.\n　・Followers from this account will automatically be migrated to the new account\n　・This account will unfollow all users it is currently following\n　・You will be unable to create new notes etc. on this account\n\nWhile migration of followers is automatic, you must manually prepare some steps to migrate the list of users you are following. To do so, carry out a follows export that you will later import on the new account in the settings menu. The same procedure applies to your lists as well as your muted and blocked users.\n\n(This explanation applies to Sharkey v13.12.0 and later. Other ActivityPub software, such as Mastodon, might function differently.)"
+  moveAccountDescription: 'This will migrate your account to a different one.
+
+    　・Followers from this account will automatically be migrated to the new account
+
+    　・This account will unfollow all users it is currently following
+
+    　・You will be unable to create new notes etc. on this account
+
+
+    While migration of followers is automatic, you must manually prepare some steps to migrate the list of users you are following. To do so, carry out a follows export that you will later import on the new account in the settings menu. The same procedure applies to your lists as well as your muted and blocked users.
+
+
+    (This explanation applies to Sharkey v13.12.0 and later. Other ActivityPub software, such as Mastodon, might function differently.)'
+reportAbuseRenote: Report boost
+wordMuteTestTest: Test
+attributionDomains: Attribution Domains
+loginWithSharedAccessDescription: Login with granted access to a shared account
+_role:
+  remoteDataWarning: This condition may be incorrect for remote users.
+  _options:
+    scheduleNoteMax: Maximum number of scheduled notes
+    canTrend: Can appear in trending notes / users
+    canImportNotes: Can import notes
+    canUpdateBioMedia: Allow users to edit their avatar or banner
+    canViewFederation: Can view federation stats and details of remote instances
+    btlAvailable: Can view the bubble timeline
+  selectTestUser: Select a user to test the condition.
+  _condition:
+    isLocked: Private account
+    remoteFollowingMoreThanOrEq: Follows X or more remote accounts
+    isFromInstance: Is from a specific instance
+    isFromInstanceHost: Hostname (case-insensitive)
+    localFollowersLessThanOrEq: Has X or fewer local followers
+    remoteFollowersMoreThanOrEq: Has X or more remote followers
+    fromBubbleInstance: User is from a bubble instance
+    isExplorable: Account is discoverable
+    remoteFollowingLessThanOrEq: Follows X or fewer remote accounts
+    localFollowingLessThanOrEq: Follows X or fewer local accounts
+    localFollowingMoreThanOrEq: Follows X or more local accounts
+    isFromInstanceSubdomains: Match subdomains
+    localFollowersMoreThanOrEq: Has X or more local followers
+    remoteFollowersLessThanOrEq: Has X or fewer remote followers
+_aboutMisskey:
+  donate_sharkey: Donate to Sharkey
+  testers: Testers
+  original: Misskey original
+  thisIsModifiedVersion: '{name} uses a modified version of the original Sharkey.'
+  translation: Translate Sharkey
+  about: Sharkey is open-source software based on Misskey which has been in development by syuilo since 2014.
+  ourLovelySponsors: Our lovely Sponsors
+  misskeyContributors: Misskey Contributors
+  original_sharkey: Sharkey original
+wellKnownResources: Well-known resources
+_chartSeries:
+  received: Received
+  delivered: Delivered
+  stalled: Stalled
+  pubActive: Pub Active
+  subActive: Sub Active
+  pubAndSub: Pub & Sub
+  pub: Pub
+  sub: Sub
+  in: In
+  outSucc: Out (success)
+  outFail: Out (fail)
+  combined: Combined
+  readWrite: Read & Write
+  write: Write
+  read: Read
+  withinWeek: Registered < 1 week
+  withinMonth: Registered < 1 month
+  withinYear: Registered < 1 year
+  outsideWeek: Registered > 1 week
+  outsideMonth: Registered > 1 month
+  outsideYear: Registered > 1 year
+  localInc: Local +
+  localDec: Local -
+  remoteInc: Remote +
+  remoteDec: Remote -
+  driveUsage: Drive usage
+  driveFiles: Drive files
+  inc: Inc
+  dec: Dec
+  other: Other
+flagSpeakAsCatDescription: Your posts will get nyanified when in cat mode. If this isn't working, then please check that you dont have 'Disable cat speak' on under General/Note Display
+denyAccount: Deny & Delete
 _achievements:
   _types:
-    _notes1:
-      title: "just setting up my shonk"
-      flavor: "Have a good time with Sharkey!"
-    _login1000:
-      flavor: "Thank you for using Sharkey!"
-    _iLoveMisskey:
-      title: "I Love Sharkey"
-      description: "Post \"I ❤ #Sharkey\""
-      flavor: "Sharkey's development team greatly appreciates your support!"
-    _client30min:
-      description: "Keep Sharkey opened for at least 30 minutes"
-    _client60min:
-      title: "No \"Miss\" in Sharkey"
-      description: "Keep Sharkey opened for at least 60 minutes"
-    _brainDiver:
-      flavor: "Sharkey-Sharkey La-Tu-Ma"
     _tutorialCompleted:
-      title: "Sharkey Elementary Course Diploma"
-_role:
-  _options:
-    btlAvailable: "Can view the bubble timeline"
-    canImportNotes: "Can import notes"
-    canUpdateBioMedia: "Allow users to edit their avatar or banner"
-    scheduleNoteMax: "Maximum number of scheduled notes"
-    canTrend: "Can appear in trending notes / users"
-    canViewFederation: "Can view federation stats and details of remote instances"
-  _condition:
-    isLocked: "Private account"
-    isExplorable: "Account is discoverable"
-    isFromInstance: "Is from a specific instance"
-    isFromInstanceHost: "Hostname (case-insensitive)"
-    isFromInstanceSubdomains: "Match subdomains"
-    fromBubbleInstance: "User is from a bubble instance"
-    localFollowersLessThanOrEq: "Has X or fewer local followers"
-    localFollowersMoreThanOrEq: "Has X or more local followers"
-    localFollowingLessThanOrEq: "Follows X or fewer local accounts"
-    localFollowingMoreThanOrEq: "Follows X or more local accounts"
-    remoteFollowersLessThanOrEq: "Has X or fewer remote followers"
-    remoteFollowersMoreThanOrEq: "Has X or more remote followers"
-    remoteFollowingLessThanOrEq: "Follows X or fewer remote accounts"
-    remoteFollowingMoreThanOrEq: "Follows X or more remote accounts"
-  remoteDataWarning: "This condition may be incorrect for remote users."
-  selectTestUser: "Select a user to test the condition."
-_emailUnavailable:
-  banned: "This email address is banned"
+      title: Sharkey Elementary Course Diploma
+    _brainDiver:
+      flavor: Sharkey-Sharkey La-Tu-Ma
+    _client30min:
+      description: Keep Sharkey opened for at least 30 minutes
+    _login1000:
+      flavor: Thank you for using Sharkey!
+    _iLoveMisskey:
+      title: I Love Sharkey
+      description: 'Post "I ❤ #Sharkey"'
+      flavor: Sharkey's development team greatly appreciates your support!
+    _notes1:
+      flavor: Have a good time with Sharkey!
+      title: just setting up my shonk
+    _client60min:
+      description: Keep Sharkey opened for at least 60 minutes
+      title: No "Miss" in Sharkey
+allowQuotesConfirm: Are you sure you wish to allow quote posts?
+wordMuteWarning: All word mutes are *case-sensitive* and match on any substring, including part of a longer word or name. You can use regular expressions for more precise control.
+sharedAccessLogin: '{target} logged in via shared access.'
+donationUrl: Donation URL
+repositoryUrlDescription: If there is a repository where the source code is publicly available, enter its URL. If you are using Sharkey as-is (without any changes to the source code), enter https://activitypub.software/TransFem-org/Sharkey/.
+oneko: Cat friend :3
+adminPermissionsDescription: Apps using this token will have no administrative access except for the functions enabled below.
+headers: Headers
+accountMigratedAt: Migrated at
+uncollapseCW: Uncollapse CWs on notes
+grantSharedAccessButton: Grant shared access
+date: Date
+localFollowing: Local following
+wordMuteTestMatch: 'Matched words: {words}'
+renotes: Boosts
+enableRss: Enable RSS feed
+enableAchievements: Enable Achievements
+numberOfRepliesDescription: Increasing this number will display more replies. Setting this too high can cause replies to be cramped and unreadable.
+renoteShift: Boost (hold Shift for visibility menu)
+_announcement:
+  confetti: Throw confetti
+  onlyForRoles: Restrict to roles
+  onlyForRolesChange: Change role restrictions
+  new: New
+  onlyForRolesRestricted: Shown to members of {roles} roles
+  onlyForRolesUnrestricted: Shown to everyone
+  confettiDescription: If enabled, the announcement will display a confetti effect when viewed.
+chooseServerOnMisskeyHub: Choose a instance from Misskey Hub
+renotedToX: Boosted to {name}
+square: square
+remoteFollowers: Remote followers
+cornerRadius: Corner roundness
+showTickerOnReplies: Show instance ticker on replies
+sharedAccessGranted: You have been granted shared access to {target} with {rank} rank and {perms} permissions.
+inChannelRenote: Channel-only Boost
+pendingFollowRequests: Pending follow requests
+libreTranslateURL: LibreTranslate URL
+defaultCWPriority: Automatic CW priority
+alsoKnownAs: Also known as
+totalFollowing: Total following
+publicKey: Public key
+authorizedFetchLegacyWarning: The configuration property 'checkActivityPubGetSignature' has been deprecated and replaced with the new Authorized Fetch setting. Please remove it from your configuration file.
+expand: Expand
+horizontal: horizontal
+collapseRenotesDescription: Collapse boosts that you have boosted or reacted to
+_themeNames:
+  4eea646f-7afa-4645-83e9-83af0333cd37: Light (default)
+  8050783a-7f63-445a-b270-36d0f6ba1677: Dark (default)
+  6ed80faa-74f0-42c2-98e4-a64d9e138eab: Coffee Light
+  0ff48d43-aab3-46e7-ab12-8492110d2e2b: Apricot Light
+  a58a0abb-ff8c-476a-8dec-0ad7837e7e96: Rainy Light
+  1100673c-f902-4ccd-93aa-7cb88be56178: Botanical Light
+  6128c2a9-5c54-43fe-a47d-17942356470b: Vivid Light
+  ac168876-f737-4074-a3fc-a370c732ef48: Cherry Light
+  213273e5-7d20-d5f0-6e36-1b6a4f67115c: Sushi Light
+  e2c940b5-6e9a-4c03-b738-261c720c426d: U0 Light
+  c503d768-7c70-4db2-a4e6-08264304bc8d: Persimmon Dark
+  080a01c5-377d-4fbb-88cc-6bb5d04977ea: Astro Dark
+  32a637ef-b47a-4775-bb7b-bacbb823f865: Future Dark
+  504debaf-4912-6a4c-5059-1db08a76b737: Botanical Dark
+  02816013-8107-440f-877e-865083ffe194: Green+Lime Dark
+  dc489603-27b5-424a-9b25-1ff6aec9824a: Green+Orange Dark
+  679b3b87-a4e9-4789-8696-b56c15cc33b0: Cherry Dark
+  66e7e5a9-cd43-42cd-837d-12f47841fa34: Ice Dark
+  7a5bc13b-df8f-4d44-8e94-4452f0c634bb: U0 Dark
+  3cdfd635-4d5e-4d06-9ba3-20f123f0999b: Rosé Pine
+  919c91ac-c6fa-43dc-a423-3cc84fd67d7c: Rosé Pine Dawn
+popularUsersGlobal: Users popular on the global network
+grantSharedAccessSuccess: Shared access granted
+approvalStatus: Approval Status
+deletedAt: Deleted at
+collapseRenotes: Collapse boosts you've already seen
+accessTokenNameDescription: Unique name to record the purpose of this access token
+wordMuteTestLabel: Test patterns
+autoloadConversation: Load conversation on replies
+_initialTutorial:
+  _done:
+    description: The functions introduced here are just a small part. For a more detailed understanding of using Sharkey, please refer to {link}.
+    title: The tutorial is complete! 🎉
+  _timeline:
+    description1: Sharkey provides multiple timelines based on usage (some may not be available depending on the server's policies).
+    bubble: You can view notes from connected servers picked by your admins.
+  _reaction:
+    reactDone: You can undo a reaction by pressing the '{undo}' button.
+    letsTryReacting: Reactions can be added by clicking the '{reaction}' button on the note. Try reacting to this sample note!
+  _postNote:
+    description1: When posting a note on Sharkey, various options are available. The posting form looks like this.
+    _visibility:
+      followers: Visible to followers only. Only followers can see it and no one else, and it cannot be boosted by others.
+      home: Public only on the Home timeline. People visiting your profile, via followers, and through boosts can see it.
+  _landing:
+    description: Here, you can learn the basics of using Sharkey and its features.
+  _note:
+    description: Posts on Sharkey are called 'Notes.' Notes are arranged chronologically on the timeline and are updated in real-time.
+libreTranslateTranslation: LibreTranslate Translation
+trendingPollsDisabledLogIn: Please log in to view trending polls.
 _signup:
-  approvalPending: "Your account has been created and is awaiting approval."
-  reasonInfo: "Please enter a reason as to why you want to join the instance."
-_aboutMisskey:
-  about: "Sharkey is open-source software based on Misskey which has been in development by syuilo since 2014."
-  original: "Misskey original"
-  original_sharkey: "Sharkey original"
-  thisIsModifiedVersion: "{name} uses a modified version of the original Sharkey."
-  translation: "Translate Sharkey"
-  donate_sharkey: "Donate to Sharkey"
-  testers: "Testers"
-  misskeyContributors: "Misskey Contributors"
-  ourLovelySponsors: "Our lovely Sponsors"
-_serverDisconnectedBehavior:
-  disabled: "Disable warning"
+  approvalPending: Your account has been created and is awaiting approval.
+  reasonInfo: Please enter a reason as to why you want to join the instance.
+expandAllCws: Show content for all replies
+mandatoryCWForInstanceDescription: Applies a content warning to all posts originating from this instance. The forced warnings will appear like a word mute to distinguish them from the notes' own content warnings.
+mediaSilencedByBase: This host's media is silenced implicitly because a base domain's media is silenced. To un-silence this host, first un-silence the base domain(s).
+seasonalScreenEffect: Seasonal screen effects
+scheduledNotes: Scheduled Notes
+trendingPollsDisabled: Trending polls are disabled on this instance.
+collapse: Collapse
+cantRenote: This post can't be boosted.
+useSoundOnlyWhenActive: Output sounds only if Sharkey is active.
+addGrantee: Share access
+deleted: Deleted
+backgroundQueue: Background queue
+_poll:
+  multiple: Multiple choices
+sharedAccount: Shared account
+trustedLinkUrlPatterns: Link to external site warning exclusion list
 _channel:
-  allowRenoteToExternal: "Allow boosts and quote outside the channel"
-_instanceMute:
-  instanceMuteDescription: "This will mute any notes/boosts from the listed instances, including those of users replying to a user from a muted instance."
+  allowRenoteToExternal: Allow boosts and quote outside the channel
+popularUsersLocal: Users popular on {name}
+voteConfirmMulti: 'Confirm your vote for "{choice}"?
+
+  　You can choose more options after confirmation.'
+donation: Donate
+approveAccount: Approve
+root: Root
+severAllFollowRelationsQueued: Severing all follow relations with {host} queued.
+trustedDomainsList: Link to external site warning exclusion list
+authorizedFetchSection: Authorized Fetch
+restartDeletionConfirm: Are you sure you want to restart this account deletion?
+patternHidden: Pattern Hidden
+enableProxyAccount: Enable the proxy account.
+verified: Verified
+lastFetchedOutboxAt: Last fetched outbox at
+previousRootUser: Previous root user
+severAllFollowRelations: Break following relationships
+_emailUnavailable:
+  banned: This email address is banned
+lookupConfirm: Are you sure that you want to look this up?
+pleaseSelect: Please select
+renote: Boost
+defaultCWPriorityDescription: Select preferred action when default CW and keep CW settings are both enabled at the same time.
+clickToOpen: Click to open notes
+_soundSettings:
+  driveFileDurationWarnDescription: Long audio may disrupt using Sharkey. Still continue?
+  driveFileError: The audio couldn't be loaded. Please make sure you selected an audio file.
+renotedBy: Boosted by {user}
+raw: Raw
+deeplFreeMode: Use DeepLX-JS (No Auth Key)
+open: Open
+quoted: Quoted.
+lastFetchedFeaturedAt: Last fetched featured at
+_flash:
+  cspError: raw.esm.sh could not be accessed, meaning this instance's Content Security Policy is likely out of date. Please contact your instance administrators.
+  loadingFlashFile: Loading Flash file
+  poweredByRuffle: Powered by Ruffle.
+  isLoading: Flash Content Is Loading
+  arbitraryCodeExecutionWarning: Always be wary of arbitrary code execution!
+  failedToLoad: 'Flash Content Failed To Load:'
+  loadingRufflePlayer: Loading Ruffle player
+  contentHidden: Flash Content Hidden
+antennaUsersDescription: List one username per line. Use "*@instance.com" to specify all users of an instance
+enableAllRead: Enable all read-only permissions
+_animatedMFM:
+  stop: Stop MFM Animation
+  play: Play MFM Animation
+  _alert:
+    confirm: Animate
+    text: Animated MFMs could include flashing lights and fast moving text/emojis.
+writtenBy: Written by {user}
+deliverQueue: Deliver queue
 _theme:
   keys:
-    renote: "Boost"
-_soundSettings:
-  driveFileDurationWarnDescription: "Long audio may disrupt using Sharkey. Still continue?"
-  driveFileError: "The audio couldn't be loaded. Please make sure you selected an audio file."
-_2fa:
-  moreDetailedGuideHere: "Click here for a detailed guide"
-_widgets:
-  search: "Search"
-_poll:
-  multiple: "Multiple choices"
-_profile:
-  updateAvatar: "Update avatar"
-  removeAvatar: "Remove avatar"
-  updateBanner: "Update banner"
-  removeBanner: "Remove banner"
-  changeBackground: "Change background"
-  updateBackground: "Update background"
-  removeBackground: "Remove background"
-  listenbrainz: "ListenBrainz username"
+    renote: Boost
+_noteSearch:
+  fileType: File Type
+  newestToOldest: Sort by newest to oldest
+  _fileType:
+    flash: Flash
+    audio: Audio
+    image: Images
+    video: Videos
+    none: None
+    module: Module
+sharedAccessDescription: Any accounts listed here will be granted access to the token and may use it to access this account.
+i18nInfoSharkey: Sharkey specific changes are translated in its own {link}.
+rejectReports: Reject reports from this instance
+_authorizedFetchValueDescription:
+  staff: Use the default value of "{value}" recommended by the instance staff.
+  essential: Allow some limited unsigned requests. Provides a hybrid between "Never" and "Always" by exposing only the minimum profile metadata that is required for federation with older software.
+  never: Block all unsigned requests. Improves privacy and makes blocks more effective, but is not compatible with some very old or uncommon instance software.
+  always: Allow all unsigned requests. Provides the greatest compatibility with other instances, but reduces privacy and weakens blocks.
+searchEngineCustomURIDescription: The custom URI must be input in the format like "https://www.google.com/search?q=\{query}" or "https://www.google.com/search?q=%s".
+_followRequest:
+  sent: Sent
+  recieved: Received
+_processErrors:
+  quoteUnavailable: Unable to process quote. This post may be missing context.
+  attachmentFailed: One or more media attachments are unavailable and cannot be shown.
+translationFailed: Failed to translate note. Please try again later or contact an administrator for assistance.
+rolePeriod: Period
+disableCatSpeak: Disable cat speak
+noteIsFlaggedAs: 'Note is flagged: "{cw}"'
+silenced: Silenced
+wordMuteTestNoMatch: Text does not match any patterns.
+rawInfoDescription: Extended user data in its raw form. These fields are private and can only be accessed by moderators.
+clone: Clone
+renotesList: Boosts
+thisPostIsMissingAltText: One of the files attached to this post is missing alt text. Please ensure all the attachments have alt text.
+rmboost: Unboosted.
+flagSpeakAsCat: Speak as a cat
 _timelines:
-  bubble: "Bubble"
+  bubble: Bubble
+mandatoryCWForNoteDescription: Applies an additional content warning to this post. The new warning will appear like a word mute to distinguish it from the author's own content warning.
+accountMigratedTo: Migrated to
+defaultLike: Default like emoji
+attachAsFileQuestion: The text in clipboard is long. Would you like to attach it as a text file?
+_timelineDescription:
+  bubble: In the Bubble timeline, you can see notes from connected servers picked by your admins.
+makeIndexable: Make public notes not indexable
+_urlPreviewSetting:
+  requireContentLength: Generate the preview only if we can get Content-Length
+  summaryProxyDescription2: The following parameters are sent to the proxy as a query string. If the proxy does not support them, the values are ignored.
+  summaryProxy: Endpoint for proxy to generate previews
+  summaryProxyDescription: Generate previews using Summaly Proxy, instead of Sharkey itself.
+  timeoutDescription: If it takes longer than this value to get the preview, the preview won't be generated.
+confirmRevokeToken: Are you sure you want to revoke this token?
+_activity:
+  uniquePvUser: Unique PV (user)
+  uniquePvVisitor: Unique PV (visitor)
+  pvUser: PV (user)
+  pvVisitor: PV (visitor)
+  pvChartTitle: Unique / Natural PV
+  followLocal: Follow (local)
+  followRemote: Follow (remote)
+  followedLocal: Followed (local)
+  followedRemote: Followed (remote)
+accessKey: Access key
+notificationDotNotWorkingAdvice: If the notification dot doesn't work, ask an admin to check our documentation {link}
+renoteMuted: Boosts muted
+_webhookSettings:
+  _systemEvents:
+    abuseReportResolved: When resolved abuse reports
+  _events:
+    renote: When boosted
+renoteUnmute: Unmute Boosts
+approvalRequiredForSignup: Require approval for new users
+pollsExpired: Polls that have ended recently
+proAccount: Pro account
+federation: Federation
+sourceCodeIsNotYetProvided: The source code is not yet available. Please contact your administrator to fix this problem.
+pendingUserApprovals: There are users awaiting approval.
+wordMuteTestDescription: Enter some text here to test your word patterns. The matched words, if any, will be displayed below.
+signinOrContinueOnRemote: To continue, you need to go to your instance to perform this action or sign up / log in to the instance you are trying to interact with.
+inboxQueue: Inbox queue
+showVisibilitySelectorOnBoostDescription: Shows the visiblity selector if enabled when clicking boost, if disabled it will use the default visiblity defined below and the selector will not show up.
+noDescription: No description
+_dataSaver:
+  _avatar:
+    description: Stop avatar image animation. Animated images can be larger in file size than normal images, potentially leading to further reductions in data traffic.
+notVerified: Not Verified
+remoteFollowing: Remote following
+thisPostIsMissingAltTextCancel: Cancel
+translationTimeoutCaption: Timeout in milliseconds for translation API requests.
+deleteAndEditConfirm: Are you sure you want to redraft this note? This means you will lose all reactions, boosts, and replies to it.
+_defaultCWPriority:
+  parentDefault: Use Parent, then Default (use the inherited CW, and append the default CW)
+  parent: Use Parent (use the inherited CW, ignoring the default CW)
+  defaultParent: Use Default, then Parent (use the default CW, and append the inherited CW)
+  default: Use Default (use the default CW, ignoring the inherited CW)
+chars: chars
+thisPostIsMissingAltTextIgnore: Post anyway
+reference: ref
+fileNotSelected: No file selected
+renotesCount: Number of boosts sent
+robotsTxtDescription: Adding entries here will override the default robots.txt packaged with Sharkey.
+overrideRank: Limit rank
+form: Form
+_widgets:
+  search: Search
+localFollowers: Local followers
+_instanceMute:
+  instanceMuteDescription: This will mute any notes/boosts from the listed instances, including those of users replying to a user from a muted instance.
+sendErrorReportsDescription: 'When turned on, detailed error information will be shared with Sharkey when a problem occurs, helping to improve the quality of Sharkey.
+
+  This will include information such the version of your OS, what browser you''re using, your activity in Sharkey, etc.'
+permissions: Permissions
+enableAllWrite: Enable all write/edit permissions
+showReactionsCount: Show the number of reactions in notes
+warnForMissingAltText: Warn you when you forget to put alt text
+loginWithSharedAccess: Login with shared access
+userIsFlaggedAs: '{name} is flagged: "{cw}"'
+abuseMarkAsResolved: Mark report as resolved
+collapseFiles: Collapse files
+deeplFreeModeDescription: Need Help? Check our documentation to know how to setup DeepLX-JS.
+authorizedFetchLabel: 'Allow unsigned ActivityPub requests:'
+expandLongNote: Always expand long notes
+undoFollowRequestConfirm: Are you sure you want to cancel your follow request?
+permissionsDescription: Apps using this token will have no API access except for the functions listed below.
+authorizedFetchDescription: This setting controls the behavior when a remote instance or user attempts to access your content without verifying their identity. If disabled, any remote user can access your profile and posts - even one who has been blocked or defederated.
+unNsfwConfirm: Are you sure that you want to unmark all media from this account as NSFW?
+ipTip: The date is when IP address was first used.
+rejectQuotesConfirm: Are you sure you wish to strip quote posts?
+tokenHasNoPermissionsConfirm: Are you sure you want to create a token with no permissions?
+friendlyCaptchaDocs: FriendlyCaptcha Docs
+mandatoryCWForNote: Force content warning
+rawUserDescription: Packed user data in its raw form. Most of these fields are public and visible to all users.
+silencedInstanceSaysSomething: '{name} has been silenced by {host} staff'
+userDeleted: This user has been deleted.
+noteFooterLabel: Note controls
+postFiltered: post is hidden by a filter
+forwardReport: Forward report to remote instance
+scratchpadDescription: The Scratchpad provides an environment for AiScript experiments. You can write, execute, and check the results of it interacting with Sharkey in it.
+didYouLikeMisskey: Have you taken a liking to Sharkey?
+openRemoteProfile: Open remote profile
+instanceIconAlt: Icon of {name}
+lastFetchedAt: Last fetched at
+_serverSettings:
+  aboutInstanceDescription: A longer description that will be displayed in the 'Instance Information' page, going in place of the regular instance description. Supports HTML.
+  sidebarLogoUrl: Logo URL
+  aboutInstance: About instance
+  sidebarLogoDescription: Specifies the logo to use instead of the regular icon in high definition, dynamic-width scenarios.
+  deliverSuspendedSoftwareDescription: You can specify a range of names and versions of the server's software to stop delivery for vulnerability or other reasons. This version information is provided by the server and is not guaranteed to be reliable. A semver range specification can be used to specify the version, but specifying >= 2024.3.1 will not include custom versions such as 2024.3.1-custom.0, so it is recommended that a prerelease specification be used, such as >= 2024.3.1-0. Specifying * will match any name or version, even when the server doesn't provide one. You can also provide a regular expression like /^sharkey-/i or /^1-/
+  inquiryUrl: Contact URL
+  sidebarLogoUsageExample: E.g. In the sidebar, to visitors and in the "About" page.
+  inquiryUrlDescription: Specify the URL of a web page that contains a contact form or the instance operators' contact information.
+keepCwEnabled: Enabled (copy CWs verbatim)
+poweredByMisskeyDescription: '{name} is one of the services powered by the open source platform <b>Sharkey</b> which is based on Misskey (referred to as a "Misskey instance").'
+_2fa:
+  moreDetailedGuideHere: Click here for a detailed guide
+grantSharedAccessNoSelection: No shared access listed
+custom: Custom
+misskeyUpdated: Sharkey has been updated!
+showBots: Show bots in timeline
+setRootUserWarning: You are currently the root user; you can give that away to someone else. If you want to remain an administrator after that, you should make yourself an administration via a role, <em>before</em> you give root away
+makeIndexableDescription: Stop note search from indexing your public notes.
+_externalNavigationWarning:
+  title: Navigate to an external site
+  trustThisDomain: Trust this domain on this device in the future
+  description: Leave {host} and go to an external site
+enableRssDescription: Generate an RSS feed containing your basic profile details and public notes. Users can subscribe to the feed without a follow request or approval.
+renoteMute: Mute Boosts
+forwardReportIsAnonymous: Instead of your account, an anonymous system account will be displayed as reporter at the remote instance.
+restartDeletionDescription: Account deletion was last attempted {date}. If the deletion failed or was incomplete, then you may click this button to restart the process.
+unrenote: Remove boost
+mandatoryCWForInstance: Force content warning
+origin: Origin
+flash: Flash
+translationTimeoutLabel: Translation timeout
+loginDates: Login Dates
+newAnnouncement: New announcement
+goToMisskey: To Sharkey
+userSaysSomethingInMutedNote: '{name} said something in a muted post'
+trustedLinkUrlPatternsDescription: Separate with spaces for an AND condition or with line breaks for an OR condition. Using surrounding keywords with slashes will turn them into a regular expression. If you write only the domain name, it will be a backward match.
+showTranslationButtonInNoteFooter: Add "Translate" to note action menu
+showReplies: Show replies
+showVisibilitySelectorOnBoost: Show Visibility Selector
+lastPosted: 'Last posted: {at}'
+deepLXJSURL: DeepLX-JS URL
+grantSharedAccessSuccess2: Shared access has been granted to {num} users.
+blockingYou: Blocking you
+severAllFollowRelationsConfirm: Really break all follow relationships? This is irreversible! This will break {followingCount} following and {followersCount} follower relations on {instanceName}!
+muteNote: Mute note
+clickToUnsubscribe: Please click [OK] to unsubscribe from announcement e-mails.
+pollsOnRemote: Polls trending on the global network
+showQuotes: Show quotes
+mediaSilencedInstancesDescription: List the host names of the instances that you want to media-silence, separated by a new line. All accounts belonging to the listed instances will be treated as sensitive, and can't use custom emojis. This will not affect the blocked instances.
 _pages:
   blocks:
-    dynamicDescription: "This block type has been removed. Please use {play} from now on."
-_notification:
-  youRenoted: "Boost from {name}"
-  renotedBySomeUsers: "Boosted by {n} users"
-  edited: "Note got edited"
-  scheduledNoteFailed: "Posting scheduled note failed"
-  scheduledNotePosted: "Scheduled Note was posted"
-  importOfXCompleted: "Import of {x} has been completed"
-  sharedAccessGranted: "Shared access granted"
-  sharedAccessRevoked: "Shared access revoked"
-  sharedAccessLogin: "Shared access login"
-  _types:
-    renote: "Boosts"
-    edited: "Edits"
-    scheduledNoteFailed: "Posting scheduled note failed"
-    scheduledNotePosted: "Scheduled note was posted"
-    importCompleted: "The import has been completed"
-  _actions:
-    renote: "Boost"
-_webhookSettings:
-  _events:
-    renote: "When boosted"
-  _systemEvents:
-    abuseReportResolved: "When resolved abuse reports"
+    dynamicDescription: This block type has been removed. Please use {play} from now on.
+cw: CW
+fluentEmoji: Fluent Emoji
 _abuseReport:
   _notificationRecipient:
     _recipientType:
       _captions:
-        mail: "Send an email to the moderators when an abuse report is received."
-        webhook: "Send a notification to the SystemWebhook when an abuse report is received or resolved."
-_moderationLogTypes:
-  approve: "Approved"
-  decline: "Declined"
-  setMandatoryCW: "Set content warning for user"
-  setMandatoryCWForNote: "Set content warning for note"
-  setMandatoryCWForInstance: "Set content warning for instance"
-  rejectRemoteInstanceReports: "Rejected reports from remote instance"
-  acceptRemoteInstanceReports: "Accepted reports from remote instance"
-  rejectQuotesUser: "Blocked/Stripped quote posts from user"
-  allowQuotesUser: "Allowed quote posts from user"
-  clearUserFiles: "Cleared a user's drive files"
-  nsfwUser: "Marked user as NSFW"
-  unNsfwUser: "Un-marked user as NSFW"
-  silenceUser: "Silenced user"
-  unSilenceUser: "Un-silenced user"
-  createAccount: "Created an account"
-  clearRemoteFiles: "Cleared remote drive files"
-  clearOwnerlessFiles: "Cleared owner-less drive files"
-  updateCustomEmojis: "Updated custom emojis"
-  importCustomEmojis: "Imported custom emojis"
-  clearInstanceFiles: "Cleared an instance's drive files"
-  severFollowRelations: "Severed follow relations with an instance"
-  createPromo: "Created a note promo"
-  addRelay: "Added a relay"
-  removeRelay: "Removed a relay"
-  restartMigration: "Restarted migration for a user"
-  setRoot: "Set the root user"
-
-_mfm:
-  uncommonFeature: "This is not a widespread feature, it may not display properly on most other fedi software, including other Misskey forks"
-  intro: "MFM is a markup language used on Misskey, Sharkey, Firefish, Akkoma, and more that can be used in many places. Here you can view a list of all available MFM syntax."
-  dummy: "Sharkey expands the world of the Fediverse"
-  mention: "Mention"
-  mentionDescription: "You can specify a user by using an At-Symbol and a username."
-  hashtag: "Hashtag"
-  hashtagDescription: "You can specify a hashtag using a number sign and text."
-  url: "URL"
-  urlDescription: "URLs can be displayed."
-  link: "Link"
-  linkDescription: "Specific parts of text can be displayed as a URL."
-  bold: "Bold"
-  boldDescription: "Highlights letters by making them thicker."
-  small: "Small"
-  smallDescription: "Displays content small and thin."
-  center: "Center"
-  centerDescription: "Displays content centered."
-  unixtime: "Unix Time"
-  unixtimeDescription: "Displays a timestamp in the viewer's current timezone."
-  inlineCode: "Code (Inline)"
-  inlineCodeDescription: "Displays inline syntax highlighting for (program) code."
-  blockCode: "Code (Block)"
-  blockCodeDescription: "Displays syntax highlighting for multi-line (program) code in a block."
-  inlineMath: "Math (Inline)"
-  inlineMathDescription: "Display math formulas (KaTeX) in-line"
-  blockMath: "Math (Block)"
-  blockMathDescription: "Display math formulas (KaTeX) in a block"
-  quote: "Quote"
-  quoteDescription: "Displays content as a quote."
-  emoji: "Custom Emoji"
-  emojiDescription: "By surrounding a custom emoji name with colons, custom emoji can be displayed."
-  search: "Search"
-  searchDescription: "Displays a search box with pre-entered text."
-  flip: "Flip"
-  flipDescription: "Flips content horizontally or vertically."
-  jelly: "Animation (Jelly)"
-  jellyDescription: "Gives content a jelly-like animation."
-  tada: "Animation (Tada)"
-  tadaDescription: "Gives content a \"Tada!\"-like animation."
-  jump: "Animation (Jump)"
-  jumpDescription: "Gives content a jumping animation."
-  bounce: "Animation (Bounce)"
-  bounceDescription: "Gives content a bouncy animation."
-  shake: "Animation (Shake)"
-  shakeDescription: "Gives content a shaking animation."
-  twitch: "Animation (Twitch)"
-  twitchDescription: "Gives content a strongly twitching animation."
-  spin: "Animation (Spin)"
-  spinDescription: "Gives content a spinning animation."
-  x2: "Big"
-  x2Description: "Displays content bigger."
-  x3: "Very big"
-  x3Description: "Displays content even bigger."
-  x4: "Unbelievably big"
-  x4Description: "Displays content even bigger than bigger than big."
-  blur: "Blur"
-  blurDescription: "Blurs content. It will be displayed clearly when hovered over."
-  font: "Font"
-  fontDescription: "Sets the font to display content in."
-  rainbow: "Rainbow"
-  rainbowDescription: "Makes the content appear in rainbow colors."
-  sparkle: "Sparkle"
-  sparkleDescription: "Gives content a sparkling particle effect."
-  rotate: "Rotate"
-  rotateDescription: "Turns content by a specified angle."
-  position: "Position"
-  positionDescription: "Move content by a specified amount."
-  crop: "Crop"
-  cropDescription: "Crop content."
-  followMouse: "Follow Mouse"
-  followMouseDescription: "Content will follow the mouse. On mobile it will follow wherever the user taps."
-  scale: "Scale"
-  scaleDescription: "Scale content by a specified amount."
-  foreground: "Foreground color"
-  foregroundDescription: "Change the foreground color of text."
-  fade: 'Fade'
-  fadeDescription: 'Fade text in and out.'
-  background: "Background color"
-  backgroundDescription: "Change the background color of text."
-  border: "Border"
-  borderDescription: "Draw a border around the content."
-  plain: "Plain"
-  plainDescription: "Deactivates the effects of all MFM contained within this MFM effect."
-_animatedMFM:
-  play: "Play MFM Animation"
-  stop: "Stop MFM Animation"
-  _alert:
-    text: "Animated MFMs could include flashing lights and fast moving text/emojis."
-    confirm: "Animate"
-_dataRequest:
-  title: "Request Data"
-  warn: "Data requests are only possible every 3 days."
-  text: "Once the data is ready to download, an email will be sent to the email address registered to this account."
-  button: "Request"
-_dataSaver:
-  _avatar:
-    description: "Stop avatar image animation. Animated images can be larger in file size than normal images, potentially leading to further reductions in data traffic."
-_urlPreviewSetting:
-  timeoutDescription: "If it takes longer than this value to get the preview, the preview won't be generated."
-  requireContentLength: "Generate the preview only if we can get Content-Length"
-  summaryProxy: "Endpoint for proxy to generate previews"
-  summaryProxyDescription: "Generate previews using Summaly Proxy, instead of Sharkey itself."
-  summaryProxyDescription2: "The following parameters are sent to the proxy as a query string. If the proxy does not support them, the values are ignored."
-_externalNavigationWarning:
-  title: "Navigate to an external site"
-  description: "Leave {host} and go to an external site"
-  trustThisDomain: "Trust this domain on this device in the future"
-
-remoteFollowersWarning: "Remote followers may have incomplete or outdated activity"
-
-_auth:
-  allowed: "Allowed"
-_announcement:
-  new: "New"
-  onlyForRoles: "Restrict to roles"
-  onlyForRolesChange: "Change role restrictions"
-  onlyForRolesUnrestricted: "Shown to everyone"
-  onlyForRolesRestricted: "Shown to members of {roles} roles"
-  confetti: "Throw confetti"
-  confettiDescription: "If enabled, the announcement will display a confetti effect when viewed."
-_deck:
-  _columns:
-    following: "Following"
-
-selectFollowRelationship: "Select a follow relationship..."
-
-schedulePost: "Schedule a note"
-schedulePostList: "List of scheduled notes"
-postOn: "Post on"
-scheduledNotes: "Scheduled Notes"
-never: "Never"
-
-_ago:
-  now: "Now"
-  never: "Never"
-_timeIn:
-  now: "Now"
-  never: "Never"
-
-_permissions:
-  "write:admin:approve-user": "Approve new users"
-  "write:admin:decline-user": "Decline new users"
-  "write:admin:nsfw-user": "Mark users as NSFW"
-  "write:admin:unnsfw-user": "Mark users as not NSFW"
-  "write:admin:cw-user": "Apply mandatory CW on users"
-  "write:admin:cw-note": "Apply mandatory CW on notes"
-  "write:admin:cw-instance": "Apply mandatory CW on instances"
-  "write:admin:silence-user": "Silence users"
-  "write:admin:unsilence-user": "Un-silence users"
-  "write:admin:reject-quotes": "Allow/Prohibit quote posts from a user"
-  "read:notes-schedule": "View your list of scheduled notes"
-  "write:notes-schedule": "Compose or delete scheduled notes"
-  "read:admin:abuse-report:notification-recipient": "Read abuse report notification recipients"
-  "write:admin:abuse-report:notification-recipient": "Edit abuse report notification recipients"
-
-robotsTxt: "Custom robots.txt"
-robotsTxtDescription: "Adding entries here will override the default robots.txt packaged with Sharkey."
-
-defaultCW: "Default content warning for new posts"
-defaultCWDescription: "The value here will be auto-filled as the content warning for all new posts and replies."
-defaultCWPriority: "Automatic CW priority"
-defaultCWPriorityDescription: "Select preferred action when default CW and keep CW settings are both enabled at the same time."
-_defaultCWPriority:
-  default: "Use Default (use the default CW, ignoring the inherited CW)"
-  parent: "Use Parent (use the inherited CW, ignoring the default CW)"
-  defaultParent: "Use Default, then Parent (use the default CW, and append the inherited CW)"
-  parentDefault: "Use Parent, then Default (use the inherited CW, and append the default CW)"
-
-genKeys: "Generate Keys"
-_genKeysDialog:
-  text: "Are you sure that you want to generate new keys? This will stop push notifications for all users who have already enabled them."
-  title: "Generate new keys"
-
-_noteSearch:
-  newestToOldest: "Sort by newest to oldest"
-  fileType: "File Type"
-  _fileType:
-    none: "None"
-    image: "Images"
-    video: "Videos"
-    audio: "Audio"
-    module: "Module"
-    flash: "Flash"
-
-id: "ID"
-
-mandatoryCW: "Force content warning"
-mandatoryCWDescription: "Applies a content warning to all posts created by this user. The forced warnings will appear like a word mute to distinguish them from the author's own content warnings."
-mandatoryCWForNote: "Force content warning"
-mandatoryCWForNoteDescription: "Applies an additional content warning to this post. The new warning will appear like a word mute to distinguish it from the author's own content warning."
-mandatoryCWForInstance: "Force content warning"
-mandatoryCWForInstanceDescription: "Applies a content warning to all posts originating from this instance. The forced warnings will appear like a word mute to distinguish them from the notes' own content warnings."
-fetchLinkedNote: "Fetch linked note"
-showTranslationButtonInNoteFooter: "Add \"Translate\" to note action menu"
-translationFailed: "Failed to translate note. Please try again later or contact an administrator for assistance."
-
-_processErrors:
-  quoteUnavailable: "Unable to process quote. This post may be missing context."
-  attachmentFailed: "One or more media attachments are unavailable and cannot be shown."
-
-authorizedFetchSection: "Authorized Fetch"
-authorizedFetchLabel: "Allow unsigned ActivityPub requests:"
-authorizedFetchDescription: "This setting controls the behavior when a remote instance or user attempts to access your content without verifying their identity. If disabled, any remote user can access your profile and posts - even one who has been blocked or defederated."
+        mail: Send an email to the moderators when an abuse report is received.
+        webhook: Send a notification to the SystemWebhook when an abuse report is received or resolved.
+restartMigrationDescription: Account migration was last attempted {date}. If the migration failed or was incomplete, then you may click this button to restart the process.
+followingPub: Following (Pub)
+keepCwDescription: When replying to a post with a Content Warning, automatically use the same CW for the reply.
+genKeys: Generate Keys
+updateRemoteUser: Refresh remote data
+mediaSilenced: Media Silenced
+disableDrawer: Don't use drawer-style menus
+collapseNotesRepliedTo: Collapse notes replied to
+latestStatus: Latest status
+continueOnRemote: Continue on remote instance
+sensitiveMediaRevealConfirm: This media might be sensitive. Are you sure you want to reveal it?
 _authorizedFetchValue:
-  never: "Never"
-  always: "Always"
-  essential: "Only for essential metadata"
-  staff: "Use staff recommendation"
-_authorizedFetchValueDescription:
-  never: "Block all unsigned requests. Improves privacy and makes blocks more effective, but is not compatible with some very old or uncommon instance software."
-  always: "Allow all unsigned requests. Provides the greatest compatibility with other instances, but reduces privacy and weakens blocks."
-  essential: "Allow some limited unsigned requests. Provides a hybrid between \"Never\" and \"Always\" by exposing only the minimum profile metadata that is required for federation with older software."
-  staff: "Use the default value of \"{value}\" recommended by the instance staff."
-authorizedFetchLegacyWarning: "The configuration property 'checkActivityPubGetSignature' has been deprecated and replaced with the new Authorized Fetch setting. Please remove it from your configuration file."
-
-_followRequest:
-  recieved: "Received"
-  sent: "Sent"
-
-deleted: "Deleted"
-
-enableProxyAccount: "Enable the proxy account."
-enableProxyAccountDescription: "If disabled, then the proxy account will not be used. User lists will only include notes from local or followed users."
-
-_confirmPollEdit:
-  title: Are you sure you want to edit this poll
-  text: Editing this poll will cause it to lose all previous votes
-
-wordMuteTestLabel: "Test patterns"
-wordMuteTestDescription: "Enter some text here to test your word patterns. The matched words, if any, will be displayed below."
-wordMuteTestTest: "Test"
-wordMuteTestMatch: "Matched words: {words}"
-wordMuteTestNoResults: "No results yet, enter some text and click \"Test\" to check it."
-wordMuteTestNoMatch: "Text does not match any patterns."
-wordMuteWarning: "All word mutes are *case-sensitive* and match on any substring, including part of a longer word or name. You can use regular expressions for more precise control."
-
-bubbleTimeline: "Bubble timeline"
-bubbleTimelineDescription: "Choose which instances should be displayed in the bubble."
-bubbleTimelineMustBeEnabled: "Note: the bubble timeline is hidden by default, and must be enabled via roles."
-
-popularUsersGlobal: "Users popular on the global network"
-popularUsersLocal: "Users popular on {name}"
-
-pollsOnLocal: "Polls trending on {name}"
-pollsOnRemote: "Polls trending on the global network"
-pollsExpired: "Polls that have ended recently"
-trendingPollsDisabled: "Trending polls are disabled on this instance."
-trendingPollsDisabledLogIn: "Please log in to view trending polls."
-
-silenced: "Silenced"
-totalFollowers: "Total followers"
-totalFollowing: "Total following"
-localFollowers: "Local followers"
-localFollowing: "Local following"
-remoteFollowers: "Remote followers"
-remoteFollowing: "Remote following"
-updateRemoteUser: "Refresh remote data"
-activityPub: "Activity Pub"
-ip: "IP"
-ipTip: "The date is when IP address was first used."
-rolePeriod: "Period"
-roleAssigned: "Assigned"
-roleAutomatic: "automatic"
-
-translationTimeoutLabel: "Translation timeout"
-translationTimeoutCaption: "Timeout in milliseconds for translation API requests."
-
-staffNotes: "Staff notes"
-instanceIconAlt: "Icon of {name}"
-
-attributionDomains: "Attribution Domains"
-attributionDomainsDescription: "A list of domains whose content can be attributed to you on link previews, separated by new-line. Any subdomain will also be valid. The following needs to be on the webpage:"
-writtenBy: "Written by {user}"
-
-followingPub: "Following (Pub)"
-followersSub: "Followers (Sub)"
-wellKnownResources: "Well-known resources"
-lastPosted: "Last posted: {at}"
-nsfw: "NSFW"
-raw: "Raw"
-cw: "CW"
-mediaSilenced: "Media Silenced"
-bubble: "Bubble"
-verified: "Verified"
-notVerified: "Not Verified"
-hibernated: "Hibernated"
-
-keepCwDescription: "When replying to a post with a Content Warning, automatically use the same CW for the reply."
-keepCwDisabled: "Disabled (do not copy CWs)"
-keepCwEnabled: "Enabled (copy CWs verbatim)"
-keepCwPrependRe: "Enabled (copy CW and prepend \"RE:\")"
-
-noteFooterLabel: "Note controls"
-
-rawUserDescription: "Packed user data in its raw form. Most of these fields are public and visible to all users."
-rawInfoDescription: "Extended user data in its raw form. These fields are private and can only be accessed by moderators."
-rawApDescription: "ActivityPub user data in its raw form. These fields are public and accessible to other instances."
-
-signupReason: "Signup Reason"
-
+  staff: Use staff recommendation
+  essential: Only for essential metadata
+  never: Never
+  always: Always
+visibilityOnBoost: Default boost visibility
+totalFollowers: Total followers
+enableProxyAccountDescription: If disabled, then the proxy account will not be used. User lists will only include notes from local or followed users.
+_permissions:
+  write:admin:approve-user: Approve new users
+  write:admin:cw-user: Apply mandatory CW on users
+  write:notes-schedule: Compose or delete scheduled notes
+  write:admin:decline-user: Decline new users
+  write:admin:silence-user: Silence users
+  write:admin:unsilence-user: Un-silence users
+  write:admin:cw-note: Apply mandatory CW on notes
+  write:admin:reject-quotes: Allow/Prohibit quote posts from a user
+  write:admin:abuse-report:notification-recipient: Edit abuse report notification recipients
+  read:admin:abuse-report:notification-recipient: Read abuse report notification recipients
+  write:admin:unnsfw-user: Mark users as not NSFW
+  read:notes-schedule: View your list of scheduled notes
+  write:admin:cw-instance: Apply mandatory CW on instances
+  write:admin:nsfw-user: Mark users as NSFW
+robotsTxt: Custom robots.txt
+cannotLoadNote: Failed to load note
+_customEmojisManagerLegacy:
+  selectMode: Select mode
+  selectAll: Select all
+  setCategory: Set category
+  setTag: Set tag
+  addTag: Add tag
+  removeTag: Remove tag
+  setLicense: Set license
+newDecoration: New decoration
+userSaysSomethingInMutedThread: '{name} said something in a muted thread'
+silencedByBase: This host is silenced implicitly because a base domain is silenced. To un-silence this host, first un-silence the base domain(s).
+flagAsBotDescription: Enable this option if this account is controlled by a program. If enabled, it will act as a flag for other developers to prevent endless interaction chains with other bots and adjust Sharkey's internal systems to treat this account as a bot.
+attributionDomainsDescription: 'A list of domains whose content can be attributed to you on link previews, separated by new-line. Any subdomain will also be valid. The following needs to be on the webpage:'
+carefulBot: Follow requests from bots require approval
+mediaSilencedInstances: Media-silenced instances
+testEmail: Test email
+copyLinkRenote: Copy boost link
+roleAutomatic: automatic
 clearCachedFilesOptions:
-  title: "Delete all cached remote files"
-  olderThan: "Only delete files older than:"
-  now: "now"
-  oneWeek: "one week"
-  oneMonth: "one month"
-  oneYear: "one year"
-  keepFilesInUse: "Don't delete files used as avatars&c"
-  keepFilesInUseDescription: "this option requires more complicated database queries, you may need to increase the value of db.extra.statement_timeout in the configuration file"
+  keepFilesInUseDescription: this option requires more complicated database queries, you may need to increase the value of db.extra.statement_timeout in the configuration file
+  now: now
+  oneWeek: one week
+  olderThan: 'Only delete files older than:'
+  title: Delete all cached remote files
+  keepFilesInUse: Don't delete files used as avatars&c
+  oneYear: one year
+  oneMonth: one month
+trustedDomainsListDescription: Following links to these domains will not show a warning. Write one domain per line.
+enableFaviconNotificationDot: Enable favicon notification dot
+defaultCW: Default content warning for new posts
+fetchLinkedNote: Fetch linked note
+showBelowAvatar: Show Below Avatar
+remoteFollowersWarning: Remote followers may have incomplete or outdated activity
+horizontalBig: horizontal-big
+noSharedAccess: You have not been granted shared access to any accounts
+aboutMisskey: About Sharkey
+markAsNSFW: Mark all media from user as NSFW
+introMisskey: 'Welcome! Sharkey is an open source, decentralized microblogging service.
 
-customFontSize: "Custom font size"
+  Create "notes" to share your thoughts with everyone around you. 📡
 
-hideAds: "Hide ads"
+  With "reactions", you can also quickly express your feelings about everyone''s notes. 👍
 
-permissionsDescription: "Apps using this token will have no API access except for the functions listed below."
-adminPermissionsDescription: "Apps using this token will have no administrative access except for the functions enabled below."
-sharedAccount: "Shared account"
-sharedAccess: "Shared access"
-sharedAccessDescription: "Any accounts listed here will be granted access to the token and may use it to access this account."
-sharedAccessDescription2: "Shared access allows another user to access your account without using your password. You may select exactly which features and data are available to guest users."
-addGrantee: "Share access"
-removeGrantee: "Remove access"
-loginWithSharedAccess: "Login with shared access"
-loginWithSharedAccessDescription: "Login with granted access to a shared account"
-noSharedAccess: "You have not been granted shared access to any accounts"
-expand: "Expand"
-collapse: "Collapse"
-permissions: "Permissions"
-overrideRank: "Limit rank"
-overrideRankDescription: "Limits the user rank (admin, moderator, or user) for apps using this token."
-rank: "Rank"
+  Let''s explore a new world! 🚀'
+url: URL
+mandatoryCW: Force content warning
+bubble: Bubble
 _ranks:
-  admin: "Admin"
-  mod: "Moderator"
-  user: "User"
-  default: "default"
-permissionsLabel: "Permissions: {num}"
-sharedAccessGranted: "You have been granted shared access to {target} with {rank} rank and {perms} permissions."
-sharedAccessRevoked: "Shared access to {target} has been revoked."
-sharedAccessLogin: "{target} logged in via shared access."
-accessTokenNameDescription: "Unique name to record the purpose of this access token"
-confirmRevokeToken: "Are you sure you want to revoke this token?"
-confirmRevokeSharedToken: "Are you sure you want to revoke this token? {num} shared other users will lose shared access."
-grantSharedAccessButton: "Grant shared access"
-grantSharedAccessNoSelection: "No shared access listed"
-grantSharedAccessNoSelection2: "No shared access users were selected. Please add at least one user in the \"shared access\" section."
-grantSharedAccessSuccess: "Shared access granted"
-grantSharedAccessSuccess2: "Shared access has been granted to {num} users."
-tokenHasNoPermissionsConfirm: "Are you sure you want to create a token with no permissions?"
-enableAllRead: "Enable all read-only permissions"
-enableAllWrite: "Enable all write/edit permissions"
-
-newAccount: "New account"
-alsoKnownAs: "Also known as"
-accountMigratedAt: "Migrated at"
-accountMigratedTo: "Migrated to"
-accountMigrationUri: "Migration URI"
-restartMigration: "Restart account migration"
-restartMigrationDescription: "Account migration was last attempted {date}. If the migration failed or was incomplete, then you may click this button to restart the process."
-restartMigrationConfirm: "Are you sure you want to restart this account migration?"
-
-backgroundQueue: "Background queue"
+  user: User
+  mod: Moderator
+  admin: Admin
+  default: default
+markInstanceAsNSFW: Mark as NSFW
+_initialAccountSetting:
+  youCanContinueTutorial: You can proceed to a tutorial on how to use {name} (Sharkey) or you can exit the setup here and start using it immediately.
+sharedAccessDescription2: Shared access allows another user to access your account without using your password. You may select exactly which features and data are available to guest users.
+muted: Muted
+_profile:
+  listenbrainz: ListenBrainz username
+  removeBackground: Remove background
+  updateBanner: Update banner
+  changeBackground: Change background
+  updateAvatar: Update avatar
+  removeBanner: Remove banner
+  removeAvatar: Remove avatar
+  updateBackground: Update background
+mediaSilenceThisInstance: Silence media from this instance
+keepCwDisabled: Disabled (do not copy CWs)
+wordMuteTestNoResults: No results yet, enter some text and click "Test" to check it.
+libreTranslateApiKey: LibreTranslate API Key
+accountMigrationUri: Migration URI
+removeGrantee: Remove access
+hibernated: Hibernated
+isLocked: Private account
+mimeType: MIME type
+restartMigrationConfirm: Are you sure you want to restart this account migration?
+rejectQuotesLocalUser: Block quote posts from this user
+restartDeletion: Restart account deletion
+deleteAllFilesQueued: Deletion of all files queued
+turnOffAchievements: Turning this off will disable the achievement system
+silencedInstancesDescription: List the host names of the instances that you want to silence, separated by a new line. All accounts belonging to the listed instances will be treated as silenced, and can only make follow requests, and cannot mention local accounts if not followed. This will not affect the blocked instances.
+hideAds: Hide ads
+selectFollowRelationship: Select a follow relationship...
+_ago:
+  never: Never
+  now: Now
+noteDesign: Note Design
+specifyHost: Specify a host
+activityPub: Activity Pub
+sharedAccessRevoked: Shared access to {target} has been revoked.
+grantSharedAccessNoSelection2: No shared access users were selected. Please add at least one user in the "shared access" section.
+verifyNotificationDotWorkingButton: Check if the notification dot works on your instance
+postOn: Post on
+deepLAuthKey: DeepL Auth Key
+_auth:
+  allowed: Allowed
+silencedUserSaysSomething: '{name} has been silenced by {host} staff'
+roleAssigned: Assigned
+deleteThisAccountConfirm: This will irreversibly delete this account. Proceed?
+notificationDotWorking: The notification dot is functioning properly on this instance.
+cantReRenote: A boost can't be boosted.
+_serverDisconnectedBehavior:
+  disabled: Disable warning
+showRenotes: Show boosts
+customEmojisBeta: Custom emoji (beta)
+notApproved: Not Approved
+usernameInfo: A name that identifies your account from others on this server. You can use the alphabet (a~z, A~Z), digits (0~9) or underscores (_). Usernames cannot be changed later.
+chatEscrow: Chat escrow
+filesRemoved: Files removed
+systemAccountDescription: This account is created and managed automatically by the system, and cannot be logged into.
+openTagPageConfirm: Are you sure you want to open this hashtags page?
+sharedAccess: Shared access
+newRootUser: New root user
+_genKeysDialog:
+  title: Generate new keys
+  text: Are you sure that you want to generate new keys? This will stop push notifications for all users who have already enabled them.
+_notification:
+  sharedAccessGranted: Shared access granted
+  youRenoted: Boost from {name}
+  importOfXCompleted: Import of {x} has been completed
+  renotedBySomeUsers: Boosted by {n} users
+  scheduledNotePosted: Scheduled Note was posted
+  sharedAccessLogin: Shared access login
+  scheduledNoteFailed: Posting scheduled note failed
+  _actions:
+    renote: Boost
+  edited: Note got edited
+  sharedAccessRevoked: Shared access revoked
+  _types:
+    renote: Boosts
+    importCompleted: The import has been completed
+    scheduledNotePosted: Scheduled note was posted
+    scheduledNoteFailed: Posting scheduled note failed
+    edited: Edits
+numberOfReplies: Number of replies in a thread
+userListTimeline: User list timeline
+bubbleTimeline: Bubble timeline
+pleaseDonate: '{host} uses the free software, Sharkey. We would highly appreciate your donations so development of Sharkey can continue!'
+notificationDotNotWorking: Unfortunately, this instance does not support the notification dot feature at this time.
+bubbleTimelineDescription: Choose which instances should be displayed in the bubble.
+renotedCount: Number of boosts received
+approvals: Approvals
+hCaptchaDeveloperGuide: hCaptcha Developer Guide
+showNonPublicNotes: Show non-public
+_dataRequest:
+  warn: Data requests are only possible every 3 days.
+  button: Request
+  text: Once the data is ready to download, an email will be sent to the email address registered to this account.
+  title: Request Data
+searchEngineOther: Other
+bgm: BGM
+intro: Installation of Sharkey has been finished! Please create an admin user.
+driveSearchbarPlaceholder: Search drive
+emailDestination: Destination address
+deepLTranslation: DeepL Translation
+pinnedOnly: Pinned
 _header:
-  browse: "Browse"
-  manage: "Manage"
-
-setRootUser: "Set the root user"
-setRootUserWarning: "You are currently the root user; you can give that away to someone else. If you want to remain an administrator after that, you should make yourself an administration via a role, <em>before</em> you give root away"
-previousRootUser: "Previous root user"
-newRootUser: "New root user"
-
-carefulBot: "Follow requests from bots require approval"
-
-userDeleted: "This user has been deleted."
-restartDeletion: "Restart account deletion"
-restartDeletionDescription: "Account deletion was last attempted {date}. If the deletion failed or was incomplete, then you may click this button to restart the process."
-restartDeletionConfirm: "Are you sure you want to restart this account deletion?"
-deletedAt: "Deleted at"
-lastFetchedAt: "Last fetched at"
-lastFetchedFeaturedAt: "Last fetched featured at"
-lastFetchedOutboxAt: "Last fetched outbox at"
-loginDates: "Login Dates"
-root: "Root"
+  browse: Browse
+  manage: Manage
+fileImported: File imported
+limitWidthOfReaction: Limits the maximum width of reactions and display them in reduced size.
+enableBotTrending: Populate Hashtags with Bots
+followersSub: Followers (Sub)
+searchEngineCusomURI: Custom URI
+poweredBy: Powered by
+nsfw: NSFW
+instanceIsFlaggedAs: '{name} is flagged: "{cw}"'
+collapseAllCws: Hide content for all replies
+defaultCWDescription: The value here will be auto-filled as the content warning for all new posts and replies.
+rejectQuotesInstance: Strip quote posts from this instance
+setRootUser: Set the root user
+allowClickingNotifications: Allow clicking on pop-up notifications
+blockedByBase: This host is blocked implicitly because a base domain is blocked. To unblock this host, first unblock the base domain(s).
+mutuals: Mutuals
+turnOffBotTrending: Turning this off will stop Bots from populating Hashtags
+rank: Rank
+_delivery:
+  resume: Resume delivery
+  stop: Suspend delivery
+permissionsLabel: 'Permissions: {num}'
+approvalRequiredToRegister: This instance is only accepting users who specify a reason for registration.
+cloudflareDocs: Cloudflare Docs
+id: ID
+privateKey: Private key
+serviceWorker: Service Worker
+systemWebhook: System Webhook
+customFontSize: Custom font size

@@ -16,16 +16,16 @@ SPDX-License-Identifier: AGPL-3.0-only
 			<div v-for="ad in ads" class="_panel _gaps_m" :class="$style.ad">
 				<MkAd v-if="ad.url" :key="ad.id" :specify="ad"/>
 				<MkInput v-model="ad.url" type="url">
-					<template #label>URL</template>
+					<template #label>{{ i18n.ts.url }}</template>
 				</MkInput>
 				<MkInput v-model="ad.imageUrl" type="url">
 					<template #label>{{ i18n.ts.imageUrl }}</template>
 				</MkInput>
 				<MkRadios v-model="ad.place">
-					<template #label>Form</template>
-					<option value="square">square</option>
-					<option value="horizontal">horizontal</option>
-					<option value="horizontal-big">horizontal-big</option>
+					<template #label>{{ i18n.ts.form }}</template>
+					<option value="square">{{ i18n.ts.square }}</option>
+					<option value="horizontal">{{ i18n.ts.horizontal }}</option>
+					<option value="horizontal-big">{{ i18n.ts.horizontalBig }}</option>
 				</MkRadios>
 				<!--
 			<div style="margin: 32px 0;">

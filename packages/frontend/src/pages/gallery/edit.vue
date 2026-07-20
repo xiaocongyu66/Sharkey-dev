@@ -90,6 +90,10 @@ async function save() {
 			fileIds: files.value.map(file => file.id),
 			isSensitive: isSensitive.value,
 		});
+		// Same-tab refresh (WS also covers other tabs)
+		import('@/events.js').then(({ globalEvents }) => {
+			globalEvents.emit('contentCreated', { kind: 'galleryPost', id: created.id, item: created as any });
+		}).catch(() => { /* ignore */ });
 		router.push(`/gallery/${created.id}`);
 	}
 }

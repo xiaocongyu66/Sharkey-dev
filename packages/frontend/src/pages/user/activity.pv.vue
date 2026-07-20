@@ -26,6 +26,7 @@ import { chartVLine } from '@/utility/chart-vline.js';
 import { initChart } from '@/utility/init-chart.js';
 import { chartLegend } from '@/utility/chart-legend.js';
 import MkChartLegend from '@/components/MkChartLegend.vue';
+import { i18n } from '@/i18n.js';
 
 initChart();
 
@@ -93,10 +94,10 @@ async function renderChart() {
 		type: 'bar',
 		data: {
 			datasets: [
-				makeDataset('UPV (user)', format(raw.upv.user).slice().reverse(), { backgroundColor: colorUser, stack: 'u' }),
-				makeDataset('UPV (visitor)', format(raw.upv.visitor).slice().reverse(), { backgroundColor: colorVisitor, stack: 'u' }),
-				makeDataset('NPV (user)', format(raw.pv.user).slice().reverse(), { backgroundColor: colorUser2, stack: 'n' }),
-				makeDataset('NPV (visitor)', format(raw.pv.visitor).slice().reverse(), { backgroundColor: colorVisitor2, stack: 'n' }),
+				makeDataset(i18n.ts._activity.uniquePvUser, format(raw.upv.user).slice().reverse(), { backgroundColor: colorUser, stack: 'u' }),
+				makeDataset(i18n.ts._activity.uniquePvVisitor, format(raw.upv.visitor).slice().reverse(), { backgroundColor: colorVisitor, stack: 'u' }),
+				makeDataset(i18n.ts._activity.pvUser, format(raw.pv.user).slice().reverse(), { backgroundColor: colorUser2, stack: 'n' }),
+				makeDataset(i18n.ts._activity.pvVisitor, format(raw.pv.visitor).slice().reverse(), { backgroundColor: colorVisitor2, stack: 'n' }),
 			],
 		},
 		options: {
@@ -151,7 +152,7 @@ async function renderChart() {
 			plugins: {
 				title: {
 					display: true,
-					text: 'Unique/Natural PV',
+					text: i18n.ts._activity.pvChartTitle,
 					padding: {
 						left: 0,
 						right: 0,

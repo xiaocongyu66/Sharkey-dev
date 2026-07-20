@@ -4,51 +4,16 @@
  */
 
 import * as crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import { Injectable } from '@nestjs/common';
-import { UnrecoverableError } from 'bullmq';
+import { RsaKeyPair } from 'slacc';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { bindThis } from '@/decorators.js';
-import Logger from '@/logger.js';
-import { LoggerService } from '@/core/LoggerService.js';
-import { StatusError } from '@/misc/status-error.js';
-import { TimeService } from '@/global/TimeService.js';
 import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CONTEXT, PRELOADED_CONTEXTS } from './misc/contexts.js';
 import { validateContentTypeSetAsJsonLD } from './misc/validator.js';
-import type { ContextDefinition, NodeObject } from 'jsonld';
-
-// https://stackoverflow.com/a/66252656
-type RemoveIndex<T> = {
-	[ K in keyof T as string extends K
-		? never
-		: number extends K
-			? never
-			: symbol extends K
-				? never
-				: K
-	] : T[K];
-};
-
-export type JsonLdObject = NodeObject | NodeObject[];
-export type Document = RemoveIndex<JsonLdObject>;
-
-export type Signature = {
-	id?: string;
-	type: string;
-	creator: string;
-	domain?: string;
-	nonce: string;
-	created: string;
-	signatureValue: string;
-};
-
-export type Signed<T extends Document> = T & {
-	signature: Signature;
-};
-
-export function isSigned<T extends Document>(doc: T): doc is Signed<T> {
-	return 'signature' in doc && typeof(doc.signature) === 'object';
-}
+import type { JsonLdDocument } from 'jsonld';
+import type { JsonLd as JsonLdObject, RemoteDocument } from 'jsonld/jsonld-spec.js';
 
 // RsaSignature2017 implementation is based on https://github.com/transmute-industries/RsaSignature2017
 
@@ -58,7 +23,19 @@ export class JsonLdError extends IdentifiableError {
 	}
 }
 
-export class JsonLdForbiddenDriectiveError extends JsonLdError {
+export class JsonLdCacheOverflowError extends JsonLdError {
+	constructor() {
+		super('42fb039c-69fb-4f75-8187-d3aee412423e', 'context cache overflow');
+	}
+}
+
+export class JsonLdCacheFrozenError extends JsonLdError {
+	constructor() {
+		super('202c41fa-72d5-4e22-95af-94a8ac83346f', 'attempt to insert into frozen context cache');
+	}
+}
+
+export class JsonLdForbiddenDirectiveError extends JsonLdError {
 	constructor(public directive: string) {
 		super('0297f79b-0ed9-4b6c-875f-b0a82ff96781', `${directive} is forbidden by Misskey in ActivityPub documents`);
 	}
@@ -71,19 +48,20 @@ export class JsonLd {
 		'@reverse',
 	]);
 
-	private readonly logger: Logger;
+	private frozen = false;
+	private cache: Map<string, RemoteDocument> = new Map();
+
+	public debug = false;
+	public preLoad = true;
+	public loderTimeout = 5000;
 
 	constructor(
 		private httpRequestService: HttpRequestService,
-		private readonly timeService: TimeService,
-
-		loggerService: LoggerService,
 	) {
-		this.logger = loggerService.getLogger('json-ld');
 	}
 
 	@bindThis
-	public async signRsaSignature2017<T extends Document>(data: T, privateKey: string, creator: string, domain?: string, created?: Date): Promise<Signed<T>> {
+	public async signRsaSignature2017(data: any, privateKey: string, creator: string, domain?: string, created?: Date): Promise<any> {
 		const options: {
 			type: string;
 			creator: string;
@@ -94,7 +72,7 @@ export class JsonLd {
 			type: 'RsaSignature2017',
 			creator,
 			nonce: crypto.randomBytes(16).toString('hex'),
-			created: (created ?? this.timeService.date).toISOString(),
+			created: (created ?? new Date()).toISOString(),
 		};
 
 		if (domain) {
@@ -103,11 +81,9 @@ export class JsonLd {
 
 		const toBeSigned = await this.createVerifyData(data, options);
 
-		const signer = crypto.createSign('sha256');
-		signer.update(toBeSigned);
-		signer.end();
+		const sign = promisify(RsaKeyPair.prototype.sign).bind(RsaKeyPair.fromPem(privateKey));
 
-		const signature = signer.sign(privateKey);
+		const signature = await sign(Buffer.from(toBeSigned));
 
 		return {
 			...data,
@@ -119,7 +95,7 @@ export class JsonLd {
 	}
 
 	@bindThis
-	public async verifyRsaSignature2017(data: Signed<Document>, publicKey: string): Promise<boolean> {
+	public async verifyRsaSignature2017(data: any, publicKey: string): Promise<boolean> {
 		const toBeSigned = await this.createVerifyData(data, data.signature);
 		const verifier = crypto.createVerify('sha256');
 		verifier.update(toBeSigned);
@@ -127,7 +103,7 @@ export class JsonLd {
 	}
 
 	@bindThis
-	public async createVerifyData<T extends Document>(data: T, options: Partial<Signature>): Promise<string> {
+	public async createVerifyData(data: any, options: any): Promise<string> {
 		const transformedOptions = {
 			...options,
 			'@context': 'https://w3id.org/identity/v1',
@@ -137,45 +113,51 @@ export class JsonLd {
 		delete transformedOptions['signatureValue'];
 		const canonizedOptions = await this.normalize(transformedOptions);
 		const optionsHash = this.sha256(canonizedOptions.toString());
-		const transformedData = { ...data } as T & { signature?: unknown };
+		const transformedData = { ...data };
 		delete transformedData['signature'];
-		const cannonidedData = await this.normalize(transformedData);
-		this.logger.debug('cannonidedData', cannonidedData);
-		const documentHash = this.sha256(cannonidedData.toString());
+		const cannonizedData = await this.normalize(transformedData);
+		if (this.debug) console.debug(`cannonizedData: ${cannonizedData}`);
+		const documentHash = this.sha256(cannonizedData.toString());
 		const verifyData = `${optionsHash}${documentHash}`;
 		return verifyData;
 	}
 
 	@bindThis
-	// TODO our default CONTEXT isn't valid for the library, is this a bug?
-	public async compact(data: Document, context: ContextDefinition = CONTEXT as unknown as ContextDefinition): Promise<Document> {
+	public async compact(data: any, context: any = CONTEXT): Promise<JsonLdDocument> {
 		const customLoader = this.getLoader();
 		// XXX: Importing jsonld dynamically since Jest frequently fails to import it statically
 		// https://github.com/misskey-dev/misskey/pull/9894#discussion_r1103753595
-		return await (await import('jsonld')).default.compact(data, context, {
+		return (await import('jsonld')).default.compact(data, context, {
 			documentLoader: customLoader,
 		});
 	}
 
 	@bindThis
-	public async normalize(data: Document): Promise<string> {
+	public async normalize(data: JsonLdDocument): Promise<string> {
 		const customLoader = this.getLoader();
-		return await (await import('jsonld')).default.normalize(data, {
+		return (await import('jsonld')).default.normalize(data, {
 			documentLoader: customLoader,
 		});
 	}
+
+	/**
+	 * Prevent any further HTTP requests from being made for the sake of
+	 * validating JSON-LD signatures.
+	 */
+	@bindThis
+	public freeze(): void { this.frozen = true; }
 
 	@bindThis
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	public checkForForbiddenDirectives(value: any): void {
-		if (typeof value === 'object') {
+		if (typeof value === 'object' && value !== null) {
 			if (Array.isArray(value)) {
 				for (const item of value) this.checkForForbiddenDirectives(item);
 			} else {
 				const object = value;
 				for (const [key, value] of Object.entries(object)) {
 					if (JsonLd.forbiddenDirectives.has(key)) {
-						throw new JsonLdForbiddenDriectiveError(key);
+						throw new JsonLdForbiddenDirectiveError(key);
 					}
 
 					if (typeof value === 'object' && value !== null) {
@@ -188,12 +170,12 @@ export class JsonLd {
 
 	@bindThis
 	private getLoader() {
-		return async (url: string) => {
-			if (!/^https?:\/\//.test(url)) throw new UnrecoverableError(`Invalid URL: ${url}`);
+		return async (url: string): Promise<RemoteDocument> => {
+			if (!/^https?:\/\//.test(url)) throw new Error(`Invalid URL ${url}`);
 
-			{
+			if (this.preLoad) {
 				if (url in PRELOADED_CONTEXTS) {
-					this.logger.debug(`Preload HIT: ${url}`);
+					if (this.debug) console.debug(`HIT: ${url}`);
 					return {
 						contextUrl: undefined,
 						document: PRELOADED_CONTEXTS[url],
@@ -202,13 +184,27 @@ export class JsonLd {
 				}
 			}
 
-			this.logger.debug(`Preload MISS: ${url}`);
+			const cached = this.cache.get(url);
+			if (cached) {
+				if (this.debug) console.debug(`HIT: ${url}`);
+				return cached;
+			}
+
+			if (this.debug) console.debug(`MISS: ${url}`);
+
+			if (this.frozen) throw new JsonLdCacheFrozenError();
+
 			const document = await this.fetchDocument(url);
-			return {
+			this.checkForForbiddenDirectives(document);
+
+			const remoteDocument = {
 				contextUrl: undefined,
 				document: document,
 				documentUrl: url,
 			};
+			this.cache.set(url, remoteDocument);
+			if (this.cache.size > 256) throw new JsonLdCacheOverflowError();
+			return remoteDocument;
 		};
 	}
 
@@ -220,6 +216,7 @@ export class JsonLd {
 				headers: {
 					Accept: 'application/ld+json, application/json',
 				},
+				timeout: this.loderTimeout,
 			},
 			{
 				throwErrorWhenResponseNotOk: false,
@@ -227,7 +224,7 @@ export class JsonLd {
 			},
 		).then(res => {
 			if (!res.ok) {
-				throw new StatusError(`failed to fetch JSON-LD from ${url}`, res.status, res.statusText);
+				throw new Error(`${res.status} ${res.statusText}`);
 			} else {
 				return res.json();
 			}
@@ -248,14 +245,11 @@ export class JsonLd {
 export class JsonLdService {
 	constructor(
 		private httpRequestService: HttpRequestService,
-		private timeService: TimeService,
-		private loggerService: LoggerService,
 	) {
 	}
 
 	@bindThis
 	public use(): JsonLd {
-		return new JsonLd(this.httpRequestService, this.timeService, this.loggerService);
+		return new JsonLd(this.httpRequestService);
 	}
 }
-

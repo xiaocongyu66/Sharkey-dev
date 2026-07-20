@@ -1,9 +1,105 @@
----
-disableDrawer: "不顯示下拉式選單"
-forwardReport: "將報告轉送給遠端伺服器"
-forwardReportIsAnonymous: "在遠端實例上看不到您的資訊，顯示的報告者是匿名的系统帳戶。"
-abuseMarkAsResolved: "處理完畢"
 _initialTutorial:
   _reaction:
-    letsTryReacting: "可以透過點擊貼文上的「{reaction}」按鈕來添加反應。請嘗試在此範例貼文添加反應！"
-    reactDone: "按下「{undo}」按鈕可以取消反應。"
+    reactDone: 按下「{undo}」按鈕可以取消反應。
+    letsTryReacting: 可以透過點擊貼文上的「{reaction}」按鈕來添加反應。請嘗試在此範例貼文添加反應！
+_activity:
+  uniquePvUser: 獨立造訪（登入使用者）
+  uniquePvVisitor: 獨立造訪（訪客）
+  pvUser: 造訪量（登入使用者）
+  pvVisitor: 造訪量（訪客）
+  pvChartTitle: 獨立 / 總造訪量
+  followLocal: 追蹤（本站）
+  followRemote: 追蹤（遠端）
+  followedLocal: 被追蹤（本站）
+  followedRemote: 被追蹤（遠端）
+_customEmojisManagerLegacy:
+  selectMode: 選擇模式
+  selectAll: 全選
+  setCategory: 設定分類
+  setTag: 設定標籤
+  addTag: 新增標籤
+  removeTag: 移除標籤
+  setLicense: 設定授權資訊
+forwardReportIsAnonymous: 在遠端實例上看不到您的資訊，顯示的報告者是匿名的系统帳戶。
+_chartSeries:
+  received: 已接收
+  delivered: 已投遞
+  stalled: 停滯
+  pubActive: 發布活躍
+  subActive: 訂閱活躍
+  pubAndSub: 發布與訂閱
+  pub: 發布
+  sub: 訂閱
+  in: 接收
+  outSucc: 送出（成功）
+  outFail: 送出（失敗）
+  combined: 合計
+  readWrite: 讀寫
+  write: 寫入
+  read: 讀取
+  withinWeek: 註冊未滿一週
+  withinMonth: 註冊未滿一月
+  withinYear: 註冊未滿一年
+  outsideWeek: 註冊超過一週
+  outsideMonth: 註冊超過一月
+  outsideYear: 註冊超過一年
+  localInc: 本站 +
+  localDec: 本站 -
+  remoteInc: 遠端 +
+  remoteDec: 遠端 -
+  driveUsage: 雲端硬碟用量
+  driveFiles: 雲端硬碟檔案
+  inc: 增加
+  dec: 減少
+  other: 其他
+_apiErrors:
+  title: 操作失敗
+  generic: 發生錯誤，請稍後再試。
+  network: 網路異常或伺服器暫時無法使用，請檢查連線後重試。
+  aborted: 請求已取消。
+  NO_SUCH_USER: 找不到該使用者。
+  NO_SUCH_NOTE: 找不到該貼文。
+  NO_SUCH_FILE: 找不到該檔案。
+  NO_SUCH_ROOM: 找不到該群聊。
+  NO_SUCH_MESSAGE: 找不到該訊息。
+  ACCESS_DENIED: 存取被拒絕。
+  PERMISSION_DENIED: 沒有權限執行此操作。
+  CREDENTIAL_REQUIRED: 請先登入後再操作。
+  RATE_LIMIT_EXCEEDED: 操作過於頻繁，請稍後再試。
+  ROOM_RATE_LIMITED: 發言過快，請稍後再發。
+  ROOM_MUTED_ALL: 全體禁言中，無法發言。
+  CONTENT_REQUIRED: 請填寫內容。
+  YOU_HAVE_BEEN_BLOCKED: 你已被該使用者封鎖。
+  INCORRECT_PASSWORD: 密碼不正確。
+  PROHIBITED_WORD: 內容包含禁止詞，無法發布。
+  NOT_A_MEMBER: 你不是該群成員。
+  SEND_FAILED: 傳送失敗，請檢查網路後重試。
+abuseMarkAsResolved: 處理完畢
+customEmojisBeta: 自訂表情符號（測試版）
+disableDrawer: 不顯示下拉式選單
+systemWebhook: 系統 Webhook
+carefulBot: 來自機器人的追蹤請求需要核准
+change: 變更
+_themeNames:
+  4eea646f-7afa-4645-83e9-83af0333cd37: 淺色（預設）
+  8050783a-7f63-445a-b270-36d0f6ba1677: 深色（預設）
+  6ed80faa-74f0-42c2-98e4-a64d9e138eab: 咖啡淺色
+  0ff48d43-aab3-46e7-ab12-8492110d2e2b: 杏子淺色
+  a58a0abb-ff8c-476a-8dec-0ad7837e7e96: 雨天淺色
+  1100673c-f902-4ccd-93aa-7cb88be56178: 植物淺色
+  6128c2a9-5c54-43fe-a47d-17942356470b: 鮮豔淺色
+  ac168876-f737-4074-a3fc-a370c732ef48: 櫻桃淺色
+  213273e5-7d20-d5f0-6e36-1b6a4f67115c: 壽司淺色
+  e2c940b5-6e9a-4c03-b738-261c720c426d: U0 淺色
+  c503d768-7c70-4db2-a4e6-08264304bc8d: 柿子深色
+  080a01c5-377d-4fbb-88cc-6bb5d04977ea: 星空深色
+  32a637ef-b47a-4775-bb7b-bacbb823f865: 未來深色
+  504debaf-4912-6a4c-5059-1db08a76b737: 植物深色
+  02816013-8107-440f-877e-865083ffe194: 綠+萊姆深色
+  dc489603-27b5-424a-9b25-1ff6aec9824a: 綠+橙深色
+  679b3b87-a4e9-4789-8696-b56c15cc33b0: 櫻桃深色
+  66e7e5a9-cd43-42cd-837d-12f47841fa34: 冰藍深色
+  7a5bc13b-df8f-4d44-8e94-4452f0c634bb: U0 深色
+  3cdfd635-4d5e-4d06-9ba3-20f123f0999b: Rosé Pine
+  919c91ac-c6fa-43dc-a423-3cc84fd67d7c: Rosé Pine 黎明
+forwardReport: 將報告轉送給遠端伺服器

@@ -5,22 +5,22 @@
 
 import * as crypto from 'node:crypto';
 import { URL } from 'node:url';
+import { promisify } from 'node:util';
 import { Inject, Injectable } from '@nestjs/common';
-import { load as cheerio } from 'cheerio/slim';
+import * as htmlParser from 'node-html-parser';
+import { RsaKeyPair } from 'slacc';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import type { MiUser } from '@/models/User.js';
 import { UserKeypairService } from '@/core/UserKeypairService.js';
-import { ApUtilityService } from '@/core/activitypub/ApUtilityService.js';
+import { UtilityService } from '@/core/UtilityService.js';
 import { HttpRequestService } from '@/core/HttpRequestService.js';
 import { LoggerService } from '@/core/LoggerService.js';
-import { TimeService } from '@/global/TimeService.js';
 import { bindThis } from '@/decorators.js';
 import type Logger from '@/logger.js';
 import { validateContentTypeSetAsActivityPub } from '@/core/activitypub/misc/validator.js';
-import type { IObject, IObjectWithId } from './type.js';
-import type { Cheerio, CheerioAPI } from 'cheerio/slim';
-import type { AnyNode } from 'domhandler';
+import { assertActivityMatchesUrl, FetchAllowSoftFailMask as FetchAllowSoftFailMask } from '@/core/activitypub/misc/check-against-url.js';
+import type { IObject } from './type.js';
 
 type Request = {
 	url: string;
@@ -41,7 +41,7 @@ type PrivateKey = {
 };
 
 export class ApRequestCreator {
-	static createSignedPost(args: { key: PrivateKey, url: string, body: string, digest?: string, additionalHeaders: Record<string, string>, now: Date | string | number }): Signed {
+	static async createSignedPost(args: { key: PrivateKey, url: string, body: string, digest?: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
 		const u = new URL(args.url);
 		const digestHeader = args.digest ?? this.createDigest(args.body);
 
@@ -49,14 +49,14 @@ export class ApRequestCreator {
 			url: u.href,
 			method: 'POST',
 			headers: this.#objectAssignWithLcKey({
-				'Date': new Date(args.now).toUTCString(),
+				'Date': new Date().toUTCString(),
 				'Host': u.host,
 				'Content-Type': 'application/activity+json',
 				'Digest': digestHeader,
 			}, args.additionalHeaders),
 		};
 
-		const result = this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host', 'digest']);
+		const result = await this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host', 'digest']);
 
 		return {
 			request,
@@ -70,7 +70,7 @@ export class ApRequestCreator {
 		return `SHA-256=${crypto.createHash('sha256').update(body).digest('base64')}`;
 	}
 
-	static createSignedGet(args: { key: PrivateKey, url: string, additionalHeaders: Record<string, string>, now: Date | string | number }): Signed {
+	static async createSignedGet(args: { key: PrivateKey, url: string, additionalHeaders: Record<string, string> }): Promise<Signed> {
 		const u = new URL(args.url);
 
 		const request: Request = {
@@ -78,12 +78,12 @@ export class ApRequestCreator {
 			method: 'GET',
 			headers: this.#objectAssignWithLcKey({
 				'Accept': 'application/activity+json, application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
-				'Date': new Date(args.now).toUTCString(),
+				'Date': new Date().toUTCString(),
 				'Host': new URL(args.url).host,
 			}, args.additionalHeaders),
 		};
 
-		const result = this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host', 'accept']);
+		const result = await this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host']);
 
 		return {
 			request,
@@ -93,9 +93,10 @@ export class ApRequestCreator {
 		};
 	}
 
-	static #signToRequest(request: Request, key: PrivateKey, includeHeaders: string[]): Signed {
+	static async #signToRequest(request: Request, key: PrivateKey, includeHeaders: string[]): Promise<Signed> {
 		const signingString = this.#genSigningString(request, includeHeaders);
-		const signature = crypto.sign('sha256', Buffer.from(signingString), key.privateKeyPem).toString('base64');
+		const sign = promisify(RsaKeyPair.prototype.sign).bind(RsaKeyPair.fromPem(key.privateKeyPem));
+		const signature = (await sign(Buffer.from(signingString))).toString('base64');
 		const signatureHeader = `keyId="${key.keyId}",algorithm="rsa-sha256",headers="${includeHeaders.join(' ')}",signature="${signature}"`;
 
 		request.headers = this.#objectAssignWithLcKey(request.headers, {
@@ -150,8 +151,7 @@ export class ApRequestService {
 		private userKeypairService: UserKeypairService,
 		private httpRequestService: HttpRequestService,
 		private loggerService: LoggerService,
-		private readonly apUtilityService: ApUtilityService,
-		private readonly timeService: TimeService,
+		private utilityService: UtilityService,
 	) {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		this.logger = this.loggerService?.getLogger('ap-request'); // なぜか TypeError: Cannot read properties of undefined (reading 'getLogger') と言われる
@@ -163,7 +163,7 @@ export class ApRequestService {
 
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
-		const req = ApRequestCreator.createSignedPost({
+		const req = await ApRequestCreator.createSignedPost({
 			key: {
 				privateKeyPem: keypair.privateKey,
 				keyId: `${this.config.url}/users/${user.id}#main-key`,
@@ -173,7 +173,6 @@ export class ApRequestService {
 			digest,
 			additionalHeaders: {
 			},
-			now: this.timeService.now,
 		});
 
 		await this.httpRequestService.send(url, {
@@ -187,15 +186,13 @@ export class ApRequestService {
 	 * Get AP object with http-signature
 	 * @param user http-signature user
 	 * @param url URL to fetch
-	 * @param allowAnonymous If a fetched object lacks an ID, then it will be auto-generated from the final URL. (default: false)
-	 * @param followAlternate Whether to resolve HTML responses to their referenced canonical AP endpoint. (default: true)
 	 */
 	@bindThis
-	public async signedGet(url: string, user: { id: MiUser['id'] }, allowAnonymous = false, followAlternate?: boolean): Promise<IObjectWithId> {
+	public async signedGet(url: string, user: { id: MiUser['id'] }, allowSoftfail: FetchAllowSoftFailMask = FetchAllowSoftFailMask.Strict, followAlternate?: boolean): Promise<unknown> {
 		const _followAlternate = followAlternate ?? true;
 		const keypair = await this.userKeypairService.getUserKeypair(user.id);
 
-		const req = ApRequestCreator.createSignedGet({
+		const req = await ApRequestCreator.createSignedGet({
 			key: {
 				privateKeyPem: keypair.privateKey,
 				keyId: `${this.config.url}/users/${user.id}#main-key`,
@@ -203,7 +200,6 @@ export class ApRequestService {
 			url,
 			additionalHeaders: {
 			},
-			now: this.timeService.now,
 		});
 
 		const res = await this.httpRequestService.send(url, {
@@ -221,60 +217,30 @@ export class ApRequestService {
 			(contentType ?? '').split(';')[0].trimEnd().toLowerCase() === 'text/html' &&
 			_followAlternate === true
 		) {
-			let alternate: Cheerio<AnyNode> | null;
+			const html = await res.text();
+
 			try {
-				const html = await res.text();
-				const document = cheerio(html);
+				const document = htmlParser.parse(html);
 
-				// Search for any matching value in priority order:
-				// 1. Type=AP > Type=none > Type=anything
-				// 2. Alternate > Canonical
-				// 3. Page order (fallback)
-				alternate = selectFirst(document, [
-					'head > link[href][rel="alternate"][type="application/activity+json"]',
-					'head > link[href][rel="canonical"][type="application/activity+json"]',
-					'head > link[href][rel="alternate"]:not([type])',
-					'head > link[href][rel="canonical"]:not([type])',
-					'head > link[href][rel="alternate"]',
-					'head > link[href][rel="canonical"]',
-				]);
-			} catch {
-				// something went wrong parsing the HTML, ignore the whole thing
-				alternate = null;
-			}
-
-			if (alternate) {
-				const href = alternate.attr('href');
-				if (href && this.apUtilityService.haveSameAuthority(url, href)) {
-					return await this.signedGet(href, user, allowAnonymous, false);
+				const alternate = document.querySelector('head > link[rel="alternate"][type="application/activity+json"]');
+				if (alternate) {
+					const href = alternate.getAttribute('href');
+					if (href && this.utilityService.punyHost(url) === this.utilityService.punyHost(href)) {
+						return await this.signedGet(href, user, allowSoftfail, false);
+					}
 				}
+			} catch (_) {
+				// something went wrong parsing the HTML, ignore the whole thing
 			}
 		}
 		//#endregion
 
 		validateContentTypeSetAsActivityPub(res);
-
+		const finalUrl = res.url; // redirects may have been involved
 		const activity = await res.json() as IObject;
 
-		// Make sure the object ID matches the final URL (which is where it actually exists).
-		// The caller (ApResolverService) will verify the ID against the original / entry URL, which ensures that all three match.
-		if (allowAnonymous && activity.id == null) {
-			activity.id = res.url;
-		} else {
-			this.apUtilityService.assertIdMatchesUrlAuthority(activity, res.url);
-		}
+		assertActivityMatchesUrl(url, activity, finalUrl, allowSoftfail);
 
-		return activity as IObjectWithId;
+		return activity;
 	}
-}
-
-function selectFirst($: CheerioAPI, selectors: string[]): Cheerio<AnyNode> | null {
-	for (const selector of selectors) {
-		const selection = $(selector);
-		if (selection.length > 0) {
-			return selection;
-		}
-	}
-
-	return null;
 }

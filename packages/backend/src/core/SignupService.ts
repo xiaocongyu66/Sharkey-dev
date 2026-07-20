@@ -97,6 +97,11 @@ export class SignupService {
 			if (isPreserved) {
 				throw new Error('USED_USERNAME');
 			}
+
+			const hasProhibitedWords = this.utilityService.isKeyWordIncluded(username.toLowerCase(), this.meta.prohibitedWordsForNameOfUser);
+			if (hasProhibitedWords) {
+				throw new Error('USED_USERNAME');
+			}
 		}
 
 		const keyPair = await new Promise<string[]>((res, rej) =>
@@ -166,4 +171,3 @@ export class SignupService {
 		return { account, secret };
 	}
 }
-

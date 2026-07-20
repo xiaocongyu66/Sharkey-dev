@@ -26,6 +26,7 @@ import { chartVLine } from '@/utility/chart-vline.js';
 import { initChart } from '@/utility/init-chart.js';
 import { chartLegend } from '@/utility/chart-legend.js';
 import MkChartLegend from '@/components/MkChartLegend.vue';
+import { i18n } from '@/i18n.js';
 
 initChart();
 
@@ -93,10 +94,10 @@ async function renderChart() {
 		type: 'bar',
 		data: {
 			datasets: [
-				makeDataset('Follow (local)', format(raw.local.followings.inc).slice().reverse(), { backgroundColor: colorFollowLocal, stack: 'follow' }),
-				makeDataset('Follow (remote)', format(raw.remote.followings.inc).slice().reverse(), { backgroundColor: colorFollowRemote, stack: 'follow' }),
-				makeDataset('Followed (local)', format(raw.local.followers.inc).slice().reverse(), { backgroundColor: colorFollowedLocal, stack: 'followed' }),
-				makeDataset('Followed (remote)', format(raw.remote.followers.inc).slice().reverse(), { backgroundColor: colorFollowedRemote, stack: 'followed' }),
+				makeDataset(i18n.ts._activity.followLocal, format(raw.local.followings.inc).slice().reverse(), { backgroundColor: colorFollowLocal, stack: 'follow' }),
+				makeDataset(i18n.ts._activity.followRemote, format(raw.remote.followings.inc).slice().reverse(), { backgroundColor: colorFollowRemote, stack: 'follow' }),
+				makeDataset(i18n.ts._activity.followedLocal, format(raw.local.followers.inc).slice().reverse(), { backgroundColor: colorFollowedLocal, stack: 'followed' }),
+				makeDataset(i18n.ts._activity.followedRemote, format(raw.remote.followers.inc).slice().reverse(), { backgroundColor: colorFollowedRemote, stack: 'followed' }),
 			],
 		},
 		options: {

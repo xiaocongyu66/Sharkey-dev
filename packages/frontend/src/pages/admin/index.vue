@@ -46,6 +46,16 @@ import { misskeyApi } from '@/utility/misskey-api.js';
 import { lookupUser, lookupUserByEmail, lookupFile } from '@/utility/admin-lookup.js';
 import { definePage, provideMetadataReceiver, provideReactiveMetadata } from '@/page.js';
 import { useRouter } from '@/router.js';
+import { miLocalStorage } from '@/local-storage.js';
+
+// Stale locale cache without new keys used to crash the control panel (undefined.title)
+try {
+	const ts = i18n.ts as any;
+	if (ts._adminNotes == null) {
+		miLocalStorage.removeItem('locale');
+		miLocalStorage.removeItem('localeVersion');
+	}
+} catch { /* ignore */ }
 
 const isEmpty = (x: string | null) => x == null || x === '';
 
@@ -147,7 +157,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		active: currentPage.value?.route.name === 'emojis',
 	}, {
 		icon: 'ti ti-icons',
-		text: i18n.ts.customEmojis + '(beta)',
+		text: (i18n.ts as any).customEmojisBeta ?? `${i18n.ts.customEmojis}（测试版）`,
 		to: '/admin/emojis2',
 		active: currentPage.value?.route.name === 'emojis2',
 	}, {
@@ -175,6 +185,11 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		text: i18n.ts.files,
 		to: '/admin/files',
 		active: currentPage.value?.route.name === 'files',
+	}, {
+		icon: 'ti ti-notes',
+		text: (i18n.ts as any)._adminNotes?.title ?? i18n.ts.notes,
+		to: '/admin/notes',
+		active: currentPage.value?.route.name === 'notes',
 	}, {
 		icon: 'ti ti-speakerphone',
 		text: i18n.ts.announcements,
@@ -240,7 +255,7 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		active: currentPage.value?.route.name === 'external-services',
 	}, {
 		icon: 'ti ti-webhook',
-		text: 'Webhook',
+		text: (i18n.ts as any).systemWebhook ?? i18n.ts._settings?.webhook ?? 'Webhook',
 		to: '/admin/system-webhook',
 		active: currentPage.value?.route.name === 'system-webhook',
 	}, {
@@ -248,6 +263,16 @@ const menuDef = computed<SuperMenuDef[]>(() => [{
 		text: i18n.ts.performance,
 		to: '/admin/performance',
 		active: currentPage.value?.route.name === 'performance',
+	}, {
+		icon: 'ti ti-brain',
+		text: (i18n.ts as any)._ai?.pageTitle ?? 'AI',
+		to: '/admin/ai',
+		active: ['ai', 'ai-note-moderation', 'ai-abuse-control', 'ai-translation'].includes(currentPage.value?.route.name ?? ''),
+	}, {
+		icon: 'ti ti-message-2-lock',
+		text: (i18n.ts as any)._chatEscrow?.title ?? 'Chat escrow',
+		to: '/admin/chat-escrow',
+		active: currentPage.value?.route.name === 'chat-escrow',
 	}],
 }, {
 	title: i18n.ts.info,

@@ -77,6 +77,7 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 			this.queryService.generateMutedUserQueryForUsers(query, me);
 			this.queryService.generateBlockQueryForUsers(query, me);
 			this.queryService.generateBlockedUserQueryForNotes(query, me);
+			this.queryService.generateBlockedUserQueryForNotes(query, me, { noteColumn: 'renote' });
 
 			// TODO optimization: replace with exists()
 			const followingQuery = this.followingsRepository.createQueryBuilder('following')

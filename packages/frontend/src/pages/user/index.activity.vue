@@ -36,9 +36,9 @@ const props = withDefaults(defineProps<{
 	collapsed: false,
 });
 
-const chartSrc = ref('per-user-notes');
+const chartSrc = ref<'per-user-notes' | 'per-user-pv'>('per-user-notes');
 
-function showMenu(ev: MouseEvent) {
+function showMenu(ev: PointerEvent) {
 	os.popupMenu([{
 		text: i18n.ts.notes,
 		active: chartSrc.value === 'per-user-notes',

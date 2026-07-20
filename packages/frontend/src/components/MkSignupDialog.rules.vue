@@ -49,14 +49,14 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 				<a href="https://activitypub.software/TransFem-org/Sharkey/-/blob/stable/IMPORTANT_NOTES.md" class="_link" target="_blank">{{ i18n.ts.basicNotesBeforeCreateAccount }} <i class="ti ti-external-link"></i></a>
 
-				<MkSwitch :modelValue="agreeNote" style="margin-top: 16px;" data-cy-signup-rules-notes-agree @update:modelValue="updateAgreeNote">{{ i18n.ts.agree }}</MkSwitch>
+				<MkSwitch :modelValue="agreeNote" style="margin-top: 16px;" data-testid="signup-rules-notes-agree" @update:modelValue="updateAgreeNote">{{ i18n.ts.agree }}</MkSwitch>
 			</MkFolder>
 
 			<div v-if="!agreed" style="text-align: center;">{{ i18n.ts.pleaseAgreeAllToContinue }}</div>
 
 			<div class="_buttonsCenter">
 				<MkButton inline rounded @click="emit('cancel')">{{ i18n.ts.cancel }}</MkButton>
-				<MkButton inline primary rounded gradate :disabled="!agreed" data-cy-signup-rules-continue @click="emit('done')">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
+				<MkButton inline primary rounded gradate :disabled="!agreed" data-testid="signup-rules-continue" @click="emit('done')">{{ i18n.ts.continue }} <i class="ti ti-arrow-right"></i></MkButton>
 			</div>
 		</div>
 	</div>

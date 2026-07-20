@@ -8,8 +8,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 	<MkSelect v-model="statusbar.type" :placeholder="i18n.ts.pleaseSelect">
 		<template #label>{{ i18n.ts.type }}</template>
 		<option value="rss">RSS</option>
-		<option v-if="instance.federation !== 'none' && policies.canViewFederation" value="federation">Federation</option>
-		<option value="userList">User list timeline</option>
+		<option v-if="instance.federation !== 'none' && policies.canViewFederation" value="federation">{{ i18n.ts.federation }}</option>
+		<option value="userList">{{ i18n.ts.userListTimeline }}</option>
 	</MkSelect>
 
 	<MkInput v-model="statusbar.name" manualSave>
@@ -17,7 +17,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 	</MkInput>
 
 	<MkSwitch v-model="statusbar.black">
-		<template #label>Black</template>
+		<template #label>{{ i18n.ts._theme.colorMode.black }}</template>
 	</MkSwitch>
 
 	<MkRadios v-model="statusbar.size">
@@ -31,7 +31,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 	<template v-if="statusbar.type === 'rss'">
 		<MkInput v-model="statusbar.props.url" manualSave type="url">
-			<template #label>URL</template>
+			<template #label>{{ i18n.ts.url }}</template>
 		</MkInput>
 		<MkSwitch v-model="statusbar.props.shuffle">
 			<template #label>{{ i18n.ts.shuffle }}</template>

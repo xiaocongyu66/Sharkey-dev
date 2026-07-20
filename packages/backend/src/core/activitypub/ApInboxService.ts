@@ -5,7 +5,7 @@
 
 import { Inject, Injectable } from '@nestjs/common';
 import { In } from 'typeorm';
-import * as Bull from 'bullmq';
+import * as Redis from 'ioredis';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
 import { UserFollowingService } from '@/core/UserFollowingService.js';
@@ -15,8 +15,8 @@ import { NotePiningService } from '@/core/NotePiningService.js';
 import { UserBlockingService } from '@/core/UserBlockingService.js';
 import { NoteDeleteService } from '@/core/NoteDeleteService.js';
 import { NoteCreateService } from '@/core/NoteCreateService.js';
+import { acquireApObjectLock } from '@/misc/distributed-lock.js';
 import { concat, toArray, toSingle, unique } from '@/misc/prelude/array.js';
-import { AppLockService } from '@/core/AppLockService.js';
 import type Logger from '@/logger.js';
 import { IdService } from '@/core/IdService.js';
 import { StatusError } from '@/misc/status-error.js';
@@ -27,15 +27,10 @@ import { QueueService } from '@/core/QueueService.js';
 import type { UsersRepository, NotesRepository, FollowingsRepository, AbuseUserReportsRepository, FollowRequestsRepository, MiMeta } from '@/models/_.js';
 import { bindThis } from '@/decorators.js';
 import type { MiRemoteUser } from '@/models/User.js';
+import { GlobalEventService } from '@/core/GlobalEventService.js';
 import { AbuseReportService } from '@/core/AbuseReportService.js';
-import { FederatedInstanceService } from '@/core/FederatedInstanceService.js';
-import { DeleteAccountService } from '@/core/DeleteAccountService.js';
-import { fromTuple } from '@/misc/from-tuple.js';
-import { IdentifiableError, errorCodes } from '@/misc/identifiable-error.js';
-import { renderInlineError } from '@/misc/render-inline-error.js';
-import { CacheService } from '@/core/CacheService.js';
-import { NoteVisibilityService } from '@/core/NoteVisibilityService.js';
-import { getApHrefNullable, getApId, getApIds, getApType, getNullableApId, isAccept, isActor, isAdd, isAnnounce, isApObject, isBlock, isCollectionOrOrderedCollection, isCreate, isDelete, isFlag, isFollow, isLike, isDislike, isMove, isPost, isReject, isRemove, isTombstone, isUndo, isUpdate, validActor, validPost, isActivity, IObjectWithId } from './type.js';
+import { IdentifiableError } from '@/misc/identifiable-error.js';
+import { getApHrefNullable, getApId, getApIds, getApType, isAccept, isActor, isAdd, isAnnounce, isBlock, isCollection, isCollectionOrOrderedCollection, isCreate, isDelete, isFlag, isFollow, isLike, isMove, isPost, isReject, isRemove, isTombstone, isUndo, isUpdate, validActor, validPost } from './type.js';
 import { ApNoteService } from './models/ApNoteService.js';
 import { ApLoggerService } from './ApLoggerService.js';
 import { ApDbResolverService } from './ApDbResolverService.js';
@@ -44,7 +39,7 @@ import { ApAudienceService } from './ApAudienceService.js';
 import { ApPersonService } from './models/ApPersonService.js';
 import { ApQuestionService } from './models/ApQuestionService.js';
 import type { Resolver } from './ApResolverService.js';
-import type { IAccept, IAdd, IAnnounce, IBlock, ICreate, IDelete, IFlag, IFollow, ILike, IDislike, IObject, IReject, IRemove, IUndo, IUpdate, IMove, IPost, IActivity } from './type.js';
+import type { IAccept, IAdd, IAnnounce, IBlock, ICreate, IDelete, IFlag, IFollow, ILike, IObject, IReject, IRemove, IUndo, IUpdate, IMove, IPost } from './type.js';
 
 @Injectable()
 export class ApInboxService {
@@ -54,8 +49,8 @@ export class ApInboxService {
 		@Inject(DI.config)
 		private config: Config,
 
-		@Inject(DI.meta)
-		private meta: MiMeta,
+		@Inject(DI.redis)
+		private redisClient: Redis.Redis,
 
 		@Inject(DI.usersRepository)
 		private usersRepository: UsersRepository,
@@ -82,7 +77,6 @@ export class ApInboxService {
 		private userBlockingService: UserBlockingService,
 		private noteCreateService: NoteCreateService,
 		private noteDeleteService: NoteDeleteService,
-		private appLockService: AppLockService,
 		private apResolverService: ApResolverService,
 		private apDbResolverService: ApDbResolverService,
 		private apLoggerService: ApLoggerService,
@@ -90,10 +84,7 @@ export class ApInboxService {
 		private apPersonService: ApPersonService,
 		private apQuestionService: ApQuestionService,
 		private queueService: QueueService,
-		private readonly federatedInstanceService: FederatedInstanceService,
-		private readonly cacheService: CacheService,
-		private readonly noteVisibilityService: NoteVisibilityService,
-		private readonly deleteAccountService: DeleteAccountService,
+		private globalEventService: GlobalEventService,
 	) {
 		this.logger = this.apLoggerService.logger;
 	}
@@ -103,29 +94,25 @@ export class ApInboxService {
 		let result = undefined as string | void;
 		if (isCollectionOrOrderedCollection(activity)) {
 			const results = [] as [string, string | void][];
-			resolver ??= this.apResolverService.createResolver();
+			// eslint-disable-next-line no-param-reassign
+			resolver ??= await this.apResolverService.createResolver();
 
-			const items = await resolver.resolveCollectionItems(activity, true, getNullableApId(activity) ?? undefined);
-			for (let i = 0; i < items.length; i++) {
-				const act = items[i];
-				if (act.id != null) {
-					if (this.utilityService.extractDbHost(act.id) !== this.utilityService.extractDbHost(actor.uri)) {
-						this.logger.warn('skipping activity: activity id mismatch');
-						continue;
-					}
-				} else {
-					// Activity ID should only be string or undefined.
-					act.id = undefined;
+			const items = toArray(isCollection(activity) ? activity.items : activity.orderedItems);
+			if (items.length >= resolver.getRecursionLimit()) {
+				throw new Error(`skipping activity: collection would surpass recursion limit: ${this.utilityService.extractDbHost(actor.uri)}`);
+			}
+
+			for (const item of items) {
+				const act = await resolver.resolve(item);
+				if (act.id == null || this.utilityService.extractDbHost(act.id) !== this.utilityService.extractDbHost(actor.uri)) {
+					this.logger.debug('skipping activity: activity id is null or mismatching');
+					continue;
 				}
-
-				const id = getNullableApId(act) ?? `${getNullableApId(activity)}#${i}`;
-
 				try {
-					const result = await this.performOneActivity(actor, act, resolver);
-					results.push([id, result]);
+					results.push([getApId(item), await this.performOneActivity(actor, act, resolver)]);
 				} catch (err) {
 					if (err instanceof Error || typeof err === 'string') {
-						this.logger.error(`Unhandled error in activity ${id}:`, err);
+						this.logger.error(err);
 					} else {
 						throw err;
 					}
@@ -141,12 +128,12 @@ export class ApInboxService {
 		}
 
 		// ついでにリモートユーザーの情報が古かったら更新しておく
-		{
-			{
-				{
+		if (actor.uri) {
+			if (actor.lastFetchedAt == null || Date.now() - actor.lastFetchedAt.getTime() > 1000 * 60 * 60 * 24) {
+				setImmediate(() => {
 					// 同一ユーザーの情報を再度処理するので、使用済みのresolverを再利用してはいけない
-					await this.apPersonService.updatePersonLazy(actor);
-				}
+					this.apPersonService.updatePerson(actor.uri);
+				});
 			}
 		}
 		return result;
@@ -175,9 +162,7 @@ export class ApInboxService {
 		} else if (isAnnounce(activity)) {
 			return await this.announce(actor, activity, resolver);
 		} else if (isLike(activity)) {
-			return await this.like(actor, activity, resolver);
-		} else if (isDislike(activity)) {
-			return await this.dislike(actor, activity);
+			return await this.like(actor, activity);
 		} else if (isUndo(activity)) {
 			return await this.undo(actor, activity, resolver);
 		} else if (isBlock(activity)) {
@@ -209,18 +194,11 @@ export class ApInboxService {
 	}
 
 	@bindThis
-	private async like(actor: MiRemoteUser, activity: ILike, resolver?: Resolver): Promise<string> {
+	private async like(actor: MiRemoteUser, activity: ILike): Promise<string> {
 		const targetUri = getApId(activity.object);
 
-		const object = fromTuple(activity.object);
-		if (!object) return 'skip: activity has no object property';
-
-		const note = await this.apNoteService.resolveNote(object, { resolver });
+		const note = await this.apNoteService.fetchNote(targetUri);
 		if (!note) return `skip: target note not found ${targetUri}`;
-
-		if (note.userHost == null && note.localOnly) {
-			throw new IdentifiableError('12e23cec-edd9-442b-aa48-9c21f0c3b215', 'Cannot react to local-only note');
-		}
 
 		await this.apNoteService.extractEmojis(activity.tag ?? [], actor.host).catch(() => null);
 
@@ -237,21 +215,16 @@ export class ApInboxService {
 	}
 
 	@bindThis
-	private async dislike(actor: MiRemoteUser, dislike: IDislike): Promise<string> {
-		return await this.undoLike(actor, dislike);
-	}
-
-	@bindThis
 	private async accept(actor: MiRemoteUser, activity: IAccept, resolver?: Resolver): Promise<string> {
 		const uri = activity.id ?? activity;
 
 		this.logger.info(`Accept: ${uri}`);
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
 		const object = await resolver.resolve(activity.object).catch(err => {
-			this.logger.error(`Resolution failed: ${renderInlineError(err)}`);
+			this.logger.error(`Resolution failed: ${err}`);
 			throw err;
 		});
 
@@ -286,7 +259,7 @@ export class ApInboxService {
 
 	@bindThis
 	private async add(actor: MiRemoteUser, activity: IAdd, resolver?: Resolver): Promise<string | void> {
-		if (actor.uri !== activity.actor) {
+		if (actor.uri !== getApId(activity.actor)) {
 			return 'invalid actor';
 		}
 
@@ -295,12 +268,7 @@ export class ApInboxService {
 		}
 
 		if (activity.target === actor.featured) {
-			const activityObject = fromTuple(activity.object);
-			if (isApObject(activityObject) && !isPost(activityObject)) {
-				return `unsupported featured object type: ${getApType(activityObject)}`;
-			}
-
-			const note = await this.apNoteService.resolveNote(activityObject, { resolver });
+			const note = await this.apNoteService.resolveNote(activity.object, { resolver });
 			if (note == null) return 'note not found';
 			await this.notePiningService.addPinned(actor, note.id);
 			return;
@@ -316,36 +284,37 @@ export class ApInboxService {
 		this.logger.info(`Announce: ${uri}`);
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
-		const activityObject = fromTuple(activity.object);
-		if (!activityObject) return 'skip: activity has no object property';
-		const targetUri = getApId(activityObject);
+		if (!activity.object) return 'skip: activity has no object property';
+		const targetUri = getApId(activity.object);
 		if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
 
-		const target = await resolver.secureResolve(activityObject, uri).catch(e => {
-			this.logger.error(`Resolution failed: ${renderInlineError(e)}`);
+		const target = await resolver.resolve(activity.object).catch(e => {
+			this.logger.error(`Resolution failed: ${e}`);
 			throw e;
 		});
 
 		if (isPost(target)) return await this.announceNote(actor, activity, target);
-		if (isActivity(target)) return await this.announceActivity(activity, target, resolver);
 
 		return `skip: unknown object type ${getApType(target)}`;
 	}
 
 	@bindThis
-	private async announceNote(actor: MiRemoteUser, activity: IAnnounce, target: IPost & IObjectWithId, resolver?: Resolver): Promise<string | void> {
-		const uri = getApId(activity);
-
+	private async announceNote(actor: MiRemoteUser, activity: IAnnounce, target: IPost, resolver?: Resolver): Promise<string | void> {
 		if (actor.isSuspended) {
 			return;
 		}
 
+		// リレーからのAnnounceかチェック
+		const fromRelay = await this.relayService.isRelayActor(actor);
+		const uri = getApId(fromRelay ? target : activity);
+
 		// アナウンス先が許可されているかチェック
 		if (!this.utilityService.isFederationAllowedUri(uri)) return;
 
-		const unlock = await this.appLockService.getApLock(uri);
+		const activityUri = getApId(activity);
+		const unlock = await acquireApObjectLock(this.redisClient, activityUri);
 
 		try {
 			// 既に同じURIを持つものが登録されていないかチェック
@@ -355,29 +324,40 @@ export class ApInboxService {
 			}
 
 			// Announce対象をresolve
-			// The target ID is verified by secureResolve, so we know it shares host authority with the actor who sent it.
-			// This means we can pass that ID to resolveNote and avoid an extra fetch, which will fail if the note is private.
-			const renote = await this.apNoteService.resolveNote(target, { resolver, sentFrom: getApId(target) });
-			if (renote == null) return 'announce target is null';
-
-			const { accessible } = await this.noteVisibilityService.checkNoteVisibilityAsync(renote, actor);
-			if (!accessible) {
-				return 'skip: invalid actor for this activity';
+			let renote;
+			try {
+				renote = await this.apNoteService.resolveNote(target, { resolver });
+				if (renote == null) return 'announce target is null';
+			} catch (err) {
+				// 対象が4xxならスキップ
+				if (err instanceof StatusError) {
+					if (!err.isRetryable) {
+						return `Ignored announce target ${target.id} - ${err.statusCode}`;
+					}
+					return `Error in announce target ${target.id} - ${err.statusCode}`;
+				}
+				throw err;
 			}
 
-			if (renote.userHost == null && renote.localOnly) {
-				throw new IdentifiableError('12e23cec-edd9-442b-aa48-9c21f0c3b215', 'Cannot renote a local-only note');
+			// リレーからのAnnounceはリノートを作成せず、ノートを直接公開する
+			if (fromRelay) {
+				this.logger.info(`Publishing relay-delivered note: ${uri}`);
+				const noteObj = await this.noteEntityService.pack(renote, null, { skipHide: true, withReactionAndUserPairCache: true });
+				this.globalEventService.publishNotesStream(noteObj);
+				return;
+			}
+
+			if (!await this.noteEntityService.isVisibleForMe(renote, actor.id)) {
+				return 'skip: invalid actor for this activity';
 			}
 
 			this.logger.info(`Creating the (Re)Note: ${uri}`);
 
 			const activityAudience = await this.apAudienceService.parseAudience(actor, activity.to, activity.cc, resolver);
-			let createdAt = activity.published ? new Date(activity.published) : null;
+			const createdAt = activity.published ? new Date(activity.published) : null;
 
-			const renoteDate = this.idService.parse(renote.id).date;
-			if (createdAt && createdAt < renoteDate) {
-				this.logger.warn(`Correcting invalid publish time for Announce "${uri}"`);
-				createdAt = renoteDate;
+			if (createdAt && createdAt < this.idService.parse(renote.id).date) {
+				return 'skip: malformed createdAt';
 			}
 
 			await this.noteCreateService.create(actor, {
@@ -388,38 +368,7 @@ export class ApInboxService {
 				uri,
 			});
 		} finally {
-			await unlock();
-		}
-	}
-
-	private async announceActivity(announce: IAnnounce, activity: IActivity & IObjectWithId, resolver: Resolver): Promise<string | void> {
-		// Since this is a new activity, we need to get a new actor.
-		const actorId = getApId(activity.actor);
-		const actor = await this.apPersonService.resolvePerson(actorId, resolver);
-
-		// Ignore announce of our own activities
-		// 1. No URI/host on an MiUser == local user
-		// 2. Local URI on activity == local activity
-		if (!actor.uri || !actor.host || this.utilityService.isUriLocal(activity.id)) {
-			throw new Bull.UnrecoverableError(`Cannot announce a local activity: ${activity.id} (from ${announce.id})`);
-		}
-
-		// Make sure that actor matches activity host.
-		// Activity host is already verified by resolver when fetching the activity, so that is the source of truth.
-		const actorHost = this.utilityService.punyHostPSLDomain(actor.uri);
-		const activityHost = this.utilityService.punyHostPSLDomain(activity.id);
-		if (actorHost !== activityHost) {
-			throw new Bull.UnrecoverableError(`Actor host ${actorHost} does not activity host ${activityHost} in activity ${activity.id} (from ${announce.id})`);
-		}
-
-		// Update stats (adapted from InboxProcessorService)
-		await this.queueService.createPostInboxJob(actor.host);
-
-		// Process it!
-		try {
-			return await this.performOneActivity(actor, activity, resolver);
-		} finally {
-			await this.apPersonService.updatePersonLazy(actor);
+			unlock();
 		}
 	}
 
@@ -437,54 +386,53 @@ export class ApInboxService {
 			return 'skip: ブロックしようとしているユーザーはローカルユーザーではありません';
 		}
 
-		await this.userBlockingService.block(actor, blockee);
+		await this.userBlockingService.block(await this.usersRepository.findOneByOrFail({ id: actor.id }), await this.usersRepository.findOneByOrFail({ id: blockee.id }));
 		return 'ok';
 	}
 
 	@bindThis
-	private async create(actor: MiRemoteUser, activity: ICreate | IUpdate, resolver?: Resolver, silent = false): Promise<string | void> {
+	private async create(actor: MiRemoteUser, activity: ICreate, resolver?: Resolver): Promise<string | void> {
 		const uri = getApId(activity);
 
 		this.logger.info(`Create: ${uri}`);
 
-		const activityObject = fromTuple(activity.object);
-		if (!activityObject) return 'skip: activity has no object property';
-		const targetUri = getApId(activityObject);
+		if (!activity.object) return 'skip: activity has no object property';
+		const targetUri = getApId(activity.object);
 		if (targetUri.startsWith('bear:')) return 'skip: bearcaps url not supported.';
 
 		// copy audiences between activity <=> object.
-		if (typeof activityObject === 'object') {
-			const to = unique(concat([toArray(activity.to), toArray(activityObject.to)]));
-			const cc = unique(concat([toArray(activity.cc), toArray(activityObject.cc)]));
+		if (typeof activity.object === 'object') {
+			const to = unique(concat([toArray(activity.to), toArray(activity.object.to)]));
+			const cc = unique(concat([toArray(activity.cc), toArray(activity.object.cc)]));
 
 			activity.to = to;
 			activity.cc = cc;
-			activityObject.to = to;
-			activityObject.cc = cc;
+			activity.object.to = to;
+			activity.object.cc = cc;
 		}
 
 		// If there is no attributedTo, use Activity actor.
-		if (typeof activityObject === 'object' && !activityObject.attributedTo) {
-			activityObject.attributedTo = activity.actor;
+		if (typeof activity.object === 'object' && !activity.object.attributedTo) {
+			activity.object.attributedTo = activity.actor;
 		}
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
-		const object = await resolver.resolve(activityObject).catch(e => {
-			this.logger.error(`Resolution failed: ${renderInlineError(e)}`);
+		const object = await resolver.resolve(activity.object).catch(e => {
+			this.logger.error(`Resolution failed: ${e}`);
 			throw e;
 		});
 
 		if (isPost(object)) {
-			await this.createNote(resolver, actor, object, silent);
+			await this.createNote(resolver, actor, object, false, activity);
 		} else {
-			return `skip: Unsupported type for Create: ${getApType(object)} ${getNullableApId(object)}`;
+			return `Unknown type: ${getApType(object)}`;
 		}
 	}
 
 	@bindThis
-	private async createNote(resolver: Resolver, actor: MiRemoteUser, note: IObject, silent = false): Promise<string> {
+	private async createNote(resolver: Resolver, actor: MiRemoteUser, note: IObject, silent = false, activity?: ICreate): Promise<string> {
 		const uri = getApId(note);
 
 		if (typeof note === 'object') {
@@ -501,7 +449,7 @@ export class ApInboxService {
 			}
 		}
 
-		const unlock = await this.appLockService.getApLock(uri);
+		const unlock = await acquireApObjectLock(this.redisClient, uri);
 
 		try {
 			const exist = await this.apNoteService.fetchNote(note);
@@ -509,29 +457,35 @@ export class ApInboxService {
 
 			await this.apNoteService.createNote(note, actor, resolver, silent);
 			return 'ok';
+		} catch (err) {
+			if (err instanceof StatusError && !err.isRetryable) {
+				return `skip ${err.statusCode}`;
+			} else {
+				throw err;
+			}
 		} finally {
-			await unlock();
+			unlock();
 		}
 	}
 
 	@bindThis
 	private async delete(actor: MiRemoteUser, activity: IDelete): Promise<string> {
-		if (actor.uri !== activity.actor) {
+		if (actor.uri !== getApId(activity.actor)) {
 			return 'invalid actor';
 		}
 
 		// 削除対象objectのtype
 		let formerType: string | undefined;
 
-		const activityObject = fromTuple(activity.object);
-		if (typeof activityObject === 'string') {
+		if (typeof activity.object === 'string') {
 			// typeが不明だけど、どうせ消えてるのでremote resolveしない
 			formerType = undefined;
 		} else {
-			if (isTombstone(activityObject)) {
-				formerType = toSingle(activityObject.formerType);
+			const object = activity.object;
+			if (isTombstone(object)) {
+				formerType = toSingle(object.formerType);
 			} else {
-				formerType = toSingle(activityObject.type);
+				formerType = toSingle(object.type);
 			}
 		}
 
@@ -558,15 +512,20 @@ export class ApInboxService {
 
 	@bindThis
 	private async deleteActor(actor: MiRemoteUser, uri: string): Promise<string> {
+		this.logger.info(`Deleting the Actor: ${uri}`);
+
 		if (actor.uri !== uri) {
-			throw new IdentifiableError(errorCodes.apValidationFailed, `skip: Delete(Person) failed - actor ${actor.id} (${actor.uri}) cannot delete other actor ${uri}`);
+			return `skip: delete actor ${actor.uri} !== ${uri}`;
 		}
 
-		if (actor.isDeleted) {
-			return 'skip: already deleted';
+		if (!(await this.usersRepository.update({ id: actor.id, isDeleted: false }, { isDeleted: true })).affected) {
+			return 'skip: already deleted or actor not found';
 		}
 
-		const job = await this.deleteAccountService.deleteAccount(actor);
+		const job = await this.queueService.createDeleteAccountJob(actor);
+
+		this.globalEventService.publishInternalEvent('remoteUserUpdated', { id: actor.id });
+
 		return `ok: queued ${job.name} ${job.id}`;
 	}
 
@@ -574,13 +533,13 @@ export class ApInboxService {
 	private async deleteNote(actor: MiRemoteUser, uri: string): Promise<string> {
 		this.logger.info(`Deleting the Note: ${uri}`);
 
-		const unlock = await this.appLockService.getApLock(uri);
+		const unlock = await acquireApObjectLock(this.redisClient, uri);
 
 		try {
 			const note = await this.apDbResolverService.getNoteFromApId(uri);
 
 			if (note == null) {
-				return 'skip: ignoring deleted note on both ends';
+				return 'message not found';
 			}
 
 			if (note.userId !== actor.id) {
@@ -590,18 +549,12 @@ export class ApInboxService {
 			await this.noteDeleteService.delete(actor, note);
 			return 'ok: note deleted';
 		} finally {
-			await unlock();
+			unlock();
 		}
 	}
 
 	@bindThis
 	private async flag(actor: MiRemoteUser, activity: IFlag): Promise<string> {
-		// Make sure the source instance is allowed to send reports.
-		const instance = await this.federatedInstanceService.fetchOrRegister(actor.host);
-		if (instance.rejectReports) {
-			throw new Bull.UnrecoverableError(`Rejecting report from instance: ${actor.host}`);
-		}
-
 		// objectは `(User|Note) | (User|Note)[]` だけど、全パターンDBスキーマと対応させられないので
 		// 対象ユーザーは一番最初のユーザー として あとはコメントとして格納する
 		const uris = getApIds(activity.object);
@@ -610,12 +563,14 @@ export class ApInboxService {
 			.filter(uri => uri.startsWith(this.config.url + '/users/'))
 			.map(uri => uri.split('/').at(-1))
 			.filter(x => x != null);
-		const user = (await this.cacheService.findUsersById(userIds)).values().take(1).toArray().at(0);
-		if (!user) return 'skip';
+		const users = await this.usersRepository.findBy({
+			id: In(userIds),
+		});
+		if (users.length < 1) return 'skip';
 
 		await this.abuseReportService.report([{
-			targetUserId: user.id,
-			targetUserHost: user.host,
+			targetUserId: users[0].id,
+			targetUserHost: users[0].host,
 			reporterId: actor.id,
 			reporterHost: actor.host,
 			comment: `${activity.content}\n${JSON.stringify(uris, null, 2)}`,
@@ -631,10 +586,10 @@ export class ApInboxService {
 		this.logger.info(`Reject: ${uri}`);
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
 		const object = await resolver.resolve(activity.object).catch(e => {
-			this.logger.error(`Resolution failed: ${renderInlineError(e)}`);
+			this.logger.error(`Resolution failed: ${e}`);
 			throw e;
 		});
 
@@ -669,7 +624,7 @@ export class ApInboxService {
 
 	@bindThis
 	private async remove(actor: MiRemoteUser, activity: IRemove, resolver?: Resolver): Promise<string | void> {
-		if (actor.uri !== activity.actor) {
+		if (actor.uri !== getApId(activity.actor)) {
 			return 'invalid actor';
 		}
 
@@ -678,12 +633,7 @@ export class ApInboxService {
 		}
 
 		if (activity.target === actor.featured) {
-			const activityObject = fromTuple(activity.object);
-			if (isApObject(activityObject) && !isPost(activityObject)) {
-				return `unsupported featured object type: ${getApType(activityObject)}`;
-			}
-
-			const note = await this.apNoteService.resolveNote(activityObject, { resolver });
+			const note = await this.apNoteService.resolveNote(activity.object, { resolver });
 			if (note == null) return 'note not found';
 			await this.notePiningService.removePinned(actor, note.id);
 			return;
@@ -694,7 +644,7 @@ export class ApInboxService {
 
 	@bindThis
 	private async undo(actor: MiRemoteUser, activity: IUndo, resolver?: Resolver): Promise<string> {
-		if (actor.uri !== activity.actor) {
+		if (actor.uri !== getApId(activity.actor)) {
 			return 'invalid actor';
 		}
 
@@ -703,10 +653,10 @@ export class ApInboxService {
 		this.logger.info(`Undo: ${uri}`);
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
 		const object = await resolver.resolve(activity.object).catch(e => {
-			this.logger.error(`Resolution failed: ${renderInlineError(e)}`);
+			this.logger.error(`Resolution failed: ${e}`);
 			throw e;
 		});
 
@@ -717,7 +667,7 @@ export class ApInboxService {
 		if (isAnnounce(object)) return await this.undoAnnounce(actor, object);
 		if (isAccept(object)) return await this.undoAccept(actor, object);
 
-		return `skip: unknown activity type ${getApType(object)}`;
+		return `skip: unknown object type ${getApType(object)}`;
 	}
 
 	@bindThis
@@ -727,7 +677,12 @@ export class ApInboxService {
 			return 'skip: follower not found';
 		}
 
-		const isFollowing = await this.cacheService.isFollowing(follower, actor);
+		const isFollowing = await this.followingsRepository.exists({
+			where: {
+				followerId: follower.id,
+				followeeId: actor.id,
+			},
+		});
 
 		if (isFollowing) {
 			await this.userFollowingService.unfollow(follower, actor);
@@ -764,7 +719,7 @@ export class ApInboxService {
 			return 'skip: ブロック解除しようとしているユーザーはローカルユーザーではありません';
 		}
 
-		await this.userBlockingService.unblock(actor, blockee);
+		await this.userBlockingService.unblock(await this.usersRepository.findOneByOrFail({ id: actor.id }), blockee);
 		return 'ok';
 	}
 
@@ -786,7 +741,12 @@ export class ApInboxService {
 			},
 		});
 
-		const isFollowing = await this.cacheService.isFollowing(actor, followee);
+		const isFollowing = await this.followingsRepository.exists({
+			where: {
+				followerId: actor.id,
+				followeeId: followee.id,
+			},
+		});
 
 		if (requestExist) {
 			await this.userFollowingService.cancelFollowRequest(followee, actor);
@@ -802,7 +762,7 @@ export class ApInboxService {
 	}
 
 	@bindThis
-	private async undoLike(actor: MiRemoteUser, activity: ILike | IDislike): Promise<string> {
+	private async undoLike(actor: MiRemoteUser, activity: ILike): Promise<string> {
 		const targetUri = getApId(activity.object);
 
 		const note = await this.apNoteService.fetchNote(targetUri);
@@ -817,18 +777,18 @@ export class ApInboxService {
 	}
 
 	@bindThis
-	private async update(actor: MiRemoteUser, activity: IUpdate, resolver?: Resolver): Promise<string | void> {
-		if (actor.uri !== activity.actor) {
+	private async update(actor: MiRemoteUser, activity: IUpdate, resolver?: Resolver): Promise<string> {
+		if (actor.uri !== getApId(activity.actor)) {
 			return 'skip: invalid actor';
 		}
 
 		this.logger.debug('Update');
 
 		// eslint-disable-next-line no-param-reassign
-		resolver ??= this.apResolverService.createResolver();
+		resolver ??= await this.apResolverService.createResolver();
 
 		const object = await resolver.resolve(activity.object).catch(e => {
-			this.logger.error(`Resolution failed: ${renderInlineError(e)}`);
+			this.logger.error(`Resolution failed: ${e}`);
 			throw e;
 		});
 
@@ -836,23 +796,10 @@ export class ApInboxService {
 			await this.apPersonService.updatePerson(actor.uri, resolver, object);
 			return 'ok: Person updated';
 		} else if (getApType(object) === 'Question') {
-			// If we get an Update(Question) for a note that doesn't exist, then create it instead
-			if (!await this.apNoteService.hasNote(object)) {
-				return await this.create(actor, activity, resolver, true);
-			}
-
-			await this.apQuestionService.updateQuestion(object, actor, resolver);
+			await this.apQuestionService.updateQuestion(object, actor, resolver).catch(err => console.error(err));
 			return 'ok: Question updated';
-		} else if (isPost(object)) {
-			// If we get an Update(Note) for a note that doesn't exist, then create it instead
-			if (!await this.apNoteService.hasNote(object)) {
-				return await this.create(actor, activity, resolver, true);
-			}
-
-			await this.apNoteService.updateNote(object, actor, resolver);
-			return 'ok: Note updated';
 		} else {
-			return `skip: Unsupported type for Update: ${getApType(object)} ${getNullableApId(object)}`;
+			return `skip: Unknown type: ${getApType(object)}`;
 		}
 	}
 

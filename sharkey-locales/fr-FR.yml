@@ -1,13 +1,86 @@
----
-disableDrawer: "Les menus ne s'affichent pas dans le tiroir"
-forwardReport: "Transférer le signalement à l’instance distante"
-forwardReportIsAnonymous: "L'instance distante ne sera pas en mesure de voir vos informations et apparaîtra comme un compte anonyme du système."
-abuseMarkAsResolved: "Marquer le signalement comme résolu"
 _initialTutorial:
   _reaction:
-    letsTryReacting: "Des réactions peuvent être ajoutées en cliquant sur le bouton « {reaction} » de la note. Essayez d'ajouter une réaction à cet exemple de note !"
-    reactDone: "Vous pouvez annuler la réaction en cliquant sur le bouton « {undo} » ."
+    reactDone: Vous pouvez annuler la réaction en cliquant sur le bouton « {undo} » .
+    letsTryReacting: Des réactions peuvent être ajoutées en cliquant sur le bouton « {reaction} » de la note. Essayez d'ajouter une réaction à cet exemple de note !
+_activity:
+  uniquePvUser: PV uniques (utilisateur)
+  uniquePvVisitor: PV uniques (visiteur)
+  pvUser: PV (utilisateur)
+  pvVisitor: PV (visiteur)
+  pvChartTitle: PV uniques / totaux
+  followLocal: Suivre (local)
+  followRemote: Suivre (distant)
+  followedLocal: Abonnés (local)
+  followedRemote: Abonnés (distant)
+_customEmojisManagerLegacy:
+  selectMode: Mode sélection
+  selectAll: Tout sélectionner
+  setCategory: Définir la catégorie
+  setTag: Définir le tag
+  addTag: Ajouter un tag
+  removeTag: Retirer le tag
+  setLicense: Définir la licence
+forwardReportIsAnonymous: L'instance distante ne sera pas en mesure de voir vos informations et apparaîtra comme un compte anonyme du système.
+_chartSeries:
+  received: Reçu
+  delivered: Livré
+  stalled: Bloqué
+  pubActive: Pub actif
+  subActive: Sub actif
+  pubAndSub: Pub & Sub
+  pub: Pub
+  sub: Sub
+  in: Entrée
+  outSucc: Sortie (succès)
+  outFail: Sortie (échec)
+  combined: Combiné
+  readWrite: Lecture et écriture
+  write: Écriture
+  read: Lecture
+  withinWeek: Inscrit < 1 semaine
+  withinMonth: Inscrit < 1 mois
+  withinYear: Inscrit < 1 an
+  outsideWeek: Inscrit > 1 semaine
+  outsideMonth: Inscrit > 1 mois
+  outsideYear: Inscrit > 1 an
+  localInc: Local +
+  localDec: Local -
+  remoteInc: Distant +
+  remoteDec: Distant -
+  driveUsage: Utilisation du drive
+  driveFiles: Fichiers du drive
+  inc: Inc
+  dec: Déc
+  other: Autre
+abuseMarkAsResolved: Marquer le signalement comme résolu
+customEmojisBeta: Émojis personnalisés (bêta)
+disableDrawer: Les menus ne s'affichent pas dans le tiroir
+systemWebhook: Webhook système
 _achievements:
   _types:
     _notes1:
-      title: "Je viens tout juste de configurer mon shonk"
+      title: Je viens tout juste de configurer mon shonk
+change: Modifier
+_themeNames:
+  4eea646f-7afa-4645-83e9-83af0333cd37: Clair (par défaut)
+  8050783a-7f63-445a-b270-36d0f6ba1677: Sombre (par défaut)
+  6ed80faa-74f0-42c2-98e4-a64d9e138eab: Café clair
+  0ff48d43-aab3-46e7-ab12-8492110d2e2b: Abricot clair
+  a58a0abb-ff8c-476a-8dec-0ad7837e7e96: Pluvieux clair
+  1100673c-f902-4ccd-93aa-7cb88be56178: Botanique clair
+  6128c2a9-5c54-43fe-a47d-17942356470b: Vif clair
+  ac168876-f737-4074-a3fc-a370c732ef48: Cerise clair
+  213273e5-7d20-d5f0-6e36-1b6a4f67115c: Sushi clair
+  e2c940b5-6e9a-4c03-b738-261c720c426d: U0 clair
+  c503d768-7c70-4db2-a4e6-08264304bc8d: Kaki sombre
+  080a01c5-377d-4fbb-88cc-6bb5d04977ea: Astro sombre
+  32a637ef-b47a-4775-bb7b-bacbb823f865: Futur sombre
+  504debaf-4912-6a4c-5059-1db08a76b737: Botanique sombre
+  02816013-8107-440f-877e-865083ffe194: Vert+Citron vert sombre
+  dc489603-27b5-424a-9b25-1ff6aec9824a: Vert+Orange sombre
+  679b3b87-a4e9-4789-8696-b56c15cc33b0: Cerise sombre
+  66e7e5a9-cd43-42cd-837d-12f47841fa34: Glace sombre
+  7a5bc13b-df8f-4d44-8e94-4452f0c634bb: U0 sombre
+  3cdfd635-4d5e-4d06-9ba3-20f123f0999b: Rosé Pine
+  919c91ac-c6fa-43dc-a423-3cc84fd67d7c: Rosé Pine Dawn
+forwardReport: Transférer le signalement à l’instance distante

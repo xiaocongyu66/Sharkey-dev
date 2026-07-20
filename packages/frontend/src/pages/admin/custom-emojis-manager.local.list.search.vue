@@ -23,21 +23,21 @@ SPDX-License-Identifier: AGPL-3.0-only
 						type="search"
 						autocapitalize="off"
 					>
-						<template #label>name</template>
+						<template #label>{{ emojiFieldLabel('name', 'name') }}</template>
 					</MkInput>
 					<MkInput
 						v-model="model.category"
 						type="search"
 						autocapitalize="off"
 					>
-						<template #label>category</template>
+						<template #label>{{ emojiFieldLabel('category', 'category') }}</template>
 					</MkInput>
 					<MkInput
 						v-model="model.aliases"
 						type="search"
 						autocapitalize="off"
 					>
-						<template #label>aliases</template>
+						<template #label>{{ emojiFieldLabel('aliases', 'aliases') }}</template>
 					</MkInput>
 
 					<MkInput
@@ -45,45 +45,45 @@ SPDX-License-Identifier: AGPL-3.0-only
 						type="search"
 						autocapitalize="off"
 					>
-						<template #label>type</template>
+						<template #label>{{ emojiFieldLabel('type', 'type') }}</template>
 					</MkInput>
 					<MkInput
 						v-model="model.license"
 						type="search"
 						autocapitalize="off"
 					>
-						<template #label>license</template>
+						<template #label>{{ emojiFieldLabel('license', 'license') }}</template>
 					</MkInput>
 					<MkSelect
 						v-model="model.sensitive"
 					>
-						<template #label>sensitive</template>
+						<template #label>{{ emojiFieldLabel('sensitive', 'sensitive') }}</template>
 						<option :value="null">-</option>
-						<option :value="true">true</option>
-						<option :value="false">false</option>
+						<option :value="true">{{ i18n.ts.yes }}</option>
+						<option :value="false">{{ i18n.ts.no }}</option>
 					</MkSelect>
 
 					<MkSelect
 						v-model="model.localOnly"
 					>
-						<template #label>localOnly</template>
+						<template #label>{{ emojiFieldLabel('localOnly', 'localOnly') }}</template>
 						<option :value="null">-</option>
-						<option :value="true">true</option>
-						<option :value="false">false</option>
+						<option :value="true">{{ i18n.ts.yes }}</option>
+						<option :value="false">{{ i18n.ts.no }}</option>
 					</MkSelect>
 					<MkInput
 						v-model="model.updatedAtFrom"
 						type="date"
 						autocapitalize="off"
 					>
-						<template #label>updatedAt(from)</template>
+						<template #label>{{ emojiFieldLabel('updatedAtFrom', 'updatedAt(from)') }}</template>
 					</MkInput>
 					<MkInput
 						v-model="model.updatedAtTo"
 						type="date"
 						autocapitalize="off"
 					>
-						<template #label>updatedAt(to)</template>
+						<template #label>{{ emojiFieldLabel('updatedAtTo', 'updatedAt(to)') }}</template>
 					</MkInput>
 
 					<MkInput
@@ -93,7 +93,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						autocapitalize="off"
 						@click="onQueryRolesEditClicked"
 					>
-						<template #label>role</template>
+						<template #label>{{ emojiFieldLabel('role', 'role') }}</template>
 						<template #suffix><i class="ti ti-pencil"></i></template>
 					</MkInput>
 				</div>
@@ -131,6 +131,7 @@ import MkSortOrderEditor from '@/components/MkSortOrderEditor.vue';
 
 import {
 	gridSortOrderKeys,
+	emojiFieldLabel,
 } from './custom-emojis-manager.impl.js';
 
 import { i18n } from '@/i18n.js';

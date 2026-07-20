@@ -35,7 +35,7 @@ export function getChartResolver(fields: string[], option?: { accumulate?: boole
 		const res: any = {};
 		for (const field of fields) {
 			const layers = field.split('.');
-			let current = res;
+			let current = res as any;
 			while (layers.length > 1) {
 				const currentKey = layers.shift()!;
 				if (current[currentKey] == null) current[currentKey] = {};

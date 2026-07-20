@@ -51,7 +51,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div :class="$style.captchaInfoMsg">
 					<div>{{ i18n.ts._captcha.testSiteKeyMessage }}</div>
 					<div>
-						<span>ref: </span><a href="https://docs.hcaptcha.com/#integration-testing-test-keys" target="_blank">hCaptcha Developer Guide</a>
+						<span>{{ i18n.ts.reference }}: </span><a href="https://docs.hcaptcha.com/#integration-testing-test-keys" target="_blank">{{ i18n.ts.hCaptchaDeveloperGuide }}</a>
 					</div>
 				</div>
 			</MkInfo>
@@ -104,11 +104,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 				<div :class="$style.captchaInfoMsg">
 					<div>{{ i18n.ts._captcha.testSiteKeyMessage }}</div>
 					<div>
-						<span>ref: </span>
+						<span>{{ i18n.ts.reference }}: </span>
 						<a
 							href="https://developers.google.com/recaptcha/docs/faq?hl=ja#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do"
 							target="_blank"
-						>reCAPTCHA FAQ</a>
+						>{{ i18n.ts.recaptchaFaq }}</a>
 					</div>
 				</div>
 			</MkInfo>
@@ -138,7 +138,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						{{ i18n.ts._captcha.testSiteKeyMessage }}
 					</div>
 					<div>
-						<span>ref: </span><a href="https://developers.cloudflare.com/turnstile/troubleshooting/testing/" target="_blank">Cloudflare Docs</a>
+						<span>{{ i18n.ts.reference }}: </span><a href="https://developers.cloudflare.com/turnstile/troubleshooting/testing/" target="_blank">{{ i18n.ts.cloudflareDocs }}</a>
 					</div>
 				</div>
 			</MkInfo>
@@ -172,7 +172,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 						{{ i18n.ts._captcha.testSiteKeyMessage }}
 					</div>
 					<div>
-						<span>ref: </span><a href="https://docs.friendlycaptcha.com/#/installation?id=_3-verifying-the-captcha-solution-on-the-server" target="_blank">FriendlyCaptcha Docs</a>
+						<span>{{ i18n.ts.reference }}: </span><a href="https://docs.friendlycaptcha.com/#/installation?id=_3-verifying-the-captcha-solution-on-the-server" target="_blank">{{ i18n.ts.friendlyCaptchaDocs }}</a>
 					</div>
 				</div>
 			</MkInfo>

@@ -1,11 +1,84 @@
----
-disableDrawer: "드로어 메뉴를 사용하지 않기"
-forwardReport: "리모트 서버에도 신고 내용 보내기"
-forwardReportIsAnonymous: "리모트 서버에서는 나의 정보를 볼 수 없으며, 익명의 시스템 계정으로 표시됩니다."
-abuseMarkAsResolved: "해결됨으로 표시"
+_urlPreviewSetting:
+  requireContentLength: Content-Length를 얻었을 때만 미리보기 만들기
 _initialTutorial:
   _reaction:
-    letsTryReacting: "리액션은 노트의 '{reaction}' 버튼을 클릭하여 붙일 수 있습니다. 지금 표시되는 샘플 노트에 리액션을 달아 보세요!"
-    reactDone: "'{undo}' 버튼을 눌러서 리액션을 취소할 수 있습니다."
-_urlPreviewSetting:
-  requireContentLength: "Content-Length를 얻었을 때만 미리보기 만들기"
+    reactDone: '''{undo}'' 버튼을 눌러서 리액션을 취소할 수 있습니다.'
+    letsTryReacting: 리액션은 노트의 '{reaction}' 버튼을 클릭하여 붙일 수 있습니다. 지금 표시되는 샘플 노트에 리액션을 달아 보세요!
+_activity:
+  uniquePvUser: 순 방문 (사용자)
+  uniquePvVisitor: 순 방문 (방문자)
+  pvUser: 방문수 (사용자)
+  pvVisitor: 방문수 (방문자)
+  pvChartTitle: 순 방문 / 총 방문
+  followLocal: 팔로우 (로컬)
+  followRemote: 팔로우 (원격)
+  followedLocal: 팔로워 (로컬)
+  followedRemote: 팔로워 (원격)
+_customEmojisManagerLegacy:
+  selectMode: 선택 모드
+  selectAll: 모두 선택
+  setCategory: 카테고리 설정
+  setTag: 태그 설정
+  addTag: 태그 추가
+  removeTag: 태그 제거
+  setLicense: 라이선스 설정
+forwardReportIsAnonymous: 리모트 서버에서는 나의 정보를 볼 수 없으며, 익명의 시스템 계정으로 표시됩니다.
+_chartSeries:
+  received: 수신
+  delivered: 전달
+  stalled: 정체
+  pubActive: Pub 활성
+  subActive: Sub 활성
+  pubAndSub: Pub & Sub
+  pub: Pub
+  sub: Sub
+  in: 수신
+  outSucc: 발신 (성공)
+  outFail: 발신 (실패)
+  combined: 합계
+  readWrite: 읽기 및 쓰기
+  write: 쓰기
+  read: 읽기
+  withinWeek: 가입 1주 미만
+  withinMonth: 가입 1개월 미만
+  withinYear: 가입 1년 미만
+  outsideWeek: 가입 1주 이상
+  outsideMonth: 가입 1개월 이상
+  outsideYear: 가입 1년 이상
+  localInc: 로컬 +
+  localDec: 로컬 -
+  remoteInc: 원격 +
+  remoteDec: 원격 -
+  driveUsage: 드라이브 사용량
+  driveFiles: 드라이브 파일
+  inc: 증가
+  dec: 감소
+  other: 기타
+abuseMarkAsResolved: 해결됨으로 표시
+customEmojisBeta: 커스텀 이모지 (베타)
+disableDrawer: 드로어 메뉴를 사용하지 않기
+systemWebhook: 시스템 Webhook
+change: 변경
+_themeNames:
+  4eea646f-7afa-4645-83e9-83af0333cd37: 라이트 (기본)
+  8050783a-7f63-445a-b270-36d0f6ba1677: 다크 (기본)
+  6ed80faa-74f0-42c2-98e4-a64d9e138eab: 커피 라이트
+  0ff48d43-aab3-46e7-ab12-8492110d2e2b: 살구 라이트
+  a58a0abb-ff8c-476a-8dec-0ad7837e7e96: 비 오는 날 라이트
+  1100673c-f902-4ccd-93aa-7cb88be56178: 식물 라이트
+  6128c2a9-5c54-43fe-a47d-17942356470b: 비비드 라이트
+  ac168876-f737-4074-a3fc-a370c732ef48: 체리 라이트
+  213273e5-7d20-d5f0-6e36-1b6a4f67115c: 스시 라이트
+  e2c940b5-6e9a-4c03-b738-261c720c426d: U0 라이트
+  c503d768-7c70-4db2-a4e6-08264304bc8d: 감 다크
+  080a01c5-377d-4fbb-88cc-6bb5d04977ea: 아스트로 다크
+  32a637ef-b47a-4775-bb7b-bacbb823f865: 퓨처 다크
+  504debaf-4912-6a4c-5059-1db08a76b737: 식물 다크
+  02816013-8107-440f-877e-865083ffe194: 그린+라임 다크
+  dc489603-27b5-424a-9b25-1ff6aec9824a: 그린+오렌지 다크
+  679b3b87-a4e9-4789-8696-b56c15cc33b0: 체리 다크
+  66e7e5a9-cd43-42cd-837d-12f47841fa34: 아이스 다크
+  7a5bc13b-df8f-4d44-8e94-4452f0c634bb: U0 다크
+  3cdfd635-4d5e-4d06-9ba3-20f123f0999b: Rosé Pine
+  919c91ac-c6fa-43dc-a423-3cc84fd67d7c: Rosé Pine Dawn
+forwardReport: 리모트 서버에도 신고 내용 보내기
