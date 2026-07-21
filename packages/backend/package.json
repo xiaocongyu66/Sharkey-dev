@@ -168,7 +168,7 @@
 		"systeminformation": "5.31.7",
 		"tinycolor2": "1.6.0",
 		"tmp": "0.2.6",
-		"typeorm": "0.3.29",
+		"typeorm": "0.3.31",
 		"ulid": "3.0.1",
 		"uuid": "13.0.0",
 		"vary": "1.1.2",
