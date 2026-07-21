@@ -64,12 +64,32 @@ export class JsonLdForbiddenDriectiveError extends JsonLdError {
 	}
 }
 
+export class JsonLdCacheOverflowError extends JsonLdError {
+	constructor() {
+		super('42fb039c-69fb-4f75-8187-d3aee412423e', 'context cache overflow');
+	}
+}
+
+export class JsonLdCacheFrozenError extends JsonLdError {
+	constructor() {
+		super('202c41fa-72d5-4e22-95af-94a8ac83346f', 'attempt to insert into frozen context cache');
+	}
+}
+
 export class JsonLd {
 	private static forbiddenDirectives = new Set([
 		'@included',
 		'@graph',
 		'@reverse',
 	]);
+
+	/** When true, remote context fetches are denied (TOCTOU: GHSA-38jx-423m-g387). */
+	private frozen = false;
+	private readonly contextCache = new Map<string, {
+		contextUrl: undefined;
+		document: JsonLdObject;
+		documentUrl: string;
+	}>();
 
 	private readonly logger: Logger;
 
@@ -80,6 +100,15 @@ export class JsonLd {
 		loggerService: LoggerService,
 	) {
 		this.logger = loggerService.getLogger('json-ld');
+	}
+
+	/**
+	 * Freeze the document loader so verify cannot pull different contexts
+	 * than those used during compact (JSON-LD signature TOCTOU fix).
+	 */
+	@bindThis
+	public freeze(): void {
+		this.frozen = true;
 	}
 
 	@bindThis
@@ -198,24 +227,38 @@ export class JsonLd {
 		return async (url: string) => {
 			if (!/^https?:\/\//.test(url)) throw new UnrecoverableError(`Invalid URL: ${url}`);
 
-			{
-				if (url in PRELOADED_CONTEXTS) {
-					this.logger.debug(`Preload HIT: ${url}`);
-					return {
-						contextUrl: undefined,
-						document: PRELOADED_CONTEXTS[url],
-						documentUrl: url,
-					};
-				}
+			if (url in PRELOADED_CONTEXTS) {
+				this.logger.debug(`Preload HIT: ${url}`);
+				return {
+					contextUrl: undefined,
+					document: PRELOADED_CONTEXTS[url],
+					documentUrl: url,
+				};
+			}
+
+			const cached = this.contextCache.get(url);
+			if (cached) {
+				this.logger.debug(`Context cache HIT: ${url}`);
+				return cached;
+			}
+
+			if (this.frozen) {
+				throw new JsonLdCacheFrozenError();
 			}
 
 			this.logger.debug(`Preload MISS: ${url}`);
 			const document = await this.fetchDocument(url);
-			return {
-				contextUrl: undefined,
-				document: document,
+			this.checkForForbiddenDirectives(document);
+			const remoteDocument = {
+				contextUrl: undefined as undefined,
+				document,
 				documentUrl: url,
 			};
+			this.contextCache.set(url, remoteDocument);
+			if (this.contextCache.size > 256) {
+				throw new JsonLdCacheOverflowError();
+			}
+			return remoteDocument;
 		};
 	}
 

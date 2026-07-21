@@ -56,6 +56,13 @@ export default class extends Endpoint<typeof meta, typeof paramDef> { // eslint-
 		private announcementEntityService: AnnouncementEntityService,
 	) {
 		super(meta, paramDef, async (ps, me) => {
+			// Inactive announcements are staff-only (GHSA-j49q-76hx-mv8f).
+			if (ps.isActive === false) {
+				if (!me || !await this.roleService.isModerator(me)) {
+					return [];
+				}
+			}
+
 			const roles = me ? await this.roleService.getUserRoles(me) : [];
 			const query = this.queryService.makePaginationQuery(this.announcementsRepository.createQueryBuilder('announcement'), ps.sinceId, ps.untilId)
 				.andWhere('announcement.isActive = :isActive', { isActive: ps.isActive })

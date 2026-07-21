@@ -10,7 +10,7 @@ import { StatusError } from '@misskey-dev/summaly/built/utils/status-error.js';
 import { IsNull, Not } from 'typeorm';
 import { DI } from '@/di-symbols.js';
 import type { Config } from '@/config.js';
-import { HttpRequestService } from '@/core/HttpRequestService.js';
+import { HttpRequestService, isPrivateUrl } from '@/core/HttpRequestService.js';
 import type Logger from '@/logger.js';
 import { query } from '@/misc/prelude/url.js';
 import { LoggerService } from '@/core/LoggerService.js';
@@ -192,6 +192,24 @@ export class UrlPreviewService {
 					id: '50294652-857b-4b13-9700-8e5c7a8deae8',
 				},
 			});
+		}
+
+		// Deny private/link-local targets *before* outbound connect (GHSA-jvcx-f39m-5xrj).
+		// Socket-level checks still apply; this avoids the TOCTOU of validating after fetch.
+		if (!this.meta.urlPreviewSummaryProxyUrl) {
+			try {
+				if (await isPrivateUrl(urlObj, this.httpRequestService.lookup)) {
+					return reply.code(403).send({
+						error: {
+							message: 'URL targets a private or non-public network',
+							code: 'URL_PREVIEW_PRIVATE',
+							id: 'a3e0c8f1-2b4d-4e6a-9c1f-0d5e7a8b9c2d',
+						},
+					});
+				}
+			} catch {
+				// DNS failure — let summaly surface a normal error
+			}
 		}
 
 		const fetch = !!request.query.fetch;

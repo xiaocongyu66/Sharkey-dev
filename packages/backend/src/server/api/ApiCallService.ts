@@ -400,30 +400,33 @@ export class ApiCallService {
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (endpointLimit) {
 			// koa will automatically load the `X-Forwarded-For` header if `proxy: true` is configured in the app.
-			let limitActor: string | MiLocalUser;
+			let limitActor: string | MiLocalUser | null = null;
 			if (user) {
 				limitActor = user;
-			} else {
+			} else if (this.config.enableIpRateLimit) {
+				// Misskey 2025.12.2: allow disabling IP rate limits when edge/CDN enforces them.
 				limitActor = getIpHash(request.ip);
 			}
 
-			const limit = {
-				key: ep.name,
-				...endpointLimit,
-			};
+			if (limitActor != null) {
+				const limit = {
+					key: ep.name,
+					...endpointLimit,
+				};
 
-			// Rate limit
-			const info = await this.rateLimiterService.limit(limit, limitActor);
+				// Rate limit
+				const info = await this.rateLimiterService.limit(limit, limitActor);
 
-			sendRateLimitHeaders(reply, info);
+				sendRateLimitHeaders(reply, info);
 
-			if (info.blocked) {
-				throw new ApiError({
-					message: 'Rate limit exceeded. Please try again later.',
-					code: 'RATE_LIMIT_EXCEEDED',
-					id: 'd5826d14-3982-4d2e-8011-b9e9f02499ef',
-					httpStatusCode: 429,
-				}, info);
+				if (info.blocked) {
+					throw new ApiError({
+						message: 'Rate limit exceeded. Please try again later.',
+						code: 'RATE_LIMIT_EXCEEDED',
+						id: 'd5826d14-3982-4d2e-8011-b9e9f02499ef',
+						httpStatusCode: 429,
+					}, info);
+				}
 			}
 		}
 

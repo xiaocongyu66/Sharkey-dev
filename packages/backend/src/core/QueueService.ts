@@ -968,6 +968,18 @@ export class QueueService implements OnModuleInit, OnApplicationBootstrap {
 	}
 
 	@bindThis
+	public async queuePause(queueType: QueueType) {
+		const queue = this.getQueue(queueType);
+		await queue.pause();
+	}
+
+	@bindThis
+	public async queueResume(queueType: QueueType) {
+		const queue = this.getQueue(queueType);
+		await queue.resume();
+	}
+
+	@bindThis
 	public async queueRetryJob(queueType: QueueType, jobId: string) {
 		const queue = this.getQueue(queueType);
 		const job: Bull.Job | undefined = await queue.getJob(jobId);

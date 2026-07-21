@@ -18,6 +18,7 @@ import type * as Sentry from '@sentry/node';
 import type * as SentryVue from '@sentry/vue';
 import type { RedisOptions } from 'ioredis';
 import type { IPv4, IPv6 } from 'ipaddr.js';
+import type { FastifyServerOptions } from 'fastify';
 
 /* eslint-disable no-restricted-properties */
 
@@ -54,6 +55,10 @@ type Source = Partial<QueueConfig> & {
 	socket?: string;
 	chmodSocket?: string;
 	disableHsts?: boolean;
+	/** Fastify trustProxy — see Misskey 2025.10–12. Defaults to true for Sharkey compat. */
+	trustProxy?: FastifyServerOptions['trustProxy'];
+	/** When false, unauthenticated IP-based rate limits are skipped (CDN/edge handles them). */
+	enableIpRateLimit?: boolean;
 	db: {
 		host: string;
 		port: number;
@@ -245,6 +250,8 @@ export type Config = QueueConfig & {
 	socket: string | undefined;
 	chmodSocket: string | undefined;
 	disableHsts: boolean | undefined;
+	trustProxy: NonNullable<FastifyServerOptions['trustProxy']>;
+	enableIpRateLimit: boolean;
 	db: {
 		host: string;
 		port: number;
@@ -458,6 +465,11 @@ export function loadConfig(logger?: Logger): Config {
 		socket: config.socket,
 		chmodSocket: config.chmodSocket,
 		disableHsts: config.disableHsts,
+		// Keep historical Sharkey default (true) unless explicitly configured.
+		// Misskey 2025.12 tightened defaults; operators behind a reverse proxy
+		// should set trustProxy appropriately in .config/default.yml.
+		trustProxy: config.trustProxy ?? true,
+		enableIpRateLimit: config.enableIpRateLimit ?? true,
 		host,
 		hostname,
 		scheme,

@@ -188,6 +188,8 @@ export class ApRendererService {
 			url: this.driveFileEntityService.getPublicUrl(file),
 			name: file.comment ?? undefined,
 			summary: file.comment ?? undefined,
+			width: file.properties?.width,
+			height: file.properties?.height,
 			sensitive: file.isSensitive,
 		};
 	}

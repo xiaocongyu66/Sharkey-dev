@@ -112,8 +112,9 @@ export class InboxProcessorService {
 
 		const host = this.utilityService.toPuny(new URL(signature.keyId).hostname);
 
+		// Permanent skip for blocked/disallowed hosts so jobs do not accumulate (Misskey 2026.5).
 		if (!this.utilityService.isFederationAllowedHost(host)) {
-			return `Blocked request: ${host}`;
+			throw new Bull.UnrecoverableError(`skip: blocked instance ${host}`);
 		}
 
 		const keyIdLower = signature.keyId.toLowerCase();
@@ -222,6 +223,10 @@ export class InboxProcessorService {
 				//#endregion
 
 				activity.signature = ldSignature;
+
+				// Freeze loader so verification cannot fetch different remote contexts
+				// than compact used (GHSA-38jx-423m-g387 / TOCTOU).
+				jsonLd.freeze();
 
 				// LD-Signature検証
 				let verified;

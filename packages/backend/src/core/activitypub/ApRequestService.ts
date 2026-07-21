@@ -83,7 +83,9 @@ export class ApRequestCreator {
 			}, args.additionalHeaders),
 		};
 
-		const result = this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host', 'accept']);
+		// Do not sign Accept: CDNs/proxies often normalize it, breaking signature
+		// verification (Misskey 2026.3.2).
+		const result = this.#signToRequest(request, args.key, ['(request-target)', 'date', 'host']);
 
 		return {
 			request,
