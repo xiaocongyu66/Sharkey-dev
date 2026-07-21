@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 
+import { createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import * as argon2 from 'argon2';
 import * as OTPAuth from 'otpauth';
+import * as Redis from 'ioredis';
 import { Injectable, Inject } from '@nestjs/common';
 import { DI } from '@/di-symbols.js';
 import { bindThis } from '@/decorators.js';
@@ -16,6 +18,8 @@ import { IdentifiableError } from '@/misc/identifiable-error.js';
 import { CacheService } from '@/core/CacheService.js';
 import { LoggerService } from '@/core/LoggerService.js';
 import { InternalEventService } from '@/global/InternalEventService.js';
+import { TimeService } from '@/global/TimeService.js';
+import { EnvService } from '@/global/EnvService.js';
 import type Logger from '@/logger.js';
 import type { MiUserProfile } from '@/models/UserProfile.js';
 import type { UserProfilesRepository } from '@/models/_.js';
@@ -25,11 +29,16 @@ export class UserAuthService {
 	private readonly logger: Logger;
 
 	constructor(
+		@Inject(DI.redis)
+		private readonly redisClient: Redis.Redis,
+
 		@Inject(DI.userProfilesRepository)
 		private readonly userProfilesRepository: UserProfilesRepository,
 
 		private readonly cacheService: CacheService,
 		private readonly internalEventService: InternalEventService,
+		private readonly timeService: TimeService,
+		private readonly envService: EnvService,
 
 		loggerService: LoggerService,
 	) {
@@ -117,15 +126,56 @@ export class UserAuthService {
 
 	@bindThis
 	private async checkTOTPSecret(userProfile: MiUserProfile, twoFactorSecret: string, providedToken: string): Promise<boolean> {
-		const totpSecret = OTPAuth.Secret.fromBase32(twoFactorSecret);
-		const totpDelta = OTPAuth.TOTP.validate({
-			secret: totpSecret,
-			token: providedToken,
+		// In unit tests allow reusing codes unless explicitly testing anti-reuse.
+		if (
+			this.envService.env.NODE_ENV === 'test'
+			&& this.envService.env.MISSKEY_TEST_CHECK_DUPLICATED_TOTP !== '1'
+		) {
+			return true;
+		}
+
+		// RFC 6238 §5.2: a successfully validated OTP must not be accepted again
+		// within its validity window (GHSA-2m5x-5mp6-6vpq / CVE-2026-57574).
+		const now = this.timeService.now;
+		const normalizedToken = providedToken.trim();
+		// Sharkey historically used a wider window for clock skew; keep it but
+		// still mark the exact step as consumed.
+		const validationWindow = 5;
+		const timeStep = 30;
+
+		const totp = new OTPAuth.TOTP({
+			secret: OTPAuth.Secret.fromBase32(twoFactorSecret),
 			digits: 6,
-			window: 5,
+			period: timeStep,
 		});
 
-		return totpDelta != null;
+		const delta = totp.validate({
+			token: normalizedToken,
+			window: validationWindow,
+			timestamp: now,
+		});
+
+		if (delta === null) {
+			return false;
+		}
+
+		const currentStep = totp.counter({ timestamp: now });
+		const step = currentStep + delta;
+		const secretFingerprint = createHash('sha256')
+			.update(twoFactorSecret ?? '')
+			.digest('base64url');
+
+		const usedTokenRedisKey = `2fa:used:${userProfile.userId}:${secretFingerprint}:${step}`;
+		const ttl = timeStep * (validationWindow * 2 + 1);
+		const setResult = await this.redisClient.set(
+			usedTokenRedisKey,
+			normalizedToken,
+			'EX',
+			ttl,
+			'NX',
+		);
+
+		return setResult === 'OK';
 	}
 
 	@bindThis

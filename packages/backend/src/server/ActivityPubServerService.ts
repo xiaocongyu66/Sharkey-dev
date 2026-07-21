@@ -348,7 +348,16 @@ export class ActivityPubServerService {
 			}
 		}
 
-		this.queueService.inbox(request.body as IActivity, signature);
+		// Reject structurally invalid activities (e.g. missing actor) here instead
+		// of letting them fail deep inside the inbox processor with TypeError.
+		// Ported from Misskey 2026.6.0 (inbox hardening).
+		const body = request.body as Record<string, unknown> | null | undefined;
+		if (typeof body !== 'object' || body == null || !('actor' in body) || body.actor == null) {
+			reply.code(400);
+			return;
+		}
+
+		this.queueService.inbox(body as IActivity, signature);
 
 		reply.code(202);
 	}
