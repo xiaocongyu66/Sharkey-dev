@@ -160,7 +160,7 @@
 		"redis-info": "3.1.0",
 		"redis-lock": "1.0.0",
 		"reflect-metadata": "0.2.2",
-		"sanitize-html": "2.17.0",
+		"sanitize-html": "2.17.5",
 		"secure-json-parse": "4.1.0",
 		"semver": "7.7.2",
 		"sharp": "0.34.4",
