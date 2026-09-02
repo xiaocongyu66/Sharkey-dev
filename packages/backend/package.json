@@ -122,7 +122,7 @@
 		"domhandler": "5.0.3",
 		"domutils": "3.2.2",
 		"fast-glob": "3.3.3",
-		"fastify": "5.8.5",
+		"fastify": "5.12.1",
 		"fastify-raw-body": "5.0.0",
 		"feed": "5.1.0",
 		"file-type": "21.3.3",
